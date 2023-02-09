@@ -12,3 +12,15 @@ All work is being done on the `develop` branch. Here's how to get to it:
 `cd Sami3GitmSimStorm`
 
 `git checkout develop`
+
+Feel free to fork this, make changes you like to the existing files & functions, or make you own stuff! Some ideas on changes that need to be made:
+
+
+
+
+
+## TODO:
+- Turn the GITM & SAMI plotting routines into regular python scripts that can be imported into another script. (read data automatically, return data in a nice way, etc.)
+- Make more plot types
+- Handle satellite outputs
+- Make things a little more user-friendly, or document things a bit better. 
