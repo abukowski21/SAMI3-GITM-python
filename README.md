@@ -13,8 +13,9 @@ All work is being done on the `develop` branch. Here's how to get to it:
 
 `git checkout develop`
 
-Feel free to fork this, make changes you like to the existing files & functions, or make you own stuff! Some ideas on changes that need to be made:
+----
 
+Feel free to fork this, make changes you like to the existing files & functions, or make you own stuff! Some ideas on changes that need to be made:
 
 
 
