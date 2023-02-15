@@ -265,7 +265,8 @@ def make_times(t0, nt, plot_start_delta = None, plot_end_delta = None):
             start_idx = 0
             
         if plot_end_delta != -1:
-            end_idx = plot_end_delta
+            end_idx = np.argmin(np.abs(np.array(times) 
+                                     - (dtime_storm_start + pd.Timedelta(plot_end_delta, 'hour'))))
         elif plot_end_delta == -1:
             end_idx = len(times)
         else:
@@ -347,7 +348,7 @@ def read_sami_data(cols, nts):
         t_end = nt
         ntimes = nt
         
-    pbar = tqdm(total = len(cols) * ntimes)
+    pbar = tqdm(total = len(cols) * ntimes, desc = 'reading SAMI data')
 
     for f in cols:
 
@@ -541,11 +542,11 @@ norm_alts = (grid['alt'].flatten() < (max(out_alts) + 300)) & (grid['alt'].flatt
 
 
 
-pbar = tqdm(total = len(times)*len(cols))
+pbar = tqdm(total = len(times)*len(cols), desc = 'making preds')
 
 # this will be very messy. clean up after the processing is done.
 
-def make_fits(col):
+def interp_grid(col):
     preds = {}
     preds[col] = np.zeros([len(times),len(out_lats), len(out_lons),  len(out_alts)])
     
@@ -595,7 +596,7 @@ def make_fits(col):
 if thread:
     with Pool(len(cols)) as pool:
 
-        pred_inter = pool.map(make_pred, cols)
+        pred_inter = pool.map(interp_grid, cols)
         
     ## Clean up predictions... Returns a list of dicts when threaded.
 
@@ -603,7 +604,7 @@ if thread:
 else:
     pred_inter = []
     for col in cols:
-        pred_inter.append(make_fits[col])
+        pred_inter.append(interp_grid[col])
         
 preds_cleaned = {}
 for p in pred_inter:
@@ -664,7 +665,7 @@ if to_filter:
         
         for l in range(0, len(out_lons),4):
             plt.figure(figsize = (8,4))
-            plt.imshow((100*(preds[cols[0]][:,:,l,a] - filtere[cols[0]]d[:,:,l,a])/preds[cols[0]][:,:,l,a]).T, 
+            plt.imshow((100*(preds[cols[0]][:,:,l,a] - filtered[cols[0]][:,:,l,a])/preds[cols[0]][:,:,l,a]).T, 
                        extent = [min(hrs), max(hrs), min(out_lats), max(out_lats)], aspect = 'auto', vmin = -4, vmax = 4)
             plt.colorbar(label = 'edends % over background at ' + str(out_alts[a]) + ' km')
             plt.title('glon = ' + str(out_lons[l].round(2)))
