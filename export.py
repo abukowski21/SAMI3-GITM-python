@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # All plots and Data Analysis used in the Sim Storm Paper
+# # All GITM plots and Data Analysis used in the Sim Storm Paper
 
 # Please make sure to run ProcessSamiData.py in utility_programs before running anything here
 
@@ -58,7 +58,7 @@ gitm_cols = ['Rho', '[O(!U3!NP)]', '[O!D2!N]', '[N!D2!N]', '[N(!U4!NS)]', '[NO]'
 gitm_path = "/home/axb170054/scratch/GITM-testing/test_folders/step_function_driving/SAMI3-stretch/gitm_data/"
 
 
-gitm_alt_idxs = -1 #set this to -1 if you want all altitudes
+gitm_alt_idxs = [1,5,10,27,25,33,40,45] #set this to -1 if you want all altitudes
 gitm_keo_lons = [-90,2,90,-178]
 
 global_lat_lim = None # will limit all plots latitude. Must be none or less than keo_lat_lim
@@ -66,7 +66,7 @@ global_lat_lim = None # will limit all plots latitude. Must be none or less than
 
 keo_lat_lim = 65 # limits keos to +/- degrees of lat. 
 
-
+OVERWRITE = True # be careful!
 
 num_pool_workers = 40 # number of workers to use in multithreading jobs. Set to 1 if you don't know what this means.
 
@@ -319,6 +319,10 @@ def make_a_keo(arr, title, cbarlims, cbar_name,
         Defaults to save. You can instead 'show' the plots. 
     
     """
+
+    if os.path.exists(fname):
+        if not OVERWRITE:
+            return
     
     fig = plt.figure(figsize = (10,7))
     if keo_lat_lim:
@@ -439,6 +443,8 @@ def call_keos(alt_idx, real_lon, numcol= None, namecol = None,  save_or_show = '
     elif numcol == None and namecol == None:
         raise ValueError('either namecol or numcol must be specified!')
 
+
+
     vmin_bins = np.min(gitm_bins[:,numcol,:,:,alt_idx])
     vmax_bins = np.max(gitm_bins[:,numcol,:,:,alt_idx])
     
@@ -529,14 +535,8 @@ def loop_keos(sel_cols, sel_alts, sel_lons, save_or_show = 'show', return_figs =
             with tqdm(desc = 'threading keo making', total = len(arg_arr)) as pbar:
                 for _ in pool.imap_unordered(thread_call_keos, arg_arr):
                     pbar.update(1)
-            
                     
-
-       
-
-
-# In[90]:
-
+                    
 
 #USAGE:
 
@@ -545,8 +545,8 @@ def loop_keos(sel_cols, sel_alts, sel_lons, save_or_show = 'show', return_figs =
 
 # In[55]:
 
-
-loop_keos(sel_cols = gitm_cols, sel_alts = gitm_alt_idxs, sel_lons = gitm_keo_lons, save_or_show = 'save', thread = True)
+# move to bottom
+#loop_keos(sel_cols = gitm_cols, sel_alts = gitm_alt_idxs, sel_lons = gitm_keo_lons, save_or_show = 'save', thread = True)
 
 
 # ## Now map time
@@ -558,6 +558,10 @@ loop_keos(sel_cols = gitm_cols, sel_alts = gitm_alt_idxs, sel_lons = gitm_keo_lo
 def draw_map(data_arr, title, cbarlims, cbar_label = None,
              y_label = 'Latitude (deg)', x_label = 'Hours since storm onset', save_or_show = 'save' , fname = None,
              plot_extent = [min(lons), max(lons), -lat_lim, lat_lim]):
+
+    if os.path.exists(fname):
+        if not OVERWRITE:
+            return
     
     fig,ax = plt.subplots(figsize = (10,5))
     world.plot(ax = ax, color = 'white', edgecolor = 'black', zorder = 1)
@@ -574,19 +578,31 @@ def draw_map(data_arr, title, cbarlims, cbar_label = None,
         plt.show()
         plt.close()
     elif save_or_show == 'save':
-        if fname == None:
+        if not fname:
             raise ValueError('plot save path must be given!')
         else:
+            fname = fname.replace(' ','')
             try:
                 plt.savefig(fname)
             except FileNotFoundError:
-                directory_list = os.path.join(fname).split('/')[:-1]
-                os.makedirs('/'+os.path.join(*directory_list))
-                plt.savefig(fname)
+                try:
+                    directory_list = os.path.join(fname).split('/')[:-1]
+                    os.makedirs('/'+os.path.join(*directory_list))
+                    plt.savefig(fname)
+                except FileExistsError:
+                    time.sleep(2) # sometimes when we make too many plots in the same directory, it fails. this fixes that.
+                    try:
+                        plt.savefig(fname)
+                    except FileNotFoundError:
+                        time.sleep(2)
+                        plt.savefig(fname)
+
+            except:
+                print(fname)
+                raise ValueError
             plt.close()
     else:
-        raise ValueError('save_or_show input is invalid. Accepted inputs are "save" or "show", you gave ', save_or_show)
-        
+        raise ValueError('save_or_show input is invalid. Accepted inputs are "save" or "show", you gave ', save_or_show)        
         
 def call_maps(alt_idx, dtime_real = None, dtime_index = None, numcol = None, namecol = None,  save_or_show = 'show', return_figs = False, figtype = 'all', outliers = False):
     #Make sure inputs are correct. either the index or actual value of the datetime and column to plot can be specified (or both).
@@ -712,6 +728,7 @@ def loop_maps(sel_cols, sel_alts, save_or_show = 'show', return_figs = False, fi
 
 # In[ ]:
 
+# loop_keos(sel_cols = gitm_cols, sel_alts = gitm_alt_idxs, sel_lons = gitm_keo_lons, save_or_show = 'save', thread = True)
 
 
 
@@ -738,7 +755,7 @@ gitm_map_save_path = "/home/axb170054/scratch/made_plots/SimStormPaper/maps-outl
 # In[ ]:
 
 
-loop_keos(sel_cols = gitm_cols, sel_alts = gitm_alt_idxs, sel_lons = gitm_keo_lons, save_or_show = 'save', thread = True, outliers = True)
+# loop_keos(sel_cols = gitm_cols, sel_alts = gitm_alt_idxs, sel_lons = gitm_keo_lons, save_or_show = 'save', thread = True, outliers = True)
 
 
 # In[ ]:
