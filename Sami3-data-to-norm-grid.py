@@ -82,6 +82,7 @@ cols = ['edens', 'hplusdens', 'oplusdens', 'noplusdens', 'o2plusdens', 'heplusde
 
 data_out_path = '/home/axb170054/scratch/pickles/SimStormPaper/simstorm_sami_files/'
 
+save_raw = False #Save original SAMI data in data_out_path?
 
 # In[ ]:
 
@@ -112,10 +113,10 @@ out_lons = np.linspace(0,360, out_grid_lons +1)[1:] # we don't need both 0 & 360
 out_alts = np.array([250,300,350,400,450,500,550,600,700,800,840,880,900,1000])
 
 
-print('out lats are ', *out_lats, sep=' ')
-print('out lons are ', *out_lons, sep=' ')
-print('out alts are ', *out_alts, sep=' ')
-print(' lengths are ', len(out_lats), len(out_lons), len(out_alts))
+print('\n out lats are ', *out_lats.round(2), sep=' ')
+print('\n out lons are ', *out_lons.round(2), sep=' ')
+print('\n out alts are ', *out_alts, sep=' ')
+print('\n lengths are ', len(out_lats), len(out_lons), len(out_alts))
 
 
 # In[ ]:
@@ -505,26 +506,6 @@ print('sami data shape: ', sami_data[cols[0]].shape)
 mlons = np.unique(grid['mlon'].round(2))
 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-print('example data shape: ', sami_data[cols[0]].shape)
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
 
 
 
@@ -540,9 +521,7 @@ norm_alts = (grid['alt'].flatten() < (max(out_alts) + 300)) & (grid['alt'].flatt
 # In[ ]:
 
 
-
-
-pbar = tqdm(total = len(times)*len(cols), desc = 'making preds')
+pbar = tqdm(total = len(times), desc = 'making preds... pbar is a very rough estimate! ')
 
 # this will be very messy. clean up after the processing is done.
 
@@ -581,7 +560,7 @@ def interp_grid(col):
 
         # break
 
-        preds[ntime] = pred.reshape([len(out_lats), len(out_lons), len(out_alts)])
+        preds[col][ntime] = pred.reshape([len(out_lats), len(out_lons), len(out_alts)])
 
         pbar.update(1)
     return preds
@@ -594,11 +573,10 @@ def interp_grid(col):
 #Thread the above function, if thread option is set.
 
 if thread:
-    with Pool(len(cols)) as pool:
+    with Pool(num_workers) as pool:
 
         pred_inter = pool.map(interp_grid, cols)
         
-    ## Clean up predictions... Returns a list of dicts when threaded.
 
     
 else:
@@ -606,6 +584,10 @@ else:
     for col in cols:
         pred_inter.append(interp_grid[col])
         
+
+
+
+
 preds_cleaned = {}
 for p in pred_inter:
     for k in p.keys():
@@ -688,28 +670,35 @@ if to_filter:
 
 
 # In[ ]:
+print('writing files...')
 
+np.array(times).tofile(data_out_path + 'times', format = '%s', sep = ',')
+out_lats.tofile(data_out_path + 'out-lats', sep = ',')
+out_lons.tofile(data_out_path + 'out-lons', sep = ',')
+out_alts.tofile(data_out_path + 'out-alts', sep = ',')
 
-np.array(times).to_file(data_out_path + 'times')
-out_lats.to_file(data_out_path + 'out-lats')
-out_lons.to_file(data_out_path + 'out-lons')
-out_alts.to_file(data_out_path + 'out-alts')
-
-np.array(preds[cols[0]].shape).to_tile(sami_data_path + 'example_shape')
+np.array(preds[cols[0]].shape).tofile(sami_data_path + 'out-shape', sep = ',')
 
 for col in cols:
 
-    preds[col].tofile(data_out_path + 'preds-' + col)
+    preds[col].tofile(data_out_path + 'preds-' + col, sep = ',')
     
     if to_filter:
-        filtered[col].to_file(data_out_path + 'bp_filtered-' + col)
+        filtered[col].file(data_out_path + 'bp_filtered-' + col, sep = ',')
 
+if save_raw:
+    for col in cols:
+
+        sami_data[col].tofile(data_out_path + 'raw-' + col, sep = ',')
+
+
+    np.array(sami_data[cols[0]].shape).tofile(sami_data_path + 'raw-shape', sep = ',')
 
 # In[ ]:
 
 
 
-
+print('written! Exiting. ')
 
 # In[ ]:
 
