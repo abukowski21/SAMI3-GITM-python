@@ -3,4 +3,5 @@
 *.pyc
 *ynb_checkpoin*
 
-.vscode
+#dev
+.vsc*
