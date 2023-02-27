@@ -134,7 +134,7 @@ def read_gitm_into_nparrays(flist):
 
     ## Fix the ordering of the longitudes and go from -180-180 not 0->360 
     newlons_for_order = []
-    for ilon in range(len(gitmgrid['longitude'])):
+    for ilon in range(0,len(gitmgrid['longitude'])):
         oldlon = gitmgrid['longitude'][ilon,0,0]
         if oldlon <=180:
             newlons_for_order.append(int(oldlon))
@@ -315,7 +315,7 @@ lats, lons, alts  = np.unique(gitm_grid['latitude']), np.unique(gitm_grid['longi
 # This is used in keos and the maps. Faster to just do it all now rather than have it done multiple times.
 
 # %
-print("Calculating fits. This will take a moment...")
+print("Calculating fits. This will take a moment...", flush = False)
 
 fits_gitm = make_fits(gitm_bins)
 
@@ -328,12 +328,6 @@ lat_lim = np.max(gitm_grid['latitude'])
 
 # % [markdown]
 # ## Keograms! of all columns!
-
-# %
-times[0], np.datetime64(dtime_storm_start)
-
-# %
-lats, lons, alts
 
 # % [markdown]
 # ### Define some useful variables:
@@ -427,7 +421,7 @@ def loop_keos(sel_cols, sel_alts, sel_lons, save_or_show = 'show', return_figs =
             sel_lons = [ sel_lons ]
 
     
-    if not thread: #make plots sequentially
+    if not thread: #make plots sequential`ly
         pbar = tqdm(desc = 'making keos..', total = len(sel_lons) * len(sel_alts) * len(sel_cols))
         for namecol in sel_cols:
             numcol = gitm_cols.index(icol)
