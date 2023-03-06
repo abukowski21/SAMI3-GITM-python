@@ -184,7 +184,6 @@ def make_times(nt, sami_data_path, dtime_storm_start, dtime_sim_start,
             end_idx = len(times)
         else:
             end_idx = len(times)
-
         times = times[start_idx:end_idx]
         hrs_since_storm_start = hrs_since_storm_start[start_idx:end_idx]
         times_list = times_list[start_idx:end_idx]
@@ -238,7 +237,7 @@ def get_sami_grid(sami_data_path, nlt, nf, nz):
     return grid
 
 
-def read_sami_data(sami_data_path, dtime_storm_start, dtime_sim_start,
+def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
                    t_start_idx=None, t_end_idx=None, pbar=False,
                    cols='all', help=False, chop_times=False):
     """Automatically read in SAMI data.
@@ -285,7 +284,6 @@ def read_sami_data(sami_data_path, dtime_storm_start, dtime_sim_start,
                   'ndens': 'denn7u.dat'}
 
     sami_data = {}
-
     # handle single time, or time range (also check for errors)
     if t_start_idx is None and t_end_idx is None:
         chop_times = False
@@ -295,6 +293,8 @@ def read_sami_data(sami_data_path, dtime_storm_start, dtime_sim_start,
     else:
         raise ValueError(
             'You must specify both t_start_idx and t_end_idx!')
+
+    print('t_start, t_end', t_end_idx, t_start_idx)
 
     # Check cols:
     if cols == 'all':
@@ -310,9 +310,6 @@ def read_sami_data(sami_data_path, dtime_storm_start, dtime_sim_start,
     times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
         nt, sami_data_path, dtime_storm_start, dtime_sim_start,
         t_start_idx, t_end_idx, help)
-
-    if chop_times:
-        times = times[start_idx:end_idx]
 
     ntimes = len(times)
 
