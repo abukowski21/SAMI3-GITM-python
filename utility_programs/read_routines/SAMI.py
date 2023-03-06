@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 try:
-    from tqdm.auto import tqdm
+    from tqdm import tqdm
     pbar = True
 except ImportError:
     pbar = False
@@ -289,7 +289,7 @@ def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
         chop_times = False
     elif t_start_idx is not None and t_end_idx is not None:
         ntimes = t_end_idx - t_start_idx
-        chop_times = True
+
     else:
         raise ValueError(
             'You must specify both t_start_idx and t_end_idx!')
