@@ -10,7 +10,7 @@ from spacepy.time import Ticktock
 from utility_programs.read_routines import SAMI
 
 try:
-    import tqdm.auto as tqdm
+    from tqdm import tqdm
     pbar = True
 except ImportError:
     pbar = False
@@ -106,7 +106,7 @@ def do_interpolating(out_lats, out_lons, out_alts, times,
     norm_alts = (sami_data['grid']['alt'].flatten() < (max(out_alts) + 300)
                  ) & (sami_data['grid']['alt'].flatten() > (min(out_alts)-75))
 
-    for col in sami_data.columns:
+    for col in columns:
         preds[col] = np.zeros(
             [len(times), len(out_lats), len(out_lons), len(out_alts)])
 
@@ -152,17 +152,17 @@ def set_up_interpolations(out_lats=None, num_out_lats=90, specific_lat=None,
     if args is not None:
         out_lats = args.out_lats
         num_out_lats = args.num_out_lats
-        specific_lat = args.specific_lat
+        specific_lat = args.lat
         lat_lim = args.lat_lim
         out_lons = args.out_lons
         num_out_lons = args.num_out_lons
         lon_lim = args.lon_lim
-        specific_lon = args.specific_lon
+        specific_lon = args.lon
         out_alts = args.out_alts
         num_out_alts = args.num_out_alts
         min_alt = args.min_alt
         max_alt = args.max_alt
-        specific_alts = args.specific_alts
+        specific_alts = args.alts
 
     print(
         out_lats, num_out_lats, specific_lat, lat_lim, out_lons, num_out_lons,
@@ -266,9 +266,9 @@ if __name__ == '__main__':
         help='Number of latitudes to interpolate to. Default: 90',
         action='store', default=90, required=False)
     parser.add_argument(
-        '--specific_lat', type=float,
+        '--lat', type=float,
         help='Specific latitude to interpolate to. Default: None',
-        action='store', default=None, required=False)
+        action='append', default=None, required=False)
     parser.add_argument(
         '--lat_lim', type=float,
         help='Latitude limit for interpolation. Default: 60',
@@ -286,9 +286,9 @@ if __name__ == '__main__':
         help='Number of longitudes to interpolate to. Default: 90',
         action='store', default=90, required=False)
     parser.add_argument(
-        '--specific_lon', type=float,
+        '--lon',
         help='Specific longitude to interpolate to. Default: None',
-        action='store', default=None, required=False)
+        action='append', default=None, required=False)
     parser.add_argument(
         '--alts', type=str,
         help='List of altitudes to interpolate to. Format: [alt1, alt2, alt3]',
@@ -298,6 +298,10 @@ if __name__ == '__main__':
         help='Number of altitudes to interpolate to. Default: 10',
         action='store', default=10, required=False)
     parser.add_argument(
+        '--out_alts', type=str,
+        help='List of altitudes to interpolate to. Format: [alt1, alt2, alt3]',
+        action='store', default=None, required=False)
+    parser.add_argument(
         '--min_alt', type=int,
         help='Minimum altitude to interpolate to. Default: 200',
         action='store', default=200, required=False)
@@ -306,9 +310,9 @@ if __name__ == '__main__':
         help='Maximum altitude to interpolate to. Default: 1000',
         action='store', default=1000, required=False)
     parser.add_argument(
-        '--specific_alts', type=str,
+        '--alt',
         help='Specific altitudes to interpolate. Format: [alt1, alt2, alt3]',
-        action='store', default=None, required=False)
+        action='append', default=None, required=False)
     parser.add_argument(
         '--columns', type=str, help='Columns to interpolate. Default: all',
         action='store', default='all', required=False)
