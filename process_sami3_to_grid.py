@@ -147,7 +147,27 @@ def set_up_interpolations(out_lats=None, num_out_lats=90, specific_lat=None,
                           lat_lim=60, out_lons=None, num_out_lons=90,
                           lon_lim=180, specific_lon=None, out_alts=None,
                           num_out_alts=10, min_alt=200, max_alt=1000,
-                          specific_alts=None):
+                          specific_alts=None, args=None):
+
+    if args is not None:
+        out_lats = args.out_lats
+        num_out_lats = args.num_out_lats
+        specific_lat = args.specific_lat
+        lat_lim = args.lat_lim
+        out_lons = args.out_lons
+        num_out_lons = args.num_out_lons
+        lon_lim = args.lon_lim
+        specific_lon = args.specific_lon
+        out_alts = args.out_alts
+        num_out_alts = args.num_out_alts
+        min_alt = args.min_alt
+        max_alt = args.max_alt
+        specific_alts = args.specific_alts
+
+    print(
+        out_lats, num_out_lats, specific_lat, lat_lim, out_lons, num_out_lons,
+        lon_lim, specific_lon, out_alts, num_out_alts, min_alt, max_alt,
+        specific_alts)
 
     if out_lats is None:
         out_lats = np.linspace(-lat_lim, lat_lim, num_out_lats)
@@ -191,16 +211,16 @@ def main(args):
     # Read in SAMI data
     global sami_data
     sami_data, times_array = SAMI.read_sami_data(
-        args.sami_data_path, dtime_sim_start, dtime_storm_start,
-        t_start_idx=None, t_end_idx=None, pbar=pbar, cols=args.columns,
+        sami_data_path=args.sami_data_path,
+        dtime_sim_start=dtime_sim_start,
+        dtime_storm_start=dtime_storm_start,
+        t_start_idx=args.t_start_idx, t_end_idx=args.t_end_idx,
+        pbar=pbar, cols=args.columns,
         help=args.info)
 
     cols = sami_data['data'].keys()
 
-    out_lats, out_lons, out_alts = set_up_interpolations(
-        args.out_lats, args.num_out_lats, args.specific_lat, args.lat_lim,
-        args.out_lons, args.num_out_lons, args.specific_lon, args.alts,
-        args.num_out_alts, args.min_alt, args.max_alt, args.specific_alts)
+    out_lats, out_lons, out_alts = set_up_interpolations(args=args)
 
     preds = do_interpolating(out_lats, out_lons, out_alts, times_array,
                              columns='all')
@@ -252,11 +272,15 @@ if __name__ == '__main__':
     parser.add_argument(
         '--lat_lim', type=float,
         help='Latitude limit for interpolation. Default: 60',
-        action='store', default=60, required=False)
+        action='store', default=65, required=False)
     parser.add_argument(
         '--out_lons', type=str,
         help='List of longitudes to interpolate. Format: [lon1, lon2, lon3]',
         action='store', default=None, required=False)
+    parser.add_argument(
+        '--lon_lim', type=float,
+        help='Longitude limit for interpolation. Default: 180',
+        action='store', default=180, required=False)
     parser.add_argument(
         '--num_out_lons', type=int,
         help='Number of longitudes to interpolate to. Default: 90',
@@ -303,6 +327,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '--info', help='Print run information. Will be a lot',
         action='store_true', required=False, default=False)
+    parser.add_argument(
+        '--t_start_idx', type=int,
+        action='store', default=None, required=False)
+    parser.add_argument(
+        '--t_end_idx', type=int,
+        action='store', default=None, required=False)
 
     args = parser.parse_args()
 
