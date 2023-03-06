@@ -5,3 +5,11 @@
 
 #dev
 .vsc*
+
+
+#Plotting stuff
+data_dir
+*.png
+*.mpy
+*.mov
+
