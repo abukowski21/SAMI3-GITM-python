@@ -164,11 +164,6 @@ def set_up_interpolations(out_lats=None, num_out_lats=90, specific_lat=None,
         max_alt = args.max_alt
         specific_alts = args.alts
 
-    print(
-        out_lats, num_out_lats, specific_lat, lat_lim, out_lons, num_out_lons,
-        lon_lim, specific_lon, out_alts, num_out_alts, min_alt, max_alt,
-        specific_alts)
-
     if out_lats is None:
         out_lats = np.linspace(-lat_lim, lat_lim, num_out_lats)
 
