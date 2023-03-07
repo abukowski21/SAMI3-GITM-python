@@ -17,14 +17,6 @@ except ImportError:
 
 from scipy.interpolate import LinearNDInterpolator
 
-# def get_command_line_args(argv):
-
-#     args = {'sami_path': '', dtime_storm_start: '', dtime_sim_start: '0',
-#             t_start_idx: 0, t_end_idx: -1, cols: 'all', help: False,
-#      thread: 48}
-
-#     for arg in argv:
-
 
 def convert_to_cart(lats_, lons_, alts_, dtime, coord_source):
     """Converts from GEO to cartesian coordinates at a single datetime.
@@ -49,15 +41,16 @@ def convert_to_cart(lats_, lons_, alts_, dtime, coord_source):
     """
     coord_arr = []
 
-    if type(alts_) != list:
-        if type(alts_) != np.array:
-            if type(alts_) != np.ndarray:
-                alts_ = [alts_]
+    if len(lats_) == len(lons_) == len(alts_):
+        coord_arr = list(zip(lats_, lons_, alts_/6371))
+    else:
+        for lat in lats_:
+            for lon in lons_:
+                for alt in alts_:
+                    coord_arr.append([(alt + 6371)/6371, lat, lon])
 
-    for lat in lats_:
-        for lon in lons_:
-            for alt in alts_:
-                coord_arr.append([(alt + 6371)/6371, lat, lon])
+    coord_arr = np.array(coord_arr)
+
     if coord_source == 'MAG':
         coords = Coords(coord_arr, 'MAG', 'sph')
     elif coord_source == 'GEO':
@@ -91,16 +84,16 @@ def do_interpolating(out_lats, out_lons, out_alts, times,
 
     # check columns
     if columns == 'all':
-        columns = sami_data.keys()
+        columns = sami_data['data'].keys()
     elif type(columns) == str:
         columns = [columns]
     for col in columns:
-        if col not in sami_data.keys():
+        if col not in sami_data['data'].keys():
             raise ValueError('column {} not in sami_data'.format(col))
 
     preds = {}
     if pbar:
-        progress = tqdm(total=len(times),
+        progress = tqdm(total=len(times)*len(columns),
                         desc='making preds... pbar is a very rough estimate! ')
 
     norm_alts = (sami_data['grid']['alt'].flatten() < (max(out_alts) + 300)
@@ -111,23 +104,24 @@ def do_interpolating(out_lats, out_lons, out_alts, times,
             [len(times), len(out_lats), len(out_lons), len(out_alts)])
 
     for ntime, dt in enumerate(times):
-        grid_cart = convert_to_cart(sami_data['grid']['mlat'],
-                                    sami_data['grid']['mlon'],
-                                    sami_data['grid']['malt'], ntime, 'MAG')
+        sami_cart = convert_to_cart(
+            sami_data['grid']['mlat'].flatten()[norm_alts],
+            sami_data['grid']['mlon'].flatten()[norm_alts],
+            sami_data['grid']['malt'].flatten()[norm_alts], dt, 'MAG')
 
-        xs = grid_cart.data[:, 0][norm_alts]
-        ys = grid_cart.data[:, 1][norm_alts]
-        zs = grid_cart.data[:, 2][norm_alts]
+        xs = sami_cart.data[:, 0]
+        ys = sami_cart.data[:, 1]
+        zs = sami_cart.data[:, 2]
 
         loc_grid = list(zip(xs, ys, zs))
 
-        out_grid = convert_to_cart(out_lats, out_lons, out_alts, ntime, 'GEO')
+        out_grid = convert_to_cart(out_lats, out_lons, out_alts, dt, 'GEO')
 
         out_xs = out_grid.data[:, 0]
         out_ys = out_grid.data[:, 1]
         out_zs = out_grid.data[:, 2]
 
-        datas = sami_data[col][:, :, :, ntime].flatten()[norm_alts]
+        datas = sami_data['data'][col][:, :, :, ntime].flatten()[norm_alts]
 
         interp = LinearNDInterpolator(loc_grid, datas, rescale=True)
         # print('interpolating')
