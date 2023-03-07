@@ -15,6 +15,8 @@ try:
 except ImportError:
     pbar = False
 
+import multiprocessing
+
 from scipy.interpolate import LinearNDInterpolator
 
 
@@ -63,8 +65,17 @@ def convert_to_cart(lats_, lons_, alts_, dtime, coord_source):
     return newcoords
 
 
-def do_interpolating(out_lats, out_lons, out_alts, times,
-                     columns='all'):
+def unpack_do_interpolating(args):
+    """Used to unpack the arguments for do_interpolating.
+
+    Args:
+        args (arguments): out_lats, out_lons, out_alts, columns
+    """
+    do_interpolating(out_lats=args[0], out_lons=args[1], out_alts=args[2],
+                     columns=args[3])
+
+
+def do_interpolating(out_lats, out_lons, out_alts, columns='all'):
     """_summary_
 
     Args:
@@ -93,7 +104,7 @@ def do_interpolating(out_lats, out_lons, out_alts, times,
 
     preds = {}
     if pbar:
-        progress = tqdm(total=len(times)*len(columns),
+        progress = tqdm(total=len(times_array)*len(columns),
                         desc='making preds... pbar is a very rough estimate! ')
 
     norm_alts = (sami_data['grid']['alt'].flatten() < (max(out_alts) + 300)
@@ -101,9 +112,9 @@ def do_interpolating(out_lats, out_lons, out_alts, times,
 
     for col in columns:
         preds[col] = np.zeros(
-            [len(times), len(out_lats), len(out_lons), len(out_alts)])
+            [len(times_array), len(out_lats), len(out_lons), len(out_alts)])
 
-    for ntime, dt in enumerate(times):
+    for ntime, dt in enumerate(times_array):
         sami_cart = convert_to_cart(
             sami_data['grid']['mlat'].flatten()[norm_alts],
             sami_data['grid']['mlon'].flatten()[norm_alts],
@@ -198,7 +209,7 @@ def main(args):
         args.dtime_storm_start.ljust(14, '0'), '%Y%m%d%H%M%S')
 
     # Read in SAMI data
-    global sami_data
+    global sami_data, times_array
     sami_data, times_array = SAMI.read_sami_data(
         sami_data_path=args.sami_data_path,
         dtime_sim_start=dtime_sim_start,
@@ -211,8 +222,24 @@ def main(args):
 
     out_lats, out_lons, out_alts = set_up_interpolations(args=args)
 
-    preds = do_interpolating(out_lats, out_lons, out_alts, times_array,
-                             columns='all')
+    if args.threading:
+        thread_args = []
+        for col in cols:
+            thread_args.append([out_lats, out_lons, out_alts,
+                                col])
+        with multiprocessing.Pool(processes=args.num_workers) as pool:
+            pred_inter = pool.map(unpack_do_interpolating, thread_args)
+
+        preds_cleaned = {}
+        for p in pred_inter:
+            for k in p.keys():
+                preds_cleaned[k] = p[k]
+        preds = preds_cleaned
+        del preds_cleaned, preds_inter
+
+    else:
+        preds = do_interpolating(out_lats, out_lons, out_alts, times_array,
+                                 columns='all')
 
     print('writing files...')
 
@@ -307,7 +334,7 @@ if __name__ == '__main__':
         action='store', default='all', required=False)
     parser.add_argument(
         '--threading',
-        help='Use threading. Default: False',  # TODO implement threading
+        help='Use threading. Default: False',
         action='store_true', default=False, required=False)
     parser.add_argument(
         '--num_workers', type=int,
