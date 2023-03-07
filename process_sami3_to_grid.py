@@ -2,6 +2,7 @@
 import argparse
 # import re
 import datetime
+import os
 
 import numpy as np
 from spacepy.coordinates import Coords
@@ -243,18 +244,19 @@ def main(args):
 
     print('writing files...')
 
-    np.array(times_array).tofile(args.data_out_path + 'times',
+    np.array(times_array).tofile(os.path.join(args.data_out_path, 'times'),
                                  format='%s', sep=',')
-    out_lats.tofile(args.data_out_path + 'out-lats', sep=',')
-    out_lons.tofile(args.data_out_path + 'out-lons', sep=',')
-    out_alts.tofile(args.data_out_path + 'out-alts', sep=',')
+    out_lats.tofile(os.path.join(args.data_out_path, 'out-lats'), sep=',')
+    out_lons.tofile(os.path.join(args.data_out_path, 'out-lons'), sep=',')
+    out_alts.tofile(os.path.join(args.data_out_path, 'out-alts'), sep=',')
 
-    np.array(preds[cols[0]].shape).tofile(
-        args.data_out_path + 'out-shape', sep=',')
+    np.array(preds[cols[0]].shape).tofile(os.path.join(
+        args.data_out_path, 'out-shape', sep=','))
 
     for col in cols:
 
-        preds[col].tofile(args.data_out_path + 'preds-' + col, sep=',')
+        preds[col].tofile(os.path.join(
+            args.data_out_path, 'preds-' + col), sep=',')
 
 
 if __name__ == '__main__':
@@ -342,8 +344,8 @@ if __name__ == '__main__':
         action='store', default=48, required=False)
     parser.add_argument(
         '--data_out_path', type=str,
-        help='Path to save data to. Default: ./data_dir',
-        action='store', default='./data_dir', required=False)
+        help='Path to save data to. Default: ./data_dir/',
+        action='store', default='./data_dir/', required=False)
     parser.add_argument(
         '--info', help='Print run information. Will be a lot',
         action='store_true', required=False, default=False)
