@@ -284,17 +284,6 @@ def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
                   'ndens': 'denn7u.dat'}
 
     sami_data = {}
-    # handle single time, or time range (also check for errors)
-    if t_start_idx is None and t_end_idx is None:
-        chop_times = False
-    elif t_start_idx is not None and t_end_idx is not None:
-        ntimes = t_end_idx - t_start_idx
-
-    else:
-        raise ValueError(
-            'You must specify both t_start_idx and t_end_idx!')
-
-    print('t_start, t_end', t_end_idx, t_start_idx)
 
     # Check cols:
     if cols == 'all':
