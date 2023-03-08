@@ -92,10 +92,11 @@ def main(args):
     else:
         cols = []
         for c in args.cols:
-            try:
+            if c in gitm_colnames_friendly.keys():
                 cols.append(c)
-            except KeyError:
-                raise ValueError('col %s not found' % c)
+            else:
+                raise ValueError('col %s not found in: \n' %
+                                 c, gitm_colnames_friendly.keys())
 
     # lat lims:
     global global_lat_lim
@@ -170,6 +171,9 @@ def main(args):
                         pbar.update(1)
 
         else:
+            pbar = tqdm(
+                total=len(cols) * len(gitm_alt_idxs) * len(gitm_keo_lons),
+                desc='keogram making')
             for alt_idx in gitm_alt_idxs:
                 for real_lon in gitm_keo_lons:
                     for col in cols:
@@ -177,6 +181,7 @@ def main(args):
                                   namecol=col, save_or_show=args.save_or_show,
                                   outliers=args.outliers,
                                   figtype=args.figtype)
+            pbar.update()
 
     if args.map:
         print("Making map")
@@ -194,6 +199,8 @@ def main(args):
                     for _ in pool.imap_unordered(thread_call_maps, arg_arr):
                         pbar.update(1)
         else:
+            pbar = tqdm(total=len(gitm_alt_idxs) * len(times) * len(cols),
+                        desc='map making')
             for alt_idx in gitm_alt_idxs:
                 for col in cols:
                     numcol = cols.index(col)
@@ -204,6 +211,7 @@ def main(args):
                                       save_or_show=args.save_or_show,
                                       figtype=args.figtype,
                                       outliers=args.outliers)
+                            pbar.update()
 
 
 def read_gitm_into_nparrays(flist):
@@ -423,9 +431,13 @@ def make_a_keo(
             try:
                 plt.savefig(fname)
             except FileNotFoundError:
-                directory_list = os.path.join(fname).split("/")[:-1]
-                os.makedirs("/" + os.path.join(*directory_list))
-                plt.savefig(fname)
+                try:
+                    directory_list = os.path.join(fname).split("/")[:-1]
+                    os.makedirs(os.path.join(*directory_list))
+                    plt.savefig(fname)
+                except PermissionError:
+                    print("Permission denied. Cannot save plot.")
+                    print(" tried writing to: ", fname)
             plt.close("all")
     else:
         raise ValueError(
@@ -632,7 +644,7 @@ def draw_map(
             except FileNotFoundError:
                 try:
                     directory_list = os.path.join(fname).split("/")[:-1]
-                    os.makedirs("/" + os.path.join(*directory_list))
+                    os.makedirs(os.path.join(*directory_list))
                     plt.savefig(fname)
                 except FileExistsError:
                     # sometimes when we make too many plots in the same
