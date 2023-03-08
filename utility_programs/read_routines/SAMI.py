@@ -39,48 +39,54 @@ def get_grid_elems_from_parammod(sami_data_path):
     nl = 0
     nt = 0
 
-    with open(os.path.join(sami_data_path, 'parameter_mod.f90'), 'r') as fp:
-        # read all lines in a list
-        lines = fp.readlines()
-        for line in lines:
-            # check if string present on a current line
+    try:
+        with open(os.path.join(sami_data_path,
+                               'parameter_mod.f90'), 'r') as fp:
+            # read all lines in a list
+            lines = fp.readlines()
+            for line in lines:
+                # check if string present on a current line
 
-            if not found[0]:
-                if line.find('nz0') != -1:
-                    nz0 = []
-                    for char in line:
-                        if char.isdigit():
-                            nz0.append(char)
-                    if len(nz0[1:4]) == 3:
-                        nz = int(''.join(nz0[1:4]))
-                        found[0] = True
+                if not found[0]:
+                    if line.find('nz0') != -1:
+                        nz0 = []
+                        for char in line:
+                            if char.isdigit():
+                                nz0.append(char)
+                        if len(nz0[1:4]) == 3:
+                            nz = int(''.join(nz0[1:4]))
+                            found[0] = True
 
-            if not found[1]:
-                if line.find('nf') != -1:
-                    nf = []
-                    for char in line:
-                        if char.isdigit():
-                            nf.append(char)
-                    nf = int(''.join(nf))
-                    found[1] = True
+                if not found[1]:
+                    if line.find('nf') != -1:
+                        nf = []
+                        for char in line:
+                            if char.isdigit():
+                                nf.append(char)
+                        nf = int(''.join(nf))
+                        found[1] = True
 
-            if not found[2][0]:
-                if line.find('nl ') != -1:
-                    nl = []
-                    for char in line:
-                        if char.isdigit():
-                            nl.append(char)
-                    nl = int(''.join(nl))
-                    found[2][0] = True
+                if not found[2][0]:
+                    if line.find('nl ') != -1:
+                        nl = []
+                        for char in line:
+                            if char.isdigit():
+                                nl.append(char)
+                        nl = int(''.join(nl))
+                        found[2][0] = True
 
-            if not found[2][1]:
-                if line.find('numwork ') != -1:
-                    numwork = []
-                    for char in line:
-                        if char.isdigit():
-                            numwork.append(char)
-                    numwork = int(''.join(numwork))
-                    found[2][1] = True
+                if not found[2][1]:
+                    if line.find('numwork ') != -1:
+                        numwork = []
+                        for char in line:
+                            if char.isdigit():
+                                numwork.append(char)
+                        numwork = int(''.join(numwork))
+                        found[2][1] = True
+    except FileNotFoundError:
+        print('Could not read file! Check that the path is correct.',
+              'here is what I see in %s:' % sami_data_path,)
+        print(os.listdir(sami_data_path))
 
     # time
     with open(os.path.join(sami_data_path, 'time.dat'), 'r') as fp:
