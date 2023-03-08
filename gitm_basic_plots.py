@@ -10,6 +10,7 @@ import geopandas
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from aetherpy.io import read_routines
 from scipy import signal
 from tqdm.auto import tqdm
@@ -98,13 +99,12 @@ def main(args):
                 raise ValueError('col %s not found in: \n' %
                                  c, gitm_colnames_friendly.keys())
 
-    # lat lims:
-    global global_lat_lim
-    global_lat_lim = args.lat_lim
-
     # Lon to keo:
     global gitm_keo_lons
     gitm_keo_lons = args.keo_lons
+
+    global keo_lat_lim
+    keo_lat_lim = args.keo_lat_lim
 
     global out_path
     out_path = args.out_path
@@ -137,6 +137,12 @@ def main(args):
     global times, gitm_grid, gitm_vars, gitm_bins
     times, gitm_grid, gitm_vars, gitm_bins = read_gitm_into_nparrays(
         gitm_files[plot_start_idx:plot_end_idx])
+
+    print(gitm_vars, cols, gitm_bins.shape)
+
+    global hrs_since_storm_onset
+    hrs_since_storm_onset = np.array([(i - pd.Timestamp(dtime_storm_start))
+                                      / pd.Timedelta('1 hour') for i in times])
 
     global lats, lons, alts
     lats, lons, alts = (
@@ -180,8 +186,10 @@ def main(args):
                         call_keos(alt_idx=alt_idx, real_lon=real_lon,
                                   namecol=col, save_or_show=args.save_or_show,
                                   outliers=args.outliers,
+                                  keo_lat_lim=args.keo_lat_lim,
                                   figtype=args.figtype)
-            pbar.update()
+                        pbar.update()
+            pbar.close()
 
     if args.map:
         print("Making map")
@@ -201,17 +209,18 @@ def main(args):
         else:
             pbar = tqdm(total=len(gitm_alt_idxs) * len(times) * len(cols),
                         desc='map making')
-            for alt_idx in gitm_alt_idxs:
-                for col in cols:
-                    numcol = cols.index(col)
-                    for nalt in gitm_alt_idxs:
-                        for dtime_real in times:
-                            call_maps(nalt, dtime_real=dtime_real,
-                                      numcol=numcol,
-                                      save_or_show=args.save_or_show,
-                                      figtype=args.figtype,
-                                      outliers=args.outliers)
-                            pbar.update()
+
+            for col in cols:
+                numcol = cols.index(col)
+                for nalt in gitm_alt_idxs:
+                    for dtime_real in times:
+                        call_maps(nalt, dtime_real=dtime_real,
+                                  numcol=numcol,
+                                  save_or_show=args.save_or_show,
+                                  figtype=args.figtype,
+                                  outliers=args.outliers)
+                        pbar.update()
+            pbar.close()
 
 
 def read_gitm_into_nparrays(flist):
@@ -246,17 +255,16 @@ def read_gitm_into_nparrays(flist):
     gitmvars = [i for i in f["vars"][3:] if i in cols]
 
     gitmtimes = []
-    gitmbins = np.zeros([len(flist), len(f["vars"]) - 3, nlons, nlats, nalts])
+    gitmbins = np.zeros([len(flist), len(cols), nlons, nlats, nalts])
 
     for ifile, file_name in enumerate(tqdm(flist)):
         f = read_routines.read_gitm_file(file_name)
 
         gitmtimes.append(f["time"])  # times
 
-        for var in cols:
-            num_v = f["vars"].index(var)
-            # -3 is to adjust for grid, 2's are for ghost cells
-            gitmbins[ifile, num_v - 3] = f[num_v][2:-2, 2:-2, 2:-2]
+        for num_var, real_var in enumerate(gitmvars):
+            num_v_src = f["vars"].index(real_var)
+            gitmbins[ifile, num_var] = f[num_v_src][2:-2, 2:-2, 2:-2]
 
     gitmgrid["latitude"] = np.rad2deg(gitmgrid["latitude"])
     gitmgrid["longitude"] = np.rad2deg(gitmgrid["longitude"])
@@ -280,25 +288,25 @@ def read_gitm_into_nparrays(flist):
     gitmbins = gitmbins[:, :, new_order, :, :]
     gitmgrid["longitude"] = np.sort(gitmgrid["longitude"], axis=0)
 
-    # enforce lat_lim:
-    if global_lat_lim != 90:
-        lat_mask = (gitmgrid["latitude"] >= -global_lat_lim) & (
-            gitmgrid["latitude"] <= global_lat_lim)
-        gitmgrid["latitude"] = gitmgrid["latitude"][lat_mask]
-        num_lats_in = len(np.unique(gitmgrid["latitude"]))
-        gitmbins = gitmbins[:, :, lat_mask].reshape(
-            len(flist),
-            len(gitm_colnames_friendly.keys()),
-            nlons,
-            num_lats_in,
-            nalts)
+    # # enforce lat_lim:
+    # if global_lat_lim != 90:
+    #     lat_mask = (gitmgrid["latitude"] >= -global_lat_lim) & (
+    #         gitmgrid["latitude"] <= global_lat_lim)
+    #     gitmgrid["latitude"] = gitmgrid["latitude"][lat_mask]
+    #     num_lats_in = len(np.unique(gitmgrid["latitude"]))
+    #     gitmbins = gitmbins[:, :, lat_mask].reshape(
+    #         len(flist),
+    #         len(gitm_colnames_friendly.keys()),
+    #         nlons,
+    #         num_lats_in,
+    #         nalts)
 
-        gitmgrid["longitude"] = gitmgrid["longitude"][lat_mask].reshape(
-            nlons, num_lats_in, nalts)
-        gitmgrid["altitude"] = gitmgrid["altitude"][lat_mask].reshape(
-            nlons, num_lats_in, nalts)
-        gitmgrid['latitude'] = gitmgrid['latitude'].reshape(
-            nlons, num_lats_in, nalts)
+    #     gitmgrid["longitude"] = gitmgrid["longitude"][lat_mask].reshape(
+    #         nlons, num_lats_in, nalts)
+    #     gitmgrid["altitude"] = gitmgrid["altitude"][lat_mask].reshape(
+    #         nlons, num_lats_in, nalts)
+    #     gitmgrid['latitude'] = gitmgrid['latitude'].reshape(
+    #         nlons, num_lats_in, nalts)
 
     return gitmtimes, gitmgrid, gitmvars, gitmbins
 
@@ -369,6 +377,7 @@ def make_a_keo(
         x_label="Hours since storm onset",
         save_or_show="save",
         fname=None,
+        keo_lat_lim=90,
         plot_extent=None,
         OVERWRITE=False):
     """
@@ -399,17 +408,17 @@ def make_a_keo(
         if not OVERWRITE:
             raise ValueError("We cannot overwrite the file: " + str(fname))
     fig = plt.figure(figsize=(10, 7))
-    if global_lat_lim:
-        if arr.shape.index(len(lats)) == 0:
-            idx_limit = np.argmin(np.abs(lats - global_lat_lim))
-            arr = arr[-idx_limit:idx_limit, :]
-        elif arr.shape.index(len(lats)) == 1:
-            idx_limit = np.argmin(np.abs(lats - global_lat_lim))
-            arr = arr[:, -idx_limit:idx_limit]
+
+    if plot_extent is None:
+        hrs_start = hrs_since_storm_onset[0]
+        hrs_end = hrs_since_storm_onset[-1]
+        lat_start = -keo_lat_lim
+        lat_end = keo_lat_lim
+        plot_extent = [hrs_start, hrs_end, lat_start, lat_end]
 
     plt.imshow(
         arr.T,
-        extent=plot_extent if plot_extent else None,
+        extent=plot_extent,
         aspect="auto",
         cmap="viridis",
         origin="lower",
@@ -455,6 +464,7 @@ def call_keos(
         save_or_show="show",
         return_figs=False,
         figtype="all",
+        keo_lat_lim=90,
         outliers=False,
         vlims=None):
 
@@ -495,6 +505,9 @@ def call_keos(
     real_lon = lons[lon_idx]
     data = gitm_bins[:, numcol, lon_idx, :, alt_idx].copy()
     bandpass = fits_gitm[:, numcol, lon_idx, :, alt_idx].copy()
+    if np.sum(data) == 0:
+        raise ValueError("No data at this altitude and longitude!",
+                         data.shape, real_lon, namecol, numcol)
     real_alt = alts[alt_idx]
     percent = 100 * (data - bandpass) / bandpass
 
@@ -526,6 +539,7 @@ def call_keos(
             title,
             cbarlims=(vmin_fits, vmax_fits),
             cbar_name=color_label,
+            keo_lat_lim=keo_lat_lim,
             save_or_show=save_or_show,
             fname=fname,)
         made_plot = True
@@ -547,6 +561,7 @@ def call_keos(
         make_a_keo(
             data,
             title,
+            keo_lat_lim=keo_lat_lim,
             cbarlims=(vmin_bins, vmax_bins),
             cbar_name=color_label,
             save_or_show=save_or_show,
@@ -570,6 +585,7 @@ def call_keos(
         make_a_keo(
             percent,
             title,
+            keo_lat_lim=keo_lat_lim,
             cbarlims=(vmin_diffs, vmax_diffs),
             cbar_name=color_label,
             save_or_show=save_or_show,
@@ -676,6 +692,7 @@ def call_maps(
         save_or_show="show",
         return_figs=False,
         figtype="all",
+        lat_lim=[-90, 90],
         diffs=[1, 2, 3, 5, 10, 30, 50],
         outliers=False):
 
@@ -877,8 +894,8 @@ if __name__ == "__main__":
         'Options: raw, filt, diffs. Default: all')
 
     parser.add_argument(
-        "--lat_lim", type=float, default=90, action='store',
-        help="limit plotted latitudes to this range")
+        "--keo_lat_lim", type=float, default=90, action='store',
+        help="limit plotted latitudes to this +/- in keos")
 
     parser.add_argument(
         '--threading',
