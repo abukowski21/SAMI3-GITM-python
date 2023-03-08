@@ -1,18 +1,20 @@
-import gc
 import argparse
-import geopandas
-from scipy import signal
-from aetherpy.io import read_routines
-from utility_programs.plot_help import UT_from_Storm_onset
 import datetime
-import time
-import numpy as np
-from multiprocessing import Pool
+import gc
+import glob
 import os
-from tqdm.auto import tqdm
+import time
+from multiprocessing import Pool
+
+import geopandas
 import matplotlib
 import matplotlib.pyplot as plt
-import glob
+import numpy as np
+from aetherpy.io import read_routines
+from scipy import signal
+from tqdm.auto import tqdm
+
+from utility_programs.plot_help import UT_from_Storm_onset
 
 matplotlib.use("Agg")
 
@@ -23,7 +25,7 @@ def main(args):
     """Main plotting routine`.
 
     Args:
-        args (_type_): _description_
+        args (namespace): alll the args
 
     Raises:
         ValueError: _description_
@@ -880,9 +882,6 @@ if __name__ == "__main__":
         "-f", "--file-type", type=str, nargs="+",
         default="3DALL*",
         help="which filetype to plot, e.g. 3DALL* or 2DANC*",)
-
-    parser.add_argument(
-        "-a", "--alt", type=int, nargs="+", help="which altitude to plot at")
 
     parser.add_argument(
         "-o", "--outliers", action="store_true",
