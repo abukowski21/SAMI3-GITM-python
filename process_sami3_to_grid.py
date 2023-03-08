@@ -274,7 +274,7 @@ if __name__ == '__main__':
         action='store')
     parser.add_argument(
         '-sami_data_path', type=str,
-        help='Path to SAMI data', default='./data_dir', action='store')
+        help='Path to SAMI data', default='./sami_dir', action='store')
     parser.add_argument(
         '--out_lats', type=str,
         help='List of latitudes to interpolate to. Format: [lat1, lat2, lat3]',
