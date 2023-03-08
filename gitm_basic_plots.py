@@ -826,6 +826,7 @@ if __name__ == "__main__":
         'dtime_storm_start',
         help='Datetime of storm start. Format YYYYMMDDHHmmss',
         action='store')
+    
     parser.add_argument(
         '-gitm_data_path', type=str,
         help='Path to gitm data', default='./gitm_dir', action='store')
@@ -869,6 +870,7 @@ if __name__ == "__main__":
         '--threading',
         help='Use threading. Default: False',
         action='store_true', default=False, required=False)
+    
     parser.add_argument(
         '--num_workers', type=int,
         help='Number of workers to use. Default: 48',
