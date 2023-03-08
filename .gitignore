@@ -8,8 +8,15 @@
 
 
 #Plotting stuff
-data_dir
 *.png
 *.mpy
 *.mov
 
+#data_directories
+data_dir
+myrun
+run
+data
+gitm_data
+sami_data
+run2
