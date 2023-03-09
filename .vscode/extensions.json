@@ -6,7 +6,6 @@
 		"njpwerner.autodocstring",
 		"github.copilot",
 		"ms-toolsai.jupyter",
-		"ms-python.vscode-pylance",
 		"ms-python.python",
 		"kevinrose.vsc-python-indent",
 		"ms-vscode-remote.remote-ssh",
