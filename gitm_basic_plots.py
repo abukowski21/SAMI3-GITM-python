@@ -136,7 +136,7 @@ def main(args):
     # Read in grid & data files.
     global times, gitm_grid, gitm_vars, gitm_bins
     times, gitm_grid, gitm_vars, gitm_bins = read_gitm_into_nparrays(
-        gitm_files[plot_start_idx:plot_end_idx])
+        gitm_files[plot_start_idx:plot_end_idx], cols)
 
     print(gitm_vars, cols, gitm_bins.shape)
 
@@ -223,7 +223,7 @@ def main(args):
             pbar.close()
 
 
-def read_gitm_into_nparrays(flist):
+def read_gitm_into_nparrays(flist, cols):
     """reads a list of gitm filenames and returns a few numpy arrays.
 
     Parameters
