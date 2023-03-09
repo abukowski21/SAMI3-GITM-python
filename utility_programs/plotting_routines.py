@@ -70,9 +70,13 @@ def make_a_keo(
             try:
                 plt.savefig(fname)
             except FileNotFoundError:
-                directory_list = os.path.join(fname).split("/")[:-1]
-                os.makedirs("/" + os.path.join(*directory_list))
-                plt.savefig(fname)
+                try:
+                    directory_list = os.path.join(fname).split("/")[:-1]
+                    os.makedirs(os.path.join(*directory_list))
+                    plt.savefig(fname)
+                except PermissionError:
+                    print("Permission denied. Cannot save plot.")
+                    print(" tried writing to: ", fname)
             plt.close("all")
     else:
         raise ValueError(
@@ -134,7 +138,7 @@ def draw_map(
             except FileNotFoundError:
                 try:
                     directory_list = os.path.join(fname).split("/")[:-1]
-                    os.makedirs("/" + os.path.join(*directory_list))
+                    os.makedirs(os.path.join(*directory_list))
                     plt.savefig(fname)
                 except FileExistsError:
                     # sometimes when we make too many plots in the same
