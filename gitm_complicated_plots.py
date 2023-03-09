@@ -140,16 +140,20 @@ def main(args):
                     print('No 2DANC files found, but 3DALL files found.')
                     CALC_TEC = True
                     threedall = True
+                    twodanc = False
+                    del gitm_colnames_friendly['Vertical TEC']
+                    gitm_colnames_friendly['[e-]'] = 'Vertical TEC'
                 else:
                     raise ValueError("No GITM Binary files found!",
                                      "found these files: ",
                                      os.listdir(idir), "in directory: ", idir,
                                      'gitm_files_all: ', gitm_files_all,
                                      'bin' in gitm_files_all)
+
     if threedall and not twodanc:
         gitm_files = [gitm_files_3dall]
         if any('TEC' in x for x in cols):
-            cols[cols.index('Vertical TEC')] = 'edens'
+            cols[cols.index('Vertical TEC')] = '[e-]'
     elif twodanc and not threedall:
         gitm_files = [gitm_files_2danc]
     elif threedall and twodanc:
@@ -197,12 +201,27 @@ def main(args):
     global times, gitm_grid, gitm_vars, gitm_bins
     times, gitm_grid, gitm_vars, gitm_bins = read_gitm_into_nparrays(
         gitm_files[0][plot_start_idx:plot_end_idx], cols)
-    print(gitm_vars, gitm_bins.shape, np.sum(gitm_bins[0, :, :, :, :]))
 
     if TWO_FILES:
         global times2, gitm_grid2, gitm_vars2, gitm_bins2
         times2, gitm_grid2, gitm_vars2, gitm_bins2 = read_gitm_into_nparrays(
             gitm_files[1][plot_start_idx:plot_end_idx])
+
+    global lats, lons, alts
+    lats, lons, alts = (
+        np.unique(gitm_grid["latitude"]),
+        np.unique(gitm_grid["longitude"]),
+        np.unique(gitm_grid["altitude"]))
+    if TWO_FILES:
+        lats2, lons2, alts2 = (
+            np.unique(gitm_grid2["latitude"]),
+            np.unique(gitm_grid2["longitude"]),
+            np.unique(gitm_grid2["altitude"]))
+
+        if lats2 != lats or lons2 != lons:
+            raise ValueError("GITM grids are not the same!")
+        print('alts2 has %i unique values out of %i total values'
+              % (len(alts2), len(gitm_grid2["altitude"])))
 
     if CALC_TEC:
         global tec, tec_filt
@@ -218,27 +237,10 @@ def main(args):
         global fits_gitm2
         fits_gitm2 = make_fits(gitm_bins2)
 
-    global lats, lons, alts
-    lats, lons, alts = (
-        np.unique(gitm_grid["latitude"]),
-        np.unique(gitm_grid["longitude"]),
-        np.unique(gitm_grid["altitude"]))
-
     if args.gitm_alt_idxs == -1:
         gitm_alt_idxs = list(range(len(alts)))
     else:
         gitm_alt_idxs = args.gitm_alt_idxs
-
-    if TWO_FILES:
-        lats2, lons2, alts2 = (
-            np.unique(gitm_grid2["latitude"]),
-            np.unique(gitm_grid2["longitude"]),
-            np.unique(gitm_grid2["altitude"]))
-
-        if lats2 != lats or lons2 != lons:
-            raise ValueError("GITM grids are not the same!")
-        print('alts2 has %i unique values out of %i total values'
-              % (len(alts2), len(gitm_grid2["altitude"])))
 
     if args.keogram:
         pbar = tqdm(total=len(gitm_alt_idxs) * len(gitm_keo_lons) * len(cols),
@@ -249,7 +251,7 @@ def main(args):
                     call_keos(real_lon=real_lon,
                               namecol=col, save_or_show=args.save_or_show,
                               outliers=args.outliers,
-                              figtype=args.figtype,
+                              figtype=args.data_to_plot,
                               TWO_FILES=TWO_FILES,)
                     pbar.update(len(gitm_alt_idxs))
                 else:
@@ -257,7 +259,7 @@ def main(args):
                         call_keos(alt_idx=alt_idx, real_lon=real_lon,
                                   namecol=col, save_or_show=args.save_or_show,
                                   outliers=args.outliers,
-                                  figtype=args.figtype,
+                                  figtype=args.data_to_plot,
                                   TWO_FILES=TWO_FILES,)
                         pbar.update(1)
         pbar.close()
@@ -272,7 +274,7 @@ def main(args):
                               namecol=col,
                               save_or_show=args.save_or_show,
                               outliers=args.outliers,
-                              figtype=args.figtype,
+                              figtype=args.data_to_plot,
                               TWO_FILES=TWO_FILES,)
                     pbar.update(1)
         pbar.close()
@@ -645,12 +647,12 @@ def get_tec_data(CALC_TEC, file=1):
         data = np.zeros_like(b[:, numcol, :, :, 0])
         for ilat in range(len(lats)):
             for ilon in range(len(lons)):
-                for itime in times:
+                for itime in range(len(times)):
                     vtec = integ.simps(b[
-                        itime, gitm_vars.index('[e-]'), :, ilat, :],
-                        gitm_grid['altitude'][:, ilat, :], "avg")
-                data[itime, ilat] = vtec
-                bandpass = make_fits(data)
+                        itime, gitm_vars.index('[e-]'), ilon, ilat, :],
+                        gitm_grid['altitude'][ilon, ilat, :], "avg")
+                data[itime, ilon, ilat] = vtec
+        bandpass = make_fits(data)
     return data, bandpass
 
 
@@ -695,7 +697,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--data_to_plot', type=str, default="diff",
         help="""What data to plot. Options are: diff, bandpass, or raw.
-                Default is diff.
+                Default is diff. Use raw or bandpass with two files.
                 NOTE: this is the type of data plot if we choose 2 paths.""")
 
     parser.add_argument(
@@ -713,6 +715,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "-k", "--keogram", action="store_true",
         help="do you want to make a keogram?")
+
+    parser.add_argument(
+        '--save_or_show', type=str,
+        action='store', default='save', required=False,
+        help='Save or show plots. Default: save')
+
+    parser.add_argument(
+        "-o", "--outliers", action="store_true",
+        help="do you want to remove outliers")
 
     args = parser.parse_args()
 
