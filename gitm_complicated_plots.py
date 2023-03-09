@@ -98,6 +98,9 @@ def main(args):
     gitm_colnames_friendly = {}
     twodanc = False
     threedall = False
+
+    if type(args.variable) == str:
+        args.variable = [args.variable]
     for c in args.variable:
         if c != 'tec':
             if c in gitm_colnames_friendly_3DALL.keys():
@@ -119,39 +122,51 @@ def main(args):
     for idir in gitm_path:
         if threedall:
             gitm_files_3dall = np.sort(
-                glob.glob(os.path.join(idir, "3DALL*.bin")))
+                glob.glob(os.path.join(idir, "3DALL*")))
             if len(gitm_files_3dall) == 0:
                 raise ValueError("No GITM Binary files found!",
                                  "found these files: ",
                                  os.listdir(idir))
         elif twodanc:
-            gitm_files_2danc = np.sort(
-                glob.glob(os.path.join(idir, "2DANC*.bin")))
+            gitm_files_all = np.sort(
+                glob.glob(os.path.join(idir, "*.bin")))
+            gitm_files_2danc = gitm_files_all[[
+                '2DANC' in x for x in gitm_files_all]]
+
             if len(gitm_files_2danc) == 0:
-                if '3DALL' in os.listdir(idir):
+                gitm_files_3dall = gitm_files_all[[
+                    '3DALL' in x for x in gitm_files_all]]
+                if len(gitm_files_3dall) != 0:
                     print('No 2DANC files found, but 3DALL files found.')
                     CALC_TEC = True
+                    threedall = True
                 else:
                     raise ValueError("No GITM Binary files found!",
                                      "found these files: ",
-                                     os.listdir(idir))
-    if threedall:
-        gitm_files = gitm_files_3dall
-    elif twodanc:
-        gitm_files = gitm_files_2danc
+                                     os.listdir(idir), "in directory: ", idir,
+                                     'gitm_files_all: ', gitm_files_all,
+                                     'bin' in gitm_files_all)
+    if threedall and not twodanc:
+        gitm_files = [gitm_files_3dall]
+        if any('TEC' in x for x in cols):
+            cols[cols.index('Vertical TEC')] = 'edens'
+    elif twodanc and not threedall:
+        gitm_files = [gitm_files_2danc]
+    elif threedall and twodanc:
+        gitm_files = [gitm_files_3dall, gitm_files_2danc]
     else:
         raise ValueError("Something very wrong happened here!")
 
     # lat lims:
-    global global_lat_lim
-    global_lat_lim = args.lat_lim
+    global keo_lat_lim
+    keo_lat_lim = args.keo_lat_lim
 
     # Lon to keo:
     global gitm_keo_lons
     gitm_keo_lons = args.keo_lons
 
     global out_path
-    out_path = args.out_path
+    out_path = args.out_path+'/comp/'
 
     global dtime_storm_start
     dtime_storm_start = datetime.datetime.strptime(
@@ -160,7 +175,7 @@ def main(args):
     # THis presently only works if files are output at the same cadence.
     # Would be a very easy fix to add ability for more general case.
     gitm_dtimes = []
-    for i in gitm_files:
+    for i in gitm_files[0]:
         yy, MM, dd = i[-17:-15], i[-15:-13], i[-13:-11]
         hr, mm, sec = i[-10:-8], i[-8:-6], i[-6:-4]
         gitm_dtimes.append(
@@ -181,7 +196,8 @@ def main(args):
 
     global times, gitm_grid, gitm_vars, gitm_bins
     times, gitm_grid, gitm_vars, gitm_bins = read_gitm_into_nparrays(
-        gitm_files[0][plot_start_idx:plot_end_idx])
+        gitm_files[0][plot_start_idx:plot_end_idx], cols)
+    print(gitm_vars, gitm_bins.shape, np.sum(gitm_bins[0, :, :, :, :]))
 
     if TWO_FILES:
         global times2, gitm_grid2, gitm_vars2, gitm_bins2
@@ -686,6 +702,10 @@ if __name__ == "__main__":
         '--gitm_alt_idxs', type=int, nargs="*",
         default=[5, 10, 15, 22, 30, 45],
         help='Which altitudes to plot. Default: 5,10,15,22,30,45')
+
+    parser.add_argument(
+        "--keo_lat_lim", type=float, default=90, action='store',
+        help="limit plotted latitudes to this +/- in keos")
 
     parser.add_argument(
         "-m", "--map", action="store_true", help="do you want to make a map?")
