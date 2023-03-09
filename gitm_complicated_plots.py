@@ -6,7 +6,7 @@ Currently, the data we can plot are:
     - difference between two bandpass filtered storms
 
 You can set:
-    - column (or "TEC") (TODO)
+    - column (or "TEC")
     - time range
     - oplot winds (TODO)
 
