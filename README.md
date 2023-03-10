@@ -7,9 +7,9 @@ SAMI3 has been modified to accept GITM neutral atmosphere data, but the code sho
 
 All work is being done on the `develop` branch. Here's how to get to it:
 
-`git clone git@github.com:abukowski21/SAMI3-GITM-python.git`
+`git clone` the repository
 
-> or if you don't have github ssh access set up: `git clone https://github.com/abukowski21/SAMI3-GITM-python`
+`cd` into it
 
 `git checkout develop`
 
