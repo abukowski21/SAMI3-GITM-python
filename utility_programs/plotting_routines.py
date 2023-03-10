@@ -25,7 +25,7 @@ def make_a_keo(
     arr: np array
         The data array to be plotted. If grabbing from the gitm array,
         you do not need to transpose.
-    extent: tuple/list
+    plot_extent: tuple/list
         The limits of the plot. [left, right, bottom, top]
     xlabel: string
         self-explanitory
