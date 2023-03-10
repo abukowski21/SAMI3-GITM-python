@@ -6,12 +6,14 @@
 		"njpwerner.autodocstring",
 		"github.copilot",
 		"ms-toolsai.jupyter",
-		"ms-python.python",
 		"kevinrose.vsc-python-indent",
 		"ms-vscode-remote.remote-ssh",
 		"ms-vscode-remote.remote-ssh-edit",
 		"ms-vscode.remote-explorer",
-		"ms-python.flake8"
+		"ms-python.flake8",
+		"ms-python.autopep8",
+		"ms-toolsai.jupyter-keymap",
+		"ms-python.isort"
 	],
 	// List of extensions recommended by VS Code that should not be recommended for users of this workspace.
 	"unwantedRecommendations": []
