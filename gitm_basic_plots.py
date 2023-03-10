@@ -1,7 +1,7 @@
 import argparse
 import datetime
 import gc
-import glob
+from utility_programs.read_routines import GITM
 import os
 import time
 from multiprocessing import Pool
@@ -11,7 +11,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from aetherpy.io import read_routines
 from scipy import signal
 from tqdm.auto import tqdm
 
@@ -77,16 +76,6 @@ def main(args):
         "V!Di!N(north)": "Vi(north)",
         "V!Di!N(up)": "Vi(up)", }
 
-    # files
-    # gitm_files = np.sort(
-    #     glob.glob(os.path.join(args.gitm_data_path, args.file_type)))
-    # if len(gitm_files) == 0:
-    #     raise ValueError("No GITM Binary files found!",
-    #                      "found these files: ",
-    #                      os.listdir(args.gitm_data_path))
-
-    # Columns to plot
-
     global cols
     if args.cols == 'all':
         cols = gitm_colnames_friendly.keys()
@@ -113,32 +102,16 @@ def main(args):
     dtime_storm_start = datetime.datetime.strptime(
         args.dtime_storm_start.ljust(14, '0'), '%Y%m%d%H%M%S')
 
-    # gitm_dtimes = []
-    # for i in gitm_files:
-    #     yy, MM, dd = i[-17:-15], i[-15:-13], i[-13:-11]
-    #     hr, mm, sec = i[-10:-8], i[-8:-6], i[-6:-4]
-    #     gitm_dtimes.append(
-    #         datetime.datetime(
-    #             int("20" + yy), int(MM), int(dd), int(hr), int(mm), int(sec)))
+    # get gitm data!
+    global times, gitm_grid, gitm_bins
+    times, gitm_grid, gitm_bins = GITM.read_gitm_into_nparrays(
+        gitm_dir=args.gitm_path,
+        dtime_storm_start=dtime_storm_start,
+        cols=cols,
+        t_start_idx=args.plot_start_delta,
+        t_end_idx=args.plot_end_delta)
 
-    # plot_start_idx = np.argmin(np.abs(np.array(gitm_dtimes)
-    #                                   - (dtime_storm_start -
-    #                                      datetime.timedelta(
-    #                                          hours=args.plot_start_delta))))
-
-    # plot_end_idx = (np.argmin(np.abs(np.array(gitm_dtimes)
-    #                                  - (dtime_storm_start +
-    #                                     datetime.timedelta(
-    #                                         hours=args.plot_end_delta))))
-    #                 if args.plot_end_delta != -1
-    #                 else -1)
-
-    # Read in grid & data files.
-    global times, gitm_grid, gitm_vars, gitm_bins
-    times, gitm_grid, gitm_vars, gitm_bins = read_gitm_into_nparrays(
-        gitm_files[plot_start_idx:plot_end_idx], cols)
-
-    print(gitm_vars, cols, gitm_bins.shape)
+    print(cols, gitm_bins.shape)
 
     global hrs_since_storm_onset
     hrs_since_storm_onset = np.array([(i - pd.Timestamp(dtime_storm_start))
@@ -221,94 +194,6 @@ def main(args):
                                   outliers=args.outliers)
                         pbar.update()
             pbar.close()
-
-
-def read_gitm_into_nparrays(flist, cols):
-    """reads a list of gitm filenames and returns a few numpy arrays.
-
-    Parameters
-    ----------
-    flist: list
-        List of gitm filenames to read in.
-
-    Returns
-    -------
-    gitmtimes = list
-        Datetimes corresponding to the times of the gitm files.
-    gitmgrid = dict.
-        Holds the gitm grid for reference. lons/lats have been
-        changed to degrees from rads. Ghost cells removed.
-        Keys are ['longitude', 'latitude', 'altitude']
-        Index with gitmgrid[time][key][lon][lat][alt]
-    gitmvars = list
-        The gitm variables.
-    gitmbins = numpy array.
-        All of the gitm data (except grid)
-        index with gitmbins[time,varnumber,lat,lon,alt]
-
-    """
-
-    f = read_routines.read_gitm_file(flist[0])
-    gitmgrid = {f["vars"][k].lower(): f[k][2:-2, 2:-2, 2:-2]
-                for k in [0, 1, 2]}
-    nlons, nlats, nalts = np.array(f[0].shape) - 4  # ghost cells
-    gitmvars = [i for i in f["vars"][3:] if i in cols]
-
-    gitmtimes = []
-    gitmbins = np.zeros([len(flist), len(cols), nlons, nlats, nalts])
-
-    for ifile, file_name in enumerate(tqdm(flist)):
-        f = read_routines.read_gitm_file(file_name)
-
-        gitmtimes.append(f["time"])  # times
-
-        for num_var, real_var in enumerate(gitmvars):
-            num_v_src = f["vars"].index(real_var)
-            gitmbins[ifile, num_var] = f[num_v_src][2:-2, 2:-2, 2:-2]
-
-    gitmgrid["latitude"] = np.rad2deg(gitmgrid["latitude"])
-    gitmgrid["longitude"] = np.rad2deg(gitmgrid["longitude"])
-
-    # Fix the ordering of the longitudes and go from -180-180 not 0->360
-    newlons_for_order = []
-    for ilon in range(len(gitmgrid["longitude"])):
-        oldlon = gitmgrid["longitude"][ilon, 0, 0]
-        if oldlon <= 180:
-            newlons_for_order.append(int(oldlon))
-
-        else:
-            newlons_for_order.append(int(oldlon) - 360)
-            gitmgrid["longitude"][ilon] = gitmgrid["longitude"][ilon] - 360
-
-    new_lons_sorted = np.sort(newlons_for_order)
-    new_order = np.array(
-        [newlons_for_order.index(new_lons_sorted[i])
-         for i in range(len(new_lons_sorted))])
-
-    gitmbins = gitmbins[:, :, new_order, :, :]
-    gitmgrid["longitude"] = np.sort(gitmgrid["longitude"], axis=0)
-
-    # # enforce lat_lim:
-    # if global_lat_lim != 90:
-    #     lat_mask = (gitmgrid["latitude"] >= -global_lat_lim) & (
-    #         gitmgrid["latitude"] <= global_lat_lim)
-    #     gitmgrid["latitude"] = gitmgrid["latitude"][lat_mask]
-    #     num_lats_in = len(np.unique(gitmgrid["latitude"]))
-    #     gitmbins = gitmbins[:, :, lat_mask].reshape(
-    #         len(flist),
-    #         len(gitm_colnames_friendly.keys()),
-    #         nlons,
-    #         num_lats_in,
-    #         nalts)
-
-    #     gitmgrid["longitude"] = gitmgrid["longitude"][lat_mask].reshape(
-    #         nlons, num_lats_in, nalts)
-    #     gitmgrid["altitude"] = gitmgrid["altitude"][lat_mask].reshape(
-    #         nlons, num_lats_in, nalts)
-    #     gitmgrid['latitude'] = gitmgrid['latitude'].reshape(
-    #         nlons, num_lats_in, nalts)
-
-    return gitmtimes, gitmgrid, gitmvars, gitmbins
 
 
 def make_filter(lowcut=100, highcut=30):
