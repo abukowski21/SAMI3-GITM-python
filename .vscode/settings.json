@@ -11,6 +11,9 @@
         "editor.detectIndentation": false
     },
     "python.formatting.autopep8Args": [
-        "--line-length","79"
+        "--max-line-length","79",
+        "--aggressive",
+        "--aggressive",
+        "--aggressive",
     ],
-    "python.formatting.provider": "autopep8",}
+}
