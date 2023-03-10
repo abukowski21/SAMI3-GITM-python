@@ -26,6 +26,7 @@ from gitm_basic_plots import read_gitm_into_nparrays, make_fits
 from gitm_basic_plots import remove_outliers
 import datetime
 import numpy as np
+import pandas as pd
 import os
 from tqdm.auto import tqdm
 import matplotlib
@@ -153,6 +154,7 @@ def main(args):
     if threedall and not twodanc:
         gitm_files = [gitm_files_3dall]
         if any('TEC' in x for x in cols):
+            plot_cols = cols
             cols[cols.index('Vertical TEC')] = '[e-]'
     elif twodanc and not threedall:
         gitm_files = [gitm_files_2danc]
@@ -160,6 +162,9 @@ def main(args):
         gitm_files = [gitm_files_3dall, gitm_files_2danc]
     else:
         raise ValueError("Something very wrong happened here!")
+
+    if not plot_cols:
+        plot_cols = cols
 
     # lat lims:
     global keo_lat_lim
@@ -230,6 +235,10 @@ def main(args):
             global tec2, tec_filt2
             tec2, tec_filt2 = get_tec_data(CALC_TEC, file=2)
 
+    global hrs_since_storm_onset
+    hrs_since_storm_onset = np.array([(i - pd.Timestamp(dtime_storm_start))
+                                      / pd.Timedelta('1 hour') for i in times])
+
     global fits_gitm
     print("Calculating fits. This will take a moment...")
     fits_gitm = make_fits(gitm_bins)
@@ -245,7 +254,7 @@ def main(args):
     if args.keogram:
         pbar = tqdm(total=len(gitm_alt_idxs) * len(gitm_keo_lons) * len(cols),
                     desc='making keograms')
-        for col in cols:
+        for col in plot_cols:
             for real_lon in gitm_keo_lons:
                 if col == 'Vertical TEC':
                     call_keos(real_lon=real_lon,
@@ -259,6 +268,7 @@ def main(args):
                         call_keos(alt_idx=alt_idx, real_lon=real_lon,
                                   namecol=col, save_or_show=args.save_or_show,
                                   outliers=args.outliers,
+                                  OVERWRITE=args.OVERWRITE,
                                   figtype=args.data_to_plot,
                                   TWO_FILES=TWO_FILES,)
                         pbar.update(1)
@@ -268,12 +278,13 @@ def main(args):
         pbar = tqdm(total=len(gitm_alt_idxs) * len(cols) * len(times),
                     desc='making maps')
         for alt_idx in gitm_alt_idxs:
-            for col in cols:
+            for col in plot_cols:
                 for dtime_real in times:
                     call_maps(alt_idx=alt_idx, dtime_real=dtime_real,
                               namecol=col,
                               save_or_show=args.save_or_show,
                               outliers=args.outliers,
+                              OVERWRITE=args.OVERWRITE,
                               figtype=args.data_to_plot,
                               TWO_FILES=TWO_FILES,)
                     pbar.update(1)
@@ -286,9 +297,11 @@ def call_maps(
         dtime_index=None,
         numcol=None,
         namecol=None,
+        OVERWRITE=False,
         save_or_show="show",
         return_figs=False,
         figtype="all",
+        TWO_FILES=False,
         lat_lim=[-90, 90],
         diffs=[1, 2, 3, 5, 10, 30, 50],
         outliers=False):
@@ -381,7 +394,7 @@ def call_maps(
         cbarlims = [vmin_bins, vmax_bins]
         plotting_routines.draw_map(raw, title, cbarlims, fname=fname,
                                    save_or_show=save_or_show,
-                                   extent=[-180, 180, -lat_lim, lat_lim])
+                                   plot_extent=[-180, 180, -90, 90])
         made_plot = True
 
     # filter map
@@ -405,6 +418,7 @@ def call_maps(
             bandpass,
             title,
             cbarlims,
+            OVERWRITE=OVERWRITE,
             save_or_show=save_or_show,
             cbar_label=cbar_label,
             fname=fname,)
@@ -434,6 +448,7 @@ def call_maps(
                     percent,
                     title,
                     cbarlims,
+                    OVERWRITE=OVERWRITE,
                     save_or_show=save_or_show,
                     cbar_label=cbar_label,
                     fname=fname,)
@@ -450,6 +465,7 @@ def call_maps(
                 percent,
                 title,
                 cbarlims,
+                OVERWRITE=OVERWRITE,
                 save_or_show=save_or_show,
                 cbar_label=cbar_label,
                 fname=fname,)
@@ -471,6 +487,7 @@ def call_keos(
         return_figs=False,
         figtype="all",
         outliers=False,
+        OVERWRITE=False,
         vlims=None,
         CALC_TEC=False,
         TWO_FILES=False,):
@@ -542,6 +559,23 @@ def call_keos(
         bandpass = remove_outliers(bandpass)
         percent = remove_outliers(percent)
 
+    # Filter out data, bandpass, percent if keo_lat_lim:
+    if keo_lat_lim:
+        good_lats = []
+        for n, lat in enumerate(lats):
+            if np.abs(lat) <= keo_lat_lim:
+                good_lats.append(n)
+        good_lats = np.sort(good_lats)
+        data = data[:, good_lats]
+        bandpass = bandpass[:, good_lats]
+        percent = percent[:, good_lats]
+
+    hrs_start = hrs_since_storm_onset[0]
+    hrs_end = hrs_since_storm_onset[-1]
+    lat_start = -keo_lat_lim
+    lat_end = keo_lat_lim
+    plot_extent = [hrs_start, hrs_end, lat_start, lat_end]
+
     made_plot = False
 
     if figtype == "all" or "filt" in figtype:
@@ -562,7 +596,9 @@ def call_keos(
             gitm_colnames_friendly[namecol] + ".png",)
         plotting_routines.make_a_keo(
             bandpass,
-            title,
+            plot_extent=plot_extent,
+            title=title,
+            OVERWRITE=OVERWRITE,
             cbarlims=(vmin_fits, vmax_fits),
             cbar_name=color_label,
             save_or_show=save_or_show,
@@ -586,6 +622,8 @@ def call_keos(
         plotting_routines.make_a_keo(
             data,
             title,
+            OVERWRITE=OVERWRITE,
+            plot_extent=plot_extent,
             cbarlims=(vmin_bins, vmax_bins),
             cbar_name=color_label,
             save_or_show=save_or_show,
@@ -609,6 +647,8 @@ def call_keos(
         plotting_routines.make_a_keo(
             percent,
             title,
+            OVERWRITE=OVERWRITE,
+            plot_extent=plot_extent,
             cbarlims=(vmin_diffs, vmax_diffs),
             cbar_name=color_label,
             save_or_show=save_or_show,
@@ -651,7 +691,7 @@ def get_tec_data(CALC_TEC, file=1):
                     vtec = integ.simps(b[
                         itime, gitm_vars.index('[e-]'), ilon, ilat, :],
                         gitm_grid['altitude'][ilon, ilat, :], "avg")
-                data[itime, ilon, ilat] = vtec
+                data[itime, ilon, ilat] = vtec * 1e-16
         bandpass = make_fits(data)
     return data, bandpass
 
@@ -724,6 +764,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outliers", action="store_true",
         help="do you want to remove outliers")
+
+    parser.add_argument(
+        "--OVERWRITE", action="store_true", default=False,
+        help="overwrite existing files?")
 
     args = parser.parse_args()
 
