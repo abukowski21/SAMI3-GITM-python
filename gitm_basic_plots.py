@@ -78,12 +78,12 @@ def main(args):
         "V!Di!N(up)": "Vi(up)", }
 
     # files
-    gitm_files = np.sort(
-        glob.glob(os.path.join(args.gitm_data_path, args.file_type)))
-    if len(gitm_files) == 0:
-        raise ValueError("No GITM Binary files found!",
-                         "found these files: ",
-                         os.listdir(args.gitm_data_path))
+    # gitm_files = np.sort(
+    #     glob.glob(os.path.join(args.gitm_data_path, args.file_type)))
+    # if len(gitm_files) == 0:
+    #     raise ValueError("No GITM Binary files found!",
+    #                      "found these files: ",
+    #                      os.listdir(args.gitm_data_path))
 
     # Columns to plot
 
@@ -113,25 +113,25 @@ def main(args):
     dtime_storm_start = datetime.datetime.strptime(
         args.dtime_storm_start.ljust(14, '0'), '%Y%m%d%H%M%S')
 
-    gitm_dtimes = []
-    for i in gitm_files:
-        yy, MM, dd = i[-17:-15], i[-15:-13], i[-13:-11]
-        hr, mm, sec = i[-10:-8], i[-8:-6], i[-6:-4]
-        gitm_dtimes.append(
-            datetime.datetime(
-                int("20" + yy), int(MM), int(dd), int(hr), int(mm), int(sec)))
+    # gitm_dtimes = []
+    # for i in gitm_files:
+    #     yy, MM, dd = i[-17:-15], i[-15:-13], i[-13:-11]
+    #     hr, mm, sec = i[-10:-8], i[-8:-6], i[-6:-4]
+    #     gitm_dtimes.append(
+    #         datetime.datetime(
+    #             int("20" + yy), int(MM), int(dd), int(hr), int(mm), int(sec)))
 
-    plot_start_idx = np.argmin(np.abs(np.array(gitm_dtimes)
-                                      - (dtime_storm_start -
-                                         datetime.timedelta(
-                                             hours=args.plot_start_delta))))
+    # plot_start_idx = np.argmin(np.abs(np.array(gitm_dtimes)
+    #                                   - (dtime_storm_start -
+    #                                      datetime.timedelta(
+    #                                          hours=args.plot_start_delta))))
 
-    plot_end_idx = (np.argmin(np.abs(np.array(gitm_dtimes)
-                                     - (dtime_storm_start +
-                                        datetime.timedelta(
-                                            hours=args.plot_end_delta))))
-                    if args.plot_end_delta != -1
-                    else -1)
+    # plot_end_idx = (np.argmin(np.abs(np.array(gitm_dtimes)
+    #                                  - (dtime_storm_start +
+    #                                     datetime.timedelta(
+    #                                         hours=args.plot_end_delta))))
+    #                 if args.plot_end_delta != -1
+    #                 else -1)
 
     # Read in grid & data files.
     global times, gitm_grid, gitm_vars, gitm_bins
