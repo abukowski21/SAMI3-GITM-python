@@ -84,7 +84,7 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
                          "found these variables: ",
                          f["vars"])
 
-    gitmbins = np.zeros([len(flist), len(cols), nlons, nlats, nalts])
+    gitmbins = np.zeros([len(flist), len(gitmvars), nlons, nlats, nalts])
 
     for ifile, file_name in enumerate(tqdm(flist)):
         f = read_routines.read_gitm_file(file_name)
