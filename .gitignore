@@ -3,8 +3,6 @@
 *.pyc
 *ynb_checkpoin*
 
-#dev
-.vsc*
 
 
 #Plotting stuff

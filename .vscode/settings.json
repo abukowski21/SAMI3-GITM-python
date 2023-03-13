@@ -1,0 +1,16 @@
+{
+    "python.linting.flake8Enabled": false,
+    "python.linting.enabled": true,
+    "python.linting.mypyEnabled": false,
+    "python.linting.prospectorEnabled": false,
+    "[python]": {
+        "editor.autoClosingBrackets": "always",
+        "editor.autoClosingDelete": "always",
+        "editor.autoClosingQuotes": "always",
+        "editor.defaultFormatter": "ms-python.autopep8",
+        "editor.detectIndentation": false
+    },
+    "python.formatting.autopep8Args": [
+        "--line-length","79"
+    ],
+    "python.formatting.provider": "autopep8",}
