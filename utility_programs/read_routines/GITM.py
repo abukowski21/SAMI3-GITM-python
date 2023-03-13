@@ -43,7 +43,8 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
     if len(flist) == 0:
         raise ValueError("No %s files found in %s" %
                          (gitm_file_pattern, gitm_dir),
-                         "\n \n instead there is: ", os.listdir(gitm_dir))
+                         "\n \n instead there is: ",
+                         glob.glob(os.path.join(gitm_dir, gitm_file_pattern)))
 
     gitm_dtimes = []
     for i in flist:
