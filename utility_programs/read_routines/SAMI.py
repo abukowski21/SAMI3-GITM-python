@@ -9,9 +9,11 @@ read_sami_data:
         t_start_idx: int, optional
         t_end_idx:int, optional
         cols='all', optional
-        help=False,
-        chop_times=False
+        help=False, optional
 
+    returns:
+        sami_data: dict (data, grid as keys)
+        times: np.array of datetime objects
 
     """
 
