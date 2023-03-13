@@ -159,7 +159,6 @@ def main(args):
                         call_keos(alt_idx=alt_idx, real_lon=real_lon,
                                   namecol=col, save_or_show=args.save_or_show,
                                   outliers=args.outliers,
-                                  
                                   keo_lat_lim=args.keo_lat_lim,
                                   figtype=args.figtype)
                         pbar.update()
