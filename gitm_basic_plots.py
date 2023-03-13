@@ -105,7 +105,7 @@ def main(args):
     # get gitm data!
     global times, gitm_grid, gitm_bins
     times, gitm_grid, gitm_bins = GITM.read_gitm_into_nparrays(
-        gitm_dir=args.gitm_path,
+        gitm_dir=args.gitm_data_path,
         dtime_storm_start=dtime_storm_start,
         cols=cols,
         t_start_idx=args.plot_start_delta,
@@ -159,6 +159,7 @@ def main(args):
                         call_keos(alt_idx=alt_idx, real_lon=real_lon,
                                   namecol=col, save_or_show=args.save_or_show,
                                   outliers=args.outliers,
+                                  
                                   keo_lat_lim=args.keo_lat_lim,
                                   figtype=args.figtype)
                         pbar.update()
