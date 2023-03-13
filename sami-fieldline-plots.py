@@ -14,6 +14,7 @@ import os
 import argparse
 import time
 import aacgmv2
+from tqdm.auto import tqdm
 
 
 def make_filter(params=None):
@@ -112,7 +113,7 @@ def draw_field_line_plot(x, y, z, title, interpolate=False,
             except FileNotFoundError:
                 try:
                     directory_list = os.path.join(fname).split('/')[:-1]
-                    os.makedirs('/'+os.path.join(*directory_list))
+                    os.makedirs(os.path.join(*directory_list))
                     plt.savefig(fname)
                 except FileExistsError:
                     # sometimes when we make too many plots in the same
@@ -160,12 +161,15 @@ def main(args):
     if args.cols == 'all':
         cols_to_plot = sami_data['data'].keys()
     else:
-        cols_to_plot = args.cols.split(',')
+        cols_to_plot = args.cols
 
     if args.plot_type == 'all':
         plot_type = ['raw', 'bandpass', 'diff']
     else:
         plot_type = [args.plot_type]
+
+    pbar = tqdm(total=len(mlons_to_plot)*len(cols_to_plot) *
+                len(plot_type)*len(times))
 
     for mlon in mlons_to_plot:
         mask = (sami_data['grid']['mlon'].round(2) == mlon)
@@ -177,15 +181,18 @@ def main(args):
             for type in plot_type:
                 if type == 'raw':
                     data_src = sami_data['data'][col][mask, :]
+                    cbar_lims = [np.min(data_src), np.max(data_src)]
                 elif type == 'bandpass':
                     data_raw = sami_data['data'][col][mask, :]
                     sos = make_filter()
                     data_src = remove_background(data_raw, sos)
+                    cbar_lims = [np.min(data_src), np.max(data_src)]
                 elif type == 'diff':
                     data_raw = sami_data['data'][col][mask, :]
                     sos = make_filter()
                     data_src = remove_background(data_raw, sos)
                     data_src = 100*(data_raw - data_src)/data_raw
+                    cbar_lims = [-3, 3]
                 else:
                     raise ValueError('Invalid plot type')
 
@@ -201,15 +208,19 @@ def main(args):
 
                     title = '%s, MLON = %s, MLT = %s' % (
                         col, str(mlon), str(mlt) + '\n UT from storm onset:' +
-                        UT_from_Storm_onset(dtime))
+                        UT_from_Storm_onset(dtime, dtime_storm_start))
 
-                    fname = os.path.join(args.out_path, col, type, mlon,
+                    fname = os.path.join(args.out_path, col, type,
+                                         str(int(mlon)),
                                          str(nt).rjust(3, '0'))
 
                     draw_field_line_plot(
-                        x, y, data_src[nt], interpolate=args.interpolate,
+                        x, y, data_src[:, nt], interpolate=args.interpolate,
                         cbar_label=col, title=title, fname=fname,
+                        cbar_lims=cbar_lims,
                         save_or_show='save', fpeak_col=fpeak_col)
+
+                    pbar.update()
 
 
 if __name__ == '__main__':
@@ -258,6 +269,11 @@ if __name__ == '__main__':
     parser.add_argument(
         '--fpeak', action='store_true',
         help='whether to plot the fpeak or not. Default: False')
+
+    parser.add_argument(
+        '--plot_type', type=str,
+        default='diff',
+        help='which type of plot? raw, bandpass, diff, or all. Default: diff')
 
     args = parser.parse_args()
 
