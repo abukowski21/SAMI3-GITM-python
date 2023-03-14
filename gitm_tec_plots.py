@@ -195,6 +195,7 @@ def main(args):
                                cbar_name='% over BG of TEC',
                                fname=fname, OVERWRITE=OVERWRITE)
                     pbar.update()
+        pbar.close()
 
     if args.map:
         pbar = tqdm(total=len(times) * len(plot_types),
@@ -269,6 +270,8 @@ def main(args):
                     make_a_map(tec, title, cbar_lims,
                                cbar_label='% over BG of TEC',
                                fname=fname, OVERWRITE=OVERWRITE)
+                    pbar.update()
+        pbar.close()
 
 
 def make_a_keo(
