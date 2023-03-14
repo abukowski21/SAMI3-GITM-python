@@ -73,9 +73,14 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
         flist = flist[:end_idx]
 
     f = read_routines.read_gitm_file(flist[0])
-    gitmgrid = {f["vars"][k].lower(): f[k][2:-2, 2:-2, 2:-2]
-                for k in [0, 1, 2]}
-    nlons, nlats, nalts = np.array(f[0].shape) - 4  # ghost cells
+    if '3DALL' in gitm_file_pattern:
+        gitmgrid = {f["vars"][k].lower(): f[k][2:-2, 2:-2, 2:-2]
+                    for k in [0, 1, 2]}
+        nlons, nlats, nalts = np.array(f[0].shape) - 4  # ghost cells
+    elif '2DANC' in gitm_file_pattern:
+        gitmgrid = {f["vars"][k].lower(): f[k]
+                    for k in [0, 1, 2]}
+        nlons, nlats, nalts = np.array(f[0].shape)  # NO ghost cells
 
     # Don't get these variables
     ignore_cols = ['Longitude', 'Latitude', 'Altitude']
@@ -87,16 +92,24 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
     if len(gitmvars) == 0:  # if no variables found
         raise ValueError("No GITM variables found in file!",
                          "found these variables: ",
-                         f["vars"])
-
-    gitmbins = np.zeros([len(flist), len(gitmvars), nlons, nlats, nalts])
+                         f["vars"], ' cols we want are: ', cols,
+                         ' ignore cols: ', ignore_cols)
+    try:
+        gitmbins = np.zeros([len(flist), len(gitmvars), nlons, nlats, nalts])
+    except ValueError:
+        raise ValueError("GITM file has different dimensions than expected!",
+                         len(flist), len(gitmvars), nlons, nlats, nalts,
+                         '\n flist, gitmvars, nlons, nlats, nalts')
 
     for ifile, file_name in enumerate(tqdm(flist)):
         f = read_routines.read_gitm_file(file_name)
 
         for num_var, real_var in enumerate(gitmvars):
             num_v_src = f["vars"].index(real_var)
-            gitmbins[ifile, num_var] = f[num_v_src][2:-2, 2:-2, 2:-2]
+            if '3DALL' in gitm_file_pattern:
+                gitmbins[ifile, num_var] = f[num_v_src][2:-2, 2:-2, 2:-2]
+            elif '2DANC' in gitm_file_pattern:
+                gitmbins[ifile, num_var] = f[num_v_src]
 
     gitmgrid["latitude"] = np.rad2deg(gitmgrid["latitude"])
     gitmgrid["longitude"] = np.rad2deg(gitmgrid["longitude"])
