@@ -36,22 +36,26 @@ def main(args):
     global out_path
     out_path = args.out_path
 
+    global OVERWRITE
+    OVERWRITE = args.overwrite
+
     global dtime_storm_start
     dtime_storm_start = datetime.datetime.strptime(
         args.dtime_storm_start.ljust(14, '0'), '%Y%m%d%H%M%S')
 
     # get gitm data!
     global times, gitm_grid, gitm_tec
-    try:
-        times, gitm_grid, gitm_tec = GITM.read_gitm_into_nparrays(
+    if args.file_type == '2DANC*.bin':
+        times, gitm_grid, gitm_bins = GITM.read_gitm_into_nparrays(
             gitm_dir=args.gitm_data_path,
             gitm_file_pattern=args.file_type,
             dtime_storm_start=dtime_storm_start,
-            cols=['Vertical TEC'],
+            cols=['VerticalTEC'],
             t_start_idx=args.plot_start_delta,
             t_end_idx=args.plot_end_delta)
         CALC_TEC = False
-    except ValueError:
+
+    elif args.file_type == '3DALL*.bin':
         times, gitm_grid, gitm_bins = GITM.read_gitm_into_nparrays(
             gitm_dir=args.gitm_data_path,
             gitm_file_pattern=args.file_type,
@@ -60,16 +64,19 @@ def main(args):
             t_start_idx=args.plot_start_delta,
             t_end_idx=args.plot_end_delta)
         CALC_TEC = True
+    else:
+        raise ValueError("File type not recognized",
+                         "we currently only accept 2DANC*.bin or 3DALL*.bin")
 
     if args.gitm_data_path2:
         TWO_FILES = True
         global times2, gitm_grid2, gitm_tec2
         if not CALC_TEC:
-            times2, gitm_grid2, gitm_tec2 = GITM.read_gitm_into_nparrays(
+            times2, gitm_grid2, gitm_bins2 = GITM.read_gitm_into_nparrays(
                 gitm_dir=args.gitm_data_path,
                 gitm_file_pattern=args.file_type,
                 dtime_storm_start=dtime_storm_start,
-                cols=['Vertical TEC'],
+                cols=['VerticalTEC'],
                 t_start_idx=args.plot_start_delta,
                 t_end_idx=args.plot_end_delta)
         if CALC_TEC:
@@ -89,25 +96,19 @@ def main(args):
     alts = np.unique(gitm_grid['altitude'])
 
     if CALC_TEC:
-        gitm_tec = np.zeros([len(times), len(lons), len(lats)])
+        # gitm_tec = np.zeros([len(times), len(lons), len(lats)])
         # print(gitm_tec.shape, len(lats), len(lons), len(alts))
-        for ilat in range(len(lats)):
-            for ilon in range(len(lons)):
-                for itime in range(len(times)):
-                    vtec = integ.simps(gitm_bins[
-                        itime, 0, ilon, ilat, :],
-                        gitm_grid['altitude'][ilon, ilat, :], "avg")
-                    gitm_tec[itime, ilon, ilat] = vtec * 1e-16
+        gitm_tec = integ.simps(gitm_bins[:, 0, :, :, :], alts, "avg") * 1e-16
 
         if TWO_FILES:
-            gitm_tec2 = np.zeros(len(times), len(lons), len(lats))
-            for ilat in range(len(lats)):
-                for ilon in range(len(lons)):
-                    for itime in range(len(times)):
-                        vtec = integ.simps(gitm_bins2[
-                            itime, 0, ilon, ilat, :],
-                            gitm_grid2['altitude'][ilon, ilat, :], "avg")
-                    gitm_tec2[itime, ilon, ilat] = vtec * 1e-16
+            gitm_tec2 = integ.simps(gitm_bins2[:, 0, :, :, :], alts,
+                                    "avg") * 1e-16
+    else:
+        gitm_tec = gitm_bins.reshape(
+            [len(times), len(lons), len(lats)])
+        if TWO_FILES:
+            gitm_tec2 = gitm_bins2.reshape(
+                [len(times), len(lons), len(lats)])
 
     global hrs_since_storm_onset
     hrs_since_storm_onset = np.array([(i - pd.Timestamp(dtime_storm_start))
@@ -131,12 +132,17 @@ def main(args):
         pbar = tqdm(total=len(gitm_keo_lons) * len(plot_types),
                     desc="Making keograms")
         for real_lon in gitm_keo_lons:
-            lon_idx = lons.index(real_lon)
+            lon_idx = np.argmin(np.abs(lons - real_lon))
+            raw = gitm_tec[:, lon_idx, :].copy()
+            fit = fits_gitm[:, lon_idx, :].copy()
+            if TWO_FILES:
+                raw2 = gitm_tec2[:, lon_idx, :].copy()
+                fit2 = fits_gitm2[:, lon_idx, :].copy()
             for plot_type in plot_types:
                 if plot_type == 'raw':
-                    tec = gitm_tec[:, lon_idx, :]
+                    tec = raw.copy()
                     if TWO_FILES:
-                        tec -= gitm_tec2[:, lon_idx, :]
+                        tec -= raw2.copy()
                         title = "Diff of Raw TEC at lon = {}".format(real_lon)
                     else:
                         title = "Raw TEC at lon = {}".format(real_lon)
@@ -148,13 +154,13 @@ def main(args):
 
                     make_a_keo(tec, title, cbar_lims,
                                cbar_name='Vertically Integrated TEC',
-                               fname=fname)
+                               fname=fname, OVERWRITE=OVERWRITE)
                     pbar.update()
 
                 if plot_type == 'fit':
-                    tec = fits_gitm[:, lon_idx, :]
+                    tec = fit.copy()
                     if TWO_FILES:
-                        tec -= fits_gitm2[:, lon_idx, :]
+                        tec -= fit2.copy()
                         title = "Diff of Fit TEC at lon = {}".format(real_lon)
                     else:
                         title = "Fit TEC at lon = {}".format(real_lon)
@@ -166,17 +172,17 @@ def main(args):
 
                     make_a_keo(tec, title, cbar_lims,
                                cbar_name='Vertically Integrated TEC',
-                               fname=fname)
+                               fname=fname, OVERWRITE=OVERWRITE)
                     pbar.update()
 
                 if plot_type == 'diff':
-                    tec = (100*(gitm_tec[:, lon_idx, :]
-                                - fits_gitm[:, lon_idx, :])
-                           / gitm_tec[:, lon_idx, :])
+                    tec = (100*(raw.copy()
+                                - fit.copy())
+                           / raw.copy())
                     if TWO_FILES:
-                        tec -= (100*(gitm_tec2[:, lon_idx, :]
-                                     - fits_gitm2[:, lon_idx, :])
-                                / gitm_tec2[:, lon_idx, :])
+                        tec -= (100*(raw2.copy()
+                                     - fit2.copy())
+                                / raw2.copy())
                         title = "Diff of % over BG of TEC at lon = {}".format(
                             real_lon)
                     cbar_lims = [-5, 5]
@@ -187,18 +193,23 @@ def main(args):
 
                     make_a_keo(tec, title, cbar_lims,
                                cbar_name='% over BG of TEC',
-                               fname=fname)
+                               fname=fname, OVERWRITE=OVERWRITE)
                     pbar.update()
 
     if args.map:
         pbar = tqdm(total=len(times) * len(plot_types),
                     desc="Making maps")
         for nt, dtime in enumerate(times):
+            raw = gitm_tec[nt, :, :].copy()
+            fit = fits_gitm[nt, :, :].copy()
+            if TWO_FILES:
+                raw2 = gitm_tec2[nt, :, :].copy()
+                fit2 = fits_gitm2[nt, :, :].copy()
             for plot_type in plot_types:
                 if plot_type == 'raw':
-                    tec = gitm_tec[nt, :, :]
+                    tec = raw.copy()
                     if TWO_FILES:
-                        tec -= gitm_tec2[nt, :, :]
+                        tec -= raw2.copy()
                         title = "Diff of Raw TEC at {} from storm onset".\
                             format(UT_from_Storm_onset(
                                 dtime, dtime_storm_start))
@@ -212,13 +223,13 @@ def main(args):
 
                     make_a_map(tec, title, cbar_lims,
                                cbar_label='Vertically Integrated TEC',
-                               fname=fname)
+                               fname=fname, OVERWRITE=OVERWRITE)
                     pbar.update()
 
                 if plot_type == 'fit':
-                    tec = fits_gitm[nt, :, :]
+                    tec = fit.copy()
                     if TWO_FILES:
-                        tec -= fits_gitm2[nt, :, :]
+                        tec -= fit2.copy()
                         title = "Diff of Fit TEC at {} from storm onset".\
                             format(UT_from_Storm_onset(
                                 dtime, dtime_storm_start))
@@ -232,15 +243,16 @@ def main(args):
 
                     make_a_map(tec, title, cbar_lims,
                                cbar_label='Vertically Integrated TEC',
-                               fname=fname)
+                               fname=fname, OVERWRITE=OVERWRITE)
                     pbar.update()
 
                 if plot_type == 'diff':
-                    tec = (100*(gitm_tec[nt, :, :]-fits_gitm[nt, :, :])
-                           / gitm_tec[nt, :, :])
+                    tec = (100*(raw.copy()-fit.copy())
+                           / raw.copy())
+                    break
                     if TWO_FILES:
-                        tec -= (100*(gitm_tec2[nt, :, :]-fits_gitm2[nt, :, :])
-                                / gitm_tec2[nt, :, :])
+                        tec -= (100*(raw2.copy()-fit2.copy())
+                                / raw2.copy())
                         title = ("Diff of % over BG of TEC at " +
                                  UT_from_Storm_onset(
                                      dtime, dtime_storm_start) +
@@ -251,12 +263,12 @@ def main(args):
                                      dtime, dtime_storm_start)))
                     cbar_lims = [-5, 5]
                     fname = os.path.join(
-                        out_path, 'map', "diff", str(nt.rjust(3, '0'))
+                        out_path, 'map', "diff", str(nt).rjust(3, '0')
                         + ".png")
 
                     make_a_map(tec, title, cbar_lims,
                                cbar_label='% over BG of TEC',
-                               fname=fname)
+                               fname=fname, OVERWRITE=OVERWRITE)
 
 
 def make_a_keo(
@@ -515,7 +527,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "-f", "--file-type", type=str,
-        default="3DALL*",
+        default="3DALL*.bin",
         help="which filetype to plot, e.g. 3DALL* or 2DANC* (3DALL default.)",)
 
     parser.add_argument(
@@ -524,6 +536,10 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "-m", "--map", action="store_true", help="do you want to make a map?")
+
+    parser.add_argument(
+        "-o", "--overwrite", action="store_true",
+        help="overwrite existing files?")
 
     args = parser.parse_args()
 
