@@ -73,7 +73,7 @@ def main(args):
         global times2, gitm_grid2, gitm_tec2
         if not CALC_TEC:
             times2, gitm_grid2, gitm_bins2 = GITM.read_gitm_into_nparrays(
-                gitm_dir=args.gitm_data_path,
+                gitm_dir=args.gitm_data_path2,
                 gitm_file_pattern=args.file_type,
                 dtime_storm_start=dtime_storm_start,
                 cols=['VerticalTEC'],
@@ -81,7 +81,7 @@ def main(args):
                 t_end_idx=args.plot_end_delta)
         if CALC_TEC:
             times2, gitm_grid2, gitm_bins2 = GITM.read_gitm_into_nparrays(
-                gitm_dir=args.gitm_data_path,
+                gitm_dir=args.gitm_data_path2,
                 gitm_file_pattern=args.file_type,
                 dtime_storm_start=dtime_storm_start,
                 cols=['[e-]'],
@@ -127,6 +127,12 @@ def main(args):
     else:
         plot_types = [args.figtype]
 
+    cbar_lims_dict = {
+        'TWO_FILES': {
+            'raw': [-5, 5], 'fit': [-5, 5], 'diff': [-10, 10]},
+        'ONE_FILE': {
+            'raw': [0, 70], 'fit': [0, 70], 'diff': [-10, 10]}}
+
     # Now for keos:
     if args.keogram:
         pbar = tqdm(total=len(gitm_keo_lons) * len(plot_types),
@@ -142,11 +148,12 @@ def main(args):
                 if plot_type == 'raw':
                     tec = raw.copy()
                     if TWO_FILES:
-                        tec -= raw2.copy()
+                        tec -= raw2
                         title = "Diff of Raw TEC at lon = {}".format(real_lon)
+                        cbar_lims = cbar_lims_dict['TWO_FILES']['raw']
                     else:
                         title = "Raw TEC at lon = {}".format(real_lon)
-                    cbar_lims = [np.min(tec), np.max(tec)]
+                        cbar_lims = cbar_lims_dict['ONE_FILE']['raw']
                     fname = os.path.join(
                         out_path, 'keo',
                         "raw", "lon" + str(int(real_lon)),
@@ -160,10 +167,12 @@ def main(args):
                 if plot_type == 'fit':
                     tec = fit.copy()
                     if TWO_FILES:
-                        tec -= fit2.copy()
+                        tec -= fit2
                         title = "Diff of Fit TEC at lon = {}".format(real_lon)
+                        cbar_lims = cbar_lims_dict['TWO_FILES']['fit']
                     else:
                         title = "Fit TEC at lon = {}".format(real_lon)
+                        cbar_lims = cbar_lims_dict['ONE_FILE']['fit']
                     cbar_lims = [np.min(tec), np.max(tec)]
                     fname = os.path.join(
                         out_path, 'keo',
@@ -180,12 +189,14 @@ def main(args):
                                 - fit.copy())
                            / raw.copy())
                     if TWO_FILES:
-                        tec -= (100*(raw2.copy()
-                                     - fit2.copy())
-                                / raw2.copy())
+                        tec -= (100*(raw2 - fit2) / raw2.copy())
                         title = "Diff of % over BG of TEC at lon = {}".format(
                             real_lon)
-                    cbar_lims = [-5, 5]
+                        cbar_lims = cbar_lims_dict['TWO_FILES']['diff']
+                    else:
+                        title = "% over BG of TEC at lon = {}".format(
+                            real_lon)
+                        cbar_lims = cbar_lims_dict['ONE_FILE']['diff']
                     fname = os.path.join(
                         out_path, 'keo',
                         'diff', "lon" + str(int(real_lon)),
@@ -210,14 +221,15 @@ def main(args):
                 if plot_type == 'raw':
                     tec = raw.copy()
                     if TWO_FILES:
-                        tec -= raw2.copy()
+                        tec -= raw2
                         title = "Diff of Raw TEC at {} from storm onset".\
                             format(UT_from_Storm_onset(
                                 dtime, dtime_storm_start))
+                        cbar_lims = cbar_lims_dict['TWO_FILES']['raw']
                     else:
                         title = "Raw TEC at {} from storm onset".format(
                             UT_from_Storm_onset(dtime, dtime_storm_start))
-                    cbar_lims = [np.min(gitm_tec), np.max(gitm_tec)]
+                        cbar_lims = cbar_lims_dict['ONE_FILE']['raw']
                     fname = os.path.join(
                         out_path, 'map',
                         "raw", str(nt).rjust(3, '0') + ".png")
@@ -230,14 +242,15 @@ def main(args):
                 if plot_type == 'fit':
                     tec = fit.copy()
                     if TWO_FILES:
-                        tec -= fit2.copy()
+                        tec -= fit2
                         title = "Diff of Fit TEC at {} from storm onset".\
                             format(UT_from_Storm_onset(
                                 dtime, dtime_storm_start))
+                        cbar_lims = cbar_lims_dict['TWO_FILES']['fit']
                     else:
                         title = "Fit TEC at {} from storm onset".format(
                             UT_from_Storm_onset(dtime, dtime_storm_start))
-                    cbar_lims = [np.min(fits_gitm), np.max(fits_gitm)]
+                        cbar_lims = cbar_lims_dict['ONE_FILE']['fit']
                     fname = os.path.join(
                         out_path, 'map',
                         "fit", str(nt).rjust(3, '0') + ".png")
@@ -250,19 +263,18 @@ def main(args):
                 if plot_type == 'diff':
                     tec = (100*(raw.copy()-fit.copy())
                            / raw.copy())
-                    break
                     if TWO_FILES:
-                        tec -= (100*(raw2.copy()-fit2.copy())
-                                / raw2.copy())
+                        tec -= (100*(raw2-fit2) / raw2)
                         title = ("Diff of % over BG of TEC at " +
                                  UT_from_Storm_onset(
                                      dtime, dtime_storm_start) +
                                  " from storm onset")
+                        cbar_lims = cbar_lims_dict['TWO_FILES']['diff']
                     else:
                         title = ("% over BG of TEC at {} from storm onset".
                                  format(UT_from_Storm_onset(
                                      dtime, dtime_storm_start)))
-                    cbar_lims = [-5, 5]
+                        cbar_lims = cbar_lims_dict['ONE_FILE']['diff']
                     fname = os.path.join(
                         out_path, 'map', "diff", str(nt).rjust(3, '0')
                         + ".png")
