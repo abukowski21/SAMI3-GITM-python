@@ -11,7 +11,8 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
                             gitm_file_pattern='3DALL*.bin',
                             cols=['all'],
                             t_start_idx=0, t_end_idx=-1,
-                            century_prefix='20'):
+                            century_prefix='20',
+                            return_vars=False):
     """reads in gitm data into a dictionary of numpy arrays
 
     Args:
@@ -133,4 +134,7 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
     gitmbins = gitmbins[:, :, new_order, :, :]
     gitmgrid["longitude"] = np.sort(gitmgrid["longitude"], axis=0)
 
-    return gitm_dtimes, gitmgrid, gitmbins
+    if return_vars:
+        return gitm_dtimes, gitmgrid, gitmbins, gitmvars
+    else:
+        return gitm_dtimes, gitmgrid, gitmbins
