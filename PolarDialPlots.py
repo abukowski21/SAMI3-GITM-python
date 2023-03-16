@@ -5,8 +5,8 @@ nice and pretty graph.  The user can also select which variable to
 put in which plot.
 
 created mar 15 2023 by aaron
-# """
-# # %%
+ """
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -19,16 +19,10 @@ from tqdm.auto import tqdm
 from utility_programs.plot_help import UT_from_Storm_onset
 import time
 import os
+import datetime
 
 import geopandas
 world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
-
-
-# # %%
-# dials_var = 'AltIntJouleHeating(W/m2)'
-# map_var = 'VerticalTEC'
-
-# # %%
 
 
 def main(args):
@@ -62,6 +56,9 @@ def main(args):
               '\n 1D: \n', var1d)
         return
 
+    dtime_storm_start = datetime.datetime.strptime(
+        args.dtime_storm_start.ljust(14, '0'), '%Y%m%d%H%M%S')
+
     # Read in files, if cut alt, use 3DALL. make sure all vars r there
     # If not, read in 2DANC.
     need_2d = True
@@ -69,28 +66,27 @@ def main(args):
     if args.alt_cut is not None:
         need_2d = False
         times3, gitm_grid3, gitm_f3, gitm_vars3 = GITM.read_gitm_into_nparrays(
-            args.gitm_data_path, args.dtime_start,
+            args.gitm_data_path, dtime_storm_start,
             gitm_file_pattern='3DALL*.bin',
             t_start_idx=args.plot_start_delta,
             t_end_idx=args.plot_end_delta, return_vars=True)
 
         if args.polar_var not in gitm_vars3:
             need_2d = True
+            polar_in_3d = False
         else:
             need_3d = True
             polar_in_3d = True
         if args.map_var not in gitm_vars3:
             need_2d = True
+            map_in_3d = False
         else:
             need_3d = True
             map_in_3d = True
-        if need_3d:
-            gitm_fits3 = filters.make_fits(gitm_f3)
-            percent3 = 100*(gitm_f3 - gitm_fits3)/gitm_f3
 
     if need_2d:
         times2, gitm_grid2, gitm_f2, gitm_vars2 = GITM.read_gitm_into_nparrays(
-            args.gitm_data_path, args.dtime_start,
+            args.gitm_data_path, dtime_storm_start,
             gitm_file_pattern='2DANC*.bin',
             t_start_idx=args.plot_start_delta,
             t_end_idx=args.plot_end_delta, return_vars=True)
@@ -99,25 +95,26 @@ def main(args):
             print('Polar variable %s not found in 3D or 2D files'
                   % args.polar_var, gitm_vars3, gitm_vars2)
             return
+        else:
+            polar_in_3d = False
         if args.map_var not in gitm_vars2:
             print('Map variable %s not found in 3D or 2D files'
                   % args.map_var, gitm_vars3, gitm_vars2)
             return
-        gitm_fits2 = filters.make_fits(gitm_f2)
-        percent2 = 100*(gitm_f2 - gitm_fits2)/gitm_f2
+        else:
+            map_in_3d = False
 
     # alt cuts?
     if args.alt_cut is not None and need_3d is False:
         raise ValueError('Alt cut requested, but no 3D files needed')
     elif args.alt_cut is not None and need_3d is True:
         if args.alt_cut < np.min(gitm_grid3['altitude']):
-            alt_cuts = args.alt_cut
+            alt_cut = args.alt_cut
         else:
-            alt_cuts = []
-            for a in args.alt_cuts:
-                alt_cuts.append(np.abs(gitm_grid3['altitude']/1e3 - a))
+            alt_cut = np.abs(gitm_grid3['altitude'] /
+                             1e3 - args.alt_cut).argmin()
     else:
-        alt_cuts = [None]
+        alt_cut = None
 
     # Set up plot_types:
     if args.figtype_map == 'all':
@@ -130,12 +127,20 @@ def main(args):
         figtype_polar = [args.figtype_polar]
 
     # make sure lats and lons match between 2d and 3d files
-    if need_2d:
+    if need_2d and not need_3d:
+        lats = np.unique(gitm_grid2['latitude'])
+        lons = np.unique(gitm_grid2['longitude'])
+        times = times2
+        new_shape = [len(times), len(lons), len(lats)]
+    elif need_2d:
         lats2 = np.unique(gitm_grid2['latitude'])
         lons2 = np.unique(gitm_grid2['longitude'])
+        new_shape = [len(times), len(lons), len(lats)]
+
     if need_3d:
         lats3 = np.unique(gitm_grid3['latitude'])
         lons3 = np.unique(gitm_grid3['longitude'])
+
     if need_2d and need_3d:
         if lats2 != lats3 or lons2 != lons3:
             raise ValueError(
@@ -146,206 +151,170 @@ def main(args):
         else:
             lats = lats2, lons = lons2, times = times2
 
-    maskNorth = lats > 45
-    maskSouth = lats < -45
+    # pull out the data. makes everything much easier.
+    if polar_in_3d:
+        polar_data = gitm_f3[:, gitm_vars2.index(
+            args.polar_var), :, :, alt_cut]
+    else:
+        polar_data = gitm_f2[:, gitm_vars2.index(
+            args.polar_var), :, :].copy().reshape(new_shape)
+    polar_fits = filters.make_fits(polar_data)
+    polar_percents = 100*(polar_data - polar_fits)/polar_data
 
-    pbar = tqdm(total=len(times)*len(alt_cuts)*len(figtype_polar)
+    if map_in_3d:
+        map_data = gitm_f3[:, gitm_vars2.index(
+            args.map_var), :, :, alt_cut].copy()
+
+    else:
+        map_data = gitm_f2[:, gitm_vars2.index(
+            args.map_var), :, :].copy().reshape(new_shape)
+    map_fits = filters.make_fits(map_data)
+    map_percents = 100*(map_data - map_fits)/map_data
+
+    # Set up masks
+    maskNorth = ((lats > 45))
+    maskSouth = ((lats < -45))
+
+    # Set colorbar limits:
+    minP = dict()
+    maxP = dict()
+    minM = dict()
+    maxM = dict()
+    poldata = {}
+    mapdata = {}
+    for p_fig in figtype_polar:
+        if p_fig == 'raw':
+            minP[p_fig] = np.min(polar_data)
+            maxP[p_fig] = np.max(polar_data)
+            poldata[p_fig] = polar_data
+        elif p_fig == 'fit':
+            minP[p_fig] = np.min(polar_fits)
+            maxP[p_fig] = np.max(polar_fits)
+            poldata[p_fig] = polar_fits
+        elif p_fig == 'diff':
+            minP[p_fig] = np.min(polar_percents)
+            maxP[p_fig] = np.max(polar_percents)
+            poldata[p_fig] = polar_percents
+        else:
+            raise ValueError('Unknown polar figure type %s' % p_fig)
+
+    for m_fig in figtype_map:
+        if m_fig == 'raw':
+            minM[m_fig] = np.min(map_data)
+            maxM[m_fig] = np.max(map_data)
+            mapdata[m_fig] = map_data
+        elif m_fig == 'fit':
+            minM[m_fig] = np.min(map_fits)
+            maxM[m_fig] = np.max(map_fits)
+            mapdata[m_fig] = map_fits
+        elif m_fig == 'diff':
+            if args.diff_lim is not None:
+                minM[m_fig] = -args.diff_lim
+                maxM[m_fig] = args.diff_lim
+            else:
+                minM[m_fig] = np.min(map_percents)
+                maxM[m_fig] = np.max(map_percents)
+            mapdata[m_fig] = map_percents
+        else:
+            raise ValueError('Unknown map figure type %s' % m_fig)
+
+    pbar = tqdm(total=len(times)*len(figtype_polar)
                 * len(figtype_map), desc='making plots')
 
-    for a in alt_cuts:
-        for nt, dtime in times:
-            for p_fig in figtype_polar:
-                for m_fig in figtype_map:
-                    # get data.
-                    if polar_in_3d:
-                        if p_fig == 'raw':
-                            poldata = gitm_f3[
-                                nt, gitm_vars3.index(args.polar_var), :, :, a
-                            ].copy()
-                            pol_str = ''
-                            minP = np.min(gitm_f3[
-                                :, gitm_vars3.index(args.polar_var), :, :, a])
-                            maxP = np.max(gitm_f3[
-                                :, gitm_vars3.index(args.polar_var), :, :, a])
-                        elif p_fig == 'fit':
-                            poldata = gitm_fits3[
-                                nt, gitm_vars3.index(args.polar_var), :, :, a
-                            ].copy()
-                            pol_str = ' (fit)'
-                            minP = np.min(gitm_fits3[
-                                :, gitm_vars3.index(args.polar_var), :, :, a])
-                            maxP = np.max(gitm_fits3[
-                                :, gitm_vars3.index(args.polar_var), :, :, a])
-                        elif p_fig == 'diff':
-                            poldata = percent3[
-                                nt, gitm_vars3.index(args.polar_var), :, :, a
-                            ].copy()
-                            pol_str = ' (% over BG)'
-                            minP = np.min(percent3[
-                                :, gitm_vars3.index(args.polar_var), :, :, a])
-                            maxP = np.max(percent3[
-                                :, gitm_vars3.index(args.polar_var), :, :, a])
+    # make plots
+    for nt, dtime in enumerate(times):
+        for p_fig in figtype_polar:
+            for m_fig in figtype_map:
 
-                    else:
-                        if p_fig == 'raw':
-                            poldata = gitm_f2[
-                                nt, gitm_vars2.index(args.polar_var)].copy()
-                            pol_str = ''
-                            minP = np.min(gitm_f2[
-                                :, gitm_vars2.index(args.polar_var), :, :, a])
-                            maxP = np.max(gitm_f2[
-                                :, gitm_vars2.index(args.polar_var), :, :, a])
-                        elif p_fig == 'fit':
-                            poldata = gitm_fits2[
-                                nt, gitm_vars2.index(args.polar_var)].copy()
-                            pol_str = ' (fit)'
-                            minP = np.min(gitm_fits2[
-                                :, gitm_vars2.index(args.polar_var), :, :, a])
-                            maxP = np.max(gitm_fits2[
-                                :, gitm_vars2.index(args.polar_var), :, :, a])
-                        elif p_fig == 'diff':
-                            poldata = percent2[
-                                nt, gitm_vars2.index(args.polar_var)].copy()
-                            pol_str = ' (% over BG)'
-                            minP = np.min(percent2[
-                                :, gitm_vars2.index(args.polar_var), :, :, a])
-                            maxP = np.max(percent2[
-                                :, gitm_vars2.index(args.polar_var), :, :, a])
+                # make fig.
+                fig = plt.figure(figsize=(10, 8.5))
 
-                    if map_in_3d:
-                        if m_fig == 'raw':
-                            mapdata = gitm_f3[
-                                nt, gitm_vars3.index(args.map_var), :, :, a
-                            ].copy()
-                            map_str = ''
-                            minM = np.min(gitm_f3[
-                                :, gitm_vars3.index(args.map_var), :, :, a])
-                            maxM = np.max(gitm_f3[
-                                :, gitm_vars3.index(args.map_var), :, :, a])
-                        elif m_fig == 'fit':
-                            mapdata = gitm_fits3[
-                                nt, gitm_vars3.index(args.map_var), :, :, a
-                            ].copy()
-                            map_str = ' (fit)'
-                            minM = np.min(gitm_fits3[
-                                :, gitm_vars3.index(args.map_var), :, :, a])
-                            maxM = np.max(gitm_fits3[
-                                :, gitm_vars3.index(args.map_var), :, :, a])
-                        elif m_fig == 'diff':
-                            mapdata = percent3[
-                                nt, gitm_vars3.index(args.map_var), :, :, a
-                            ].copy()
-                            map_str = ' (% over BG)'
-                            minM = np.min(percent3[
-                                :, gitm_vars3.index(args.map_var), :, :, a])
-                            maxM = np.max(percent3[
-                                :, gitm_vars3.index(args.map_var), :, :, a])
+                fig.suptitle('%s UT from storm onset \n (%s) UT'
+                             % (UT_from_Storm_onset(
+                                 dtime, dtime_storm_start),
+                                str(dtime)), fontsize=15)
 
-                    else:
-                        if m_fig == 'raw':
-                            mapdata = gitm_f2[
-                                nt, gitm_vars2.index(args.map_var)].copy()
-                            map_str = ''
-                            minM = np.min(gitm_f2[
-                                :, gitm_vars2.index(args.map_var), :, :, a])
-                            maxM = np.max(gitm_f2[
-                                :, gitm_vars2.index(args.map_var), :, :, a])
-                        elif m_fig == 'fit':
-                            mapdata = gitm_fits2[
-                                nt, gitm_vars2.index(args.map_var)].copy()
-                            map_str = ' (fit)'
-                            minM = np.min(gitm_fits2[
-                                :, gitm_vars2.index(args.map_var), :, :, a])
-                            maxM = np.max(gitm_fits2[
-                                :, gitm_vars2.index(args.map_var), :, :, a])
-                        elif m_fig == 'diff':
-                            mapdata = percent2[
-                                nt, gitm_vars2.index(args.map_var)].copy()
-                            map_str = ' (% over BG)'
-                            minM = np.min(percent2[
-                                :, gitm_vars2.index(args.map_var), :, :, a])
-                            maxM = np.max(percent2[
-                                :, gitm_vars2.index(args.map_var), :, :, a])
+                gs1 = GridSpec(nrows=2, ncols=2, wspace=.1, hspace=.1)
+                ax0 = fig.add_subplot(gs1[0, 0], projection='polar')
+                ax1 = fig.add_subplot(gs1[0, 1], projection='polar')
+                ax2 = fig.add_subplot(gs1[1, :2])
 
-                    # make fig.
-                    fig = plt.figure(figsize=(10, 8.5), layout='tight')
+                # add in plots. polar left, polar right, map
+                r, theta = np.meshgrid(90-lats[maskNorth], lons)
+                print(r.shape, theta.shape,
+                      poldata[p_fig][nt, :, maskNorth].T.shape)
+                ax0.pcolor(np.deg2rad(theta), r,
+                           poldata[p_fig][nt, :, maskNorth].T.copy(),
+                           vmin=np.min(poldata[p_fig]),
+                           vmax=np.max(poldata[p_fig]))
+                ylabels = ['80', '70', '60', '50']
+                ax0.set_yticklabels(ylabels)
+                ax0.set_xticks(np.arange(0, 2*np.pi, np.pi/2))
+                ax0.set_yticks(np.arange(10, 50, 10))
+                ax0.set_title('North')
 
-                    fig.suptitle('%s UT from storm onset \n (%s) UT'
-                                 % (UT_from_Storm_onset(
-                                     dtime, args.dtime_storm_start),
-                                    str(dtime)), fontsize=17)
+                r, theta = np.meshgrid(lats[maskSouth], lons)
+                cb = ax1.pcolor(np.deg2rad(theta), r,
+                                poldata[p_fig][nt, :, maskSouth].T.copy(),
+                                vmin=minP[p_fig], vmax=maxP[p_fig])
+                ylabels = ['-80', '-70', '-60', '-50']
+                ax1.set_yticklabels(ylabels)
+                ax1.set_title('South')
+                fig.colorbar(cb, ax=ax1,
+                             label=p_fig + ' ' + args.polar_var)
 
-                    gs1 = GridSpec(nrows=2, ncols=2, wspace=.1, hspace=.1)
-                    ax0 = fig.add_subplot(gs1[0, 0], projection='polar')
-                    ax1 = fig.add_subplot(gs1[0, 1], projection='polar')
-                    ax2 = fig.add_subplot(gs1[1, :2])
+                mapping(data_arr=mapdata[m_fig][nt, :, :], lats=lats,
+                        lons=lons,
+                        map_var=m_fig + ' ' + args.map_var,
+                        ax=ax2, zorder=1, origin='lower', alpha=0.8,
+                        vmin=minM[m_fig], vmax=maxM[m_fig],
+                        title=m_fig + ' ' + args.map_var)
 
-                    # add in plots. polar left, polar right, map
-                    r, theta = np.meshgrid(90-lats[maskNorth], lons)
-                    ax0.pcolor(np.deg2rad(theta), r, poldata[:, maskNorth],
-                               vmin=minP, vmax=maxP)
-                    ylabels = ['80', '70', '60', '50']
-                    ax0.set_yticklabels(ylabels)
-                    ax0.set_xticks(np.arange(0, 2*np.pi, np.pi/2))
-                    ax0.set_yticks(np.arange(10, 50, 10))
-                    ax0.set_title('North ' + args.polar_var + pol_str)
+                if args.save_or_show == "show":
+                    plt.show()
+                    plt.close()
+                elif args.save_or_show == "save":
+                    pvar = args.polar_var.replace(
+                        '/', '-').replace('(', '-').replace(')', '-')
+                    mvar = args.map_var.replace(
+                        '/', '-').replace('(', '-').replace(')', '-')
 
-                    r, theta = np.meshgrid(lats[maskSouth], lons)
-                    cb = ax1.pcolor(np.deg2rad(theta), r,
-                                    poldata[:, maskSouth],
-                                    vmin=minP, vmax=maxP)
-                    ylabels = ['-80', '-70', '-60', '-50']
-                    ax1.set_yticklabels(ylabels)
-                    ax1.set_xticks(np.arange(0, 2*np.pi, np.pi/2))
-                    ax1.set_yticks(np.arange(10, 50, 10))
-                    ax1.set_title('South ' + args.polar_var + pol_str)
-                    fig.colorbar(cb)
+                    fname = os.path.join(
+                        args.out_path + str(alt_cut),
+                        'map_' + mvar + m_fig + str(args.diff_lim),
+                        'polar_' + pvar + p_fig,
+                        str(nt).rjust(3, '0') + '.png')
 
-                    mapping(data_arr=mapdata, lats=lats, lons=lons,
-                            map_var=args.mapvar + map_str,
-                            ax=ax2, zorder=1, origin='lower', alpha=0.8,
-                            vmin=minM, vmax=maxM,
-                            title=m_fig + ' ' + args.map_var)
-
-                    if args.save_or_show == "show":
-                        plt.show()
-                        plt.close()
-                    elif args.save_or_show == "save":
-                        fname = os.path.join(args.out_path, str(a),
-                                             'map_' + args.map_var + m_fig,
-                                             'polar_' + args.polar_var + p_fig,
-                                             str(nt).rjust(3, '0') + '.png')
-                        fname = fname.replace(" ", "")
+                    fname = fname.replace(" ", "")
+                    try:
+                        plt.savefig(fname)
+                    except FileNotFoundError:
                         try:
+                            last_slash = fname.rfind('/')
+                            os.makedirs(fname[:last_slash])
                             plt.savefig(fname)
-                        except FileNotFoundError:
+                        except FileExistsError:
+                            # sometimes when we make too many plots in
+                            # the same directory, it fails.
+                            # this fixes that.
+                            time.sleep(2)
                             try:
-                                directory_list = os.path.join(
-                                    fname).split("/")[:-1]
-                                os.makedirs(os.path.join(*directory_list))
                                 plt.savefig(fname)
-                            except FileExistsError:
-                                # sometimes when we make too many plots in
-                                # the same directory, it fails.
-                                # this fixes that.
+                            except FileNotFoundError:
                                 time.sleep(2)
-                                try:
-                                    plt.savefig(fname)
-                                except FileNotFoundError:
-                                    time.sleep(2)
-                                    plt.savefig(fname)
+                                plt.savefig(fname)
 
-                        except FileNotFoundError:
-                            print(fname)
-                            raise ValueError
-                        plt.close("all")
-                    else:
-                        raise ValueError(
-                            'save_or_show input is invalid. Accepted inputs',
-                            'are "save" or "show", you gave ',
-                            args.save_or_show)
+                    except FileNotFoundError:
+                        print(fname)
+                        raise ValueError
+                    plt.close("all")
+                else:
+                    raise ValueError(
+                        'save_or_show input is invalid. Accepted inputs',
+                        'are "save" or "show", you gave ',
+                        args.save_or_show)
 
-                    pbar.update()
+                pbar.update()
 
 
 def mapping(data_arr, lats, lons, map_var, title=None,
@@ -379,6 +348,8 @@ def mapping(data_arr, lats, lons, map_var, title=None,
         data_arr.T,
         cmap="viridis",
         aspect="auto",
+        vmin=vmin,
+        vmax=vmax,
         extent=[min(lons), max(lons), min(lats), max(lats)],
         **kwargs)
     plt.colorbar(data, ax=ax, label=map_var)
@@ -405,7 +376,7 @@ if __name__ == "__main__":
         help='which variable to plot on the map')
 
     parser.add_argument(
-        '--alt_cut', type=int, default=None, nargs='+',
+        '--alt_cut', type=int, default=None,
         help='Whether or not to make an alt cut. Default: None' +
         '(no cut) You can specify an alt-idx or an alt in km')
 
@@ -448,6 +419,10 @@ if __name__ == "__main__":
         '--var_help', action='store_true',
         help='print out available variables and exit' +
         'OR you can specify some vars for plots and check if they work')
+
+    parser.add_argument(
+        '--diff_lim', type=int, default=None,
+        help='Set the limits of the colobar on diff maps.')
 
     args = parser.parse_args()
 
