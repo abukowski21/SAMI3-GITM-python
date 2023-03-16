@@ -4,7 +4,7 @@
     "python.linting.mypyEnabled": false,
     "python.linting.prospectorEnabled": false,
     "[python]": {
-        "editor.autoClosingBrackets": "always",
+        "editor.autoClosingBrackets": "beforeWhitespace",
         "editor.autoClosingDelete": "always",
         "editor.autoClosingQuotes": "always",
         "editor.defaultFormatter": "ms-python.autopep8",
