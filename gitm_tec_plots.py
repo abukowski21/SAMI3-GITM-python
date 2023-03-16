@@ -128,9 +128,9 @@ def main(args):
 
     cbar_lims_dict = {
         'TWO_FILES': {
-            'raw': [-5, 5], 'fit': [-5, 5], 'diff': [-10, 10]},
+            'raw': [-5, 5], 'fit': [-5, 5], 'diff': [-5, 5]},
         'ONE_FILE': {
-            'raw': [0, 70], 'fit': [0, 70], 'diff': [-10, 10]}}
+            'raw': [0, 70], 'fit': [0, 70], 'diff': [-5, 5]}}
 
     # Now for keos:
     if args.keogram:
@@ -358,8 +358,8 @@ def make_a_keo(
                 plt.savefig(fname)
             except FileNotFoundError:
                 try:
-                    directory_list = os.path.join(fname).split("/")[:-1]
-                    os.makedirs(os.path.join(*directory_list))
+                    last_slash = fname.rfind('/')
+                    os.makedirs(fname[:last_slash])
                     plt.savefig(fname)
                 except PermissionError:
                     print("Permission denied. Cannot save plot.")
@@ -424,8 +424,8 @@ def make_a_map(
                 plt.savefig(fname)
             except FileNotFoundError:
                 try:
-                    directory_list = os.path.join(fname).split("/")[:-1]
-                    os.makedirs(os.path.join(*directory_list))
+                    last_slash = fname.rfind('/')
+                    os.makedirs(fname[:last_slash])
                     plt.savefig(fname)
                 except FileExistsError:
                     # sometimes when we make too many plots in the same
