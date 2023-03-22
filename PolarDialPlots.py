@@ -63,7 +63,7 @@ def main(args):
     # If not, read in 2DANC.
     need_2d = True
     need_3d = False
-    if args.alt_cut is not None:
+    if args.alt_cut is not None and args.sami_path is None:
         need_2d = False
         times3, gitm_grid3, gitm_f3, gitm_vars3 = GITM.read_gitm_into_nparrays(
             args.gitm_data_path, dtime_storm_start,
@@ -105,7 +105,7 @@ def main(args):
             map_in_3d = False
 
     # alt cuts?
-    if args.alt_cut is not None and need_3d is False:
+    if args.alt_cut is not None and need_3d is False and args.sami_path is None:
         raise ValueError('Alt cut requested, but no 3D files needed')
     elif args.alt_cut is not None and need_3d is True:
         if args.alt_cut < np.min(gitm_grid3['altitude']):
@@ -160,16 +160,47 @@ def main(args):
             args.polar_var), :, :].copy().reshape(new_shape)
     polar_fits = filters.make_fits(polar_data)
     polar_percents = 100*(polar_data - polar_fits)/polar_data
+    
+    
+    if args.sami_path is None:
+        if map_in_3d:
+            map_data = gitm_f3[:, gitm_vars2.index(
+                args.map_var), :, :, alt_cut].copy()
 
-    if map_in_3d:
-        map_data = gitm_f3[:, gitm_vars2.index(
-            args.map_var), :, :, alt_cut].copy()
-
+        else:
+            map_data = gitm_f2[:, gitm_vars2.index(
+                args.map_var), :, :].copy().reshape(new_shape)
+        map_fits = filters.make_fits(map_data)
+        map_percents = 100*(map_data - map_fits)/map_data
+    
     else:
-        map_data = gitm_f2[:, gitm_vars2.index(
-            args.map_var), :, :].copy().reshape(new_shape)
-    map_fits = filters.make_fits(map_data)
-    map_percents = 100*(map_data - map_fits)/map_data
+        f, list(tectimes) = SAMI.read_sami_dene_tec(
+            args.sami_path, reshape = True)
+        
+        if t_start_idx != 0:
+            start_idx = tectimes.index(
+                tectimes - datetime.timedelta(
+                    hours=t_start_idx))
+            f['data'][args.map_var] = f['data'][args.map_var][start_idx:]
+            tectimes = tectimes[start_idx:]
+
+        if t_end_idx != -1:
+            end_idx = tectimes.index(
+                dtime_storm_start + datetime.timedelta(
+                    hours=t_end_idx))
+            f['data'][args.map_var] = f['data'][args.map_var][:end_idx]
+            tectimes = tectimes[:end_idx]
+        
+        if alt_cut is None:
+            sami_alt_cut = np.argmin(np.abs(f['data']['alt'] - args.alt_cut))
+            map_data = f['data'][args.map_var][:,:,sami_alt_cut,:]
+            map_fits = filters.make_fits(map_data)
+            map_percents = 100*(map_data - map_fits)/map_data
+        else:
+            map_data = f['data'][args.map_var][nt,:,:]
+            map_fits = filters.make_fits(map_data)
+            map_percents = (map_data - map_fits)
+        
 
     # Set up masks
     maskNorth = ((lats > 45))
@@ -198,26 +229,27 @@ def main(args):
         else:
             raise ValueError('Unknown polar figure type %s' % p_fig)
 
-    for m_fig in figtype_map:
-        if m_fig == 'raw':
-            minM[m_fig] = np.min(map_data)
-            maxM[m_fig] = np.max(map_data)
-            mapdata[m_fig] = map_data
-        elif m_fig == 'fit':
-            minM[m_fig] = np.min(map_fits)
-            maxM[m_fig] = np.max(map_fits)
-            mapdata[m_fig] = map_fits
-        elif m_fig == 'diff':
-            if args.diff_lim is not None:
-                minM[m_fig] = -args.diff_lim
-                maxM[m_fig] = args.diff_lim
+        for m_fig in figtype_map:
+            if m_fig == 'raw':
+                minM[m_fig] = np.min(map_data)
+                maxM[m_fig] = np.max(map_data)
+                mapdata[m_fig] = map_data
+            elif m_fig == 'fit':
+                minM[m_fig] = np.min(map_fits)
+                maxM[m_fig] = np.max(map_fits)
+                mapdata[m_fig] = map_fits
+            elif m_fig == 'diff':
+                if args.diff_lim is not None:
+                    minM[m_fig] = -args.diff_lim
+                    maxM[m_fig] = args.diff_lim
+                else:
+                    minM[m_fig] = np.min(map_percents)
+                    maxM[m_fig] = np.max(map_percents)
+                mapdata[m_fig] = map_percents
             else:
-                minM[m_fig] = np.min(map_percents)
-                maxM[m_fig] = np.max(map_percents)
-            mapdata[m_fig] = map_percents
-        else:
-            raise ValueError('Unknown map figure type %s' % m_fig)
-
+                raise ValueError('Unknown map figure type %s' % m_fig)
+                
+                
     pbar = tqdm(total=len(times)*len(figtype_polar)
                 * len(figtype_map), desc='making plots')
 
@@ -383,6 +415,10 @@ if __name__ == "__main__":
     parser.add_argument(
         '-gitm_data_path', type=str,
         help='Path to gitm data', default='./gitm_dir', action='store')
+
+    parser.add_argument(
+        '-sami_path', type=str,
+        help='Path to SAMI data (if we want it)', default=None, action='store')
 
     parser.add_argument(
         '--out_path', type=str,
