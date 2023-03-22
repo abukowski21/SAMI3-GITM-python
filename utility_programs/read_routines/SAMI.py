@@ -244,7 +244,7 @@ def make_times(nt, sami_data_path, dtime_storm_start, dtime_sim_start,
 
     if plot_start_delta is None and plot_end_delta is None:
         return times, hrs_since_storm_start
-    
+
     else:
         return times, hrs_since_storm_start, (start_idx, end_idx)
 
@@ -390,7 +390,10 @@ def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
     return sami_data, np.array(times)
 
 
-def read_sami_dene_tec(sami_data_path, reshape = True):
+def read_sami_dene_tec(sami_data_path, reshape=True):
+    """ Read in TEC (and interpolated dene) data!
+
+    """
     # TODO: Add in all of the data files. This is just a placeholder
     data_files = {'edens': 'dene0B.dat', 'tec': 'tecuB.dat'}
 
@@ -419,18 +422,22 @@ def read_sami_dene_tec(sami_data_path, reshape = True):
 
     # Reshape everything!
     if reshape:
-        sami_data['data']['edens'] = sami_data['data']['edens'].reshape(625,80,100,100)
-        sami_data['data']['tec'] = sami_data['data']['tec'].reshape(625,80,100)
-        sami_data['grid']['glat'] = sami_data['grid']['glat'].reshape(80,100,100)
-        sami_data['grid']['glon'] = sami_data['grid']['glon'].reshape(80,100,100)
-        
+        sami_data['data']['edens'] = sami_data['data']['edens'].reshape(
+            625, 80, 100, 100)
+        sami_data['data']['tec'] = sami_data['data']['tec'].reshape(
+            625, 80, 100)
+        sami_data['grid']['glat'] = sami_data['grid']['glat'].reshape(
+            80, 100, 100)
+        sami_data['grid']['glon'] = sami_data['grid']['glon'].reshape(
+            80, 100, 100)
+
     with open(os.path.join(sami_data_path, 'time.dat'), 'r') as fp:
         lines = fp.readlines()
         nt = len(lines) - 1
-        
-    times, hrs_since_storm_start= make_times(
-        nt, sami_data_path, 
-        dtime_storm_start=datetime.datetime(2011,5,21,12),
-        dtime_sim_start=datetime.datetime(2011,5,20))
+
+    times, hrs_since_storm_start = make_times(
+        nt, sami_data_path,
+        dtime_storm_start=datetime.datetime(2011, 5, 21, 12),
+        dtime_sim_start=datetime.datetime(2011, 5, 20))
 
     return sami_data, np.array(times)
