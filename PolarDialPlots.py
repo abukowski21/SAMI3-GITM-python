@@ -10,7 +10,7 @@ created mar 15 2023 by aaron
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-from utility_programs.read_routines import GITM
+from utility_programs.read_routines import GITM, SAMI
 
 from utility_programs import filters
 
@@ -97,7 +97,7 @@ def main(args):
             return
         else:
             polar_in_3d = False
-        if args.map_var not in gitm_vars2:
+        if args.map_var not in gitm_vars2 and args.sami_path is None:
             print('Map variable %s not found in 3D or 2D files'
                   % args.map_var, gitm_vars3, gitm_vars2)
             return
@@ -105,7 +105,7 @@ def main(args):
             map_in_3d = False
 
     # alt cuts?
-    if args.alt_cut is not None and need_3d is False and args.sami_path is None:
+    if args.alt_cut is not None and need_3d is False and args.sami_path is not None:
         raise ValueError('Alt cut requested, but no 3D files needed')
     elif args.alt_cut is not None and need_3d is True:
         if args.alt_cut < np.min(gitm_grid3['altitude']):
@@ -174,30 +174,31 @@ def main(args):
         map_percents = 100*(map_data - map_fits)/map_data
     
     else:
-        f, list(tectimes) = SAMI.read_sami_dene_tec(
+        f, tectimes = SAMI.read_sami_dene_tec(
             args.sami_path, reshape = True)
+        tectimes = list(tectimes)
         
-        if t_start_idx != 0:
+        if args.plot_start_delta != 0:
             start_idx = tectimes.index(
-                tectimes - datetime.timedelta(
-                    hours=t_start_idx))
+                dtime_storm_start - datetime.timedelta(
+                    hours=args.plot_start_delta))
             f['data'][args.map_var] = f['data'][args.map_var][start_idx:]
             tectimes = tectimes[start_idx:]
 
-        if t_end_idx != -1:
+        if args.plot_end_delta != -1:
             end_idx = tectimes.index(
                 dtime_storm_start + datetime.timedelta(
-                    hours=t_end_idx))
+                    hours=args.plot_end_delta))
             f['data'][args.map_var] = f['data'][args.map_var][:end_idx]
             tectimes = tectimes[:end_idx]
         
-        if alt_cut is None:
+        if alt_cut is not None:
             sami_alt_cut = np.argmin(np.abs(f['data']['alt'] - args.alt_cut))
             map_data = f['data'][args.map_var][:,:,sami_alt_cut,:]
             map_fits = filters.make_fits(map_data)
             map_percents = 100*(map_data - map_fits)/map_data
         else:
-            map_data = f['data'][args.map_var][nt,:,:]
+            map_data = f['data'][args.map_var]
             map_fits = filters.make_fits(map_data)
             map_percents = (map_data - map_fits)
         
@@ -273,8 +274,6 @@ def main(args):
 
                 # add in plots. polar left, polar right, map
                 r, theta = np.meshgrid(90-lats[maskNorth], lons)
-                print(r.shape, theta.shape,
-                      poldata[p_fig][nt, :, maskNorth].T.shape)
                 ax0.pcolor(np.deg2rad(theta), r,
                            poldata[p_fig][nt, :, maskNorth].T.copy(),
                            vmin=np.min(poldata[p_fig]),
@@ -426,7 +425,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '--plot_start_delta', type=int,
-        action='store', default=-1, required=False)
+        action='store', default=0, required=False)
 
     parser.add_argument(
         '--plot_end_delta', type=int,
@@ -440,12 +439,12 @@ if __name__ == "__main__":
     parser.add_argument(
         '--figtype_polar', type=str, action='store', default='raw',
         help='Which type of plot to make (in polar dials).' +
-        'Options: raw, filt, diffs. Default: raw')
+        'Options: raw, filt, diff. Default: raw')
 
     parser.add_argument(
         '--figtype_map', type=str, action='store', default='all',
         help='Which type of plot to make (in map view).' +
-        'Options: all, raw, filt, diffs. Default: all')
+        'Options: all, raw, filt, diff. Default: all')
 
     parser.add_argument(
         '-o', '--overwrite', action='store_true',
@@ -457,7 +456,7 @@ if __name__ == "__main__":
         'OR you can specify some vars for plots and check if they work')
 
     parser.add_argument(
-        '--diff_lim', type=int, default=None,
+        '--diff_lim', type=float, default=None,
         help='Set the limits of the colobar on diff maps.')
 
     args = parser.parse_args()
