@@ -22,8 +22,9 @@ import argparse
 
 from utility_programs.plot_help import UT_from_Storm_onset
 from utility_programs import plotting_routines
-from gitm_basic_plots import read_gitm_into_nparrays, make_fits
+from gitm_basic_plots import make_fits
 from gitm_basic_plots import remove_outliers
+from utility_programs.read_routines import GITM
 import datetime
 import numpy as np
 import pandas as pd
@@ -93,9 +94,14 @@ def main(args):
     else:
         gitm_path = [args.gitm_data_path]
         TWO_FILES = False
+        
+    
 
+        
+        """
     global cols, gitm_colnames_friendly
     cols = []
+    plot_cols = None
     gitm_colnames_friendly = {}
     twodanc = False
     threedall = False
@@ -211,6 +217,7 @@ def main(args):
         global times2, gitm_grid2, gitm_vars2, gitm_bins2
         times2, gitm_grid2, gitm_vars2, gitm_bins2 = read_gitm_into_nparrays(
             gitm_files[1][plot_start_idx:plot_end_idx])
+            """
 
     global lats, lons, alts
     lats, lons, alts = (

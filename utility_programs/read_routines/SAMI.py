@@ -1,21 +1,43 @@
-"""automaticall read in SAMI data.
 
-main function is:
-read_sami_data:
-    args:
-        sami_data_path: str
-        dtime_sim_start: datetime
-        dtime_storm_start: datetime
-        t_start_idx: int, optional
-        t_end_idx:int, optional
-        cols='all', optional
-        help=False, optional
+"""read sami data.
 
-    returns:
-        sami_data: dict (data, grid as keys)
-        times: np.array of datetime objects
+call:
 
-    """
+read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
+                   t_start_idx=None, t_end_idx=None, pbar=False,
+                   cols='all', help=False, chop_times=False
+
+ Automatically read in SAMI data.
+
+    Args:
+        sami_data_path (str):
+            Path to SAMI data
+        dtime_storm_start (datetime.datetime):
+            Datetime of the start of the storm
+        dtime_sim_start (datetime.datetime):
+            Datetime of the start of the simulation
+        t_start_idx (int, optional):
+            Time index of the start of the data return. Defaults to None.
+        t_end_idx (int, optional):
+            Time index of the end of the data return. Defaults to None.
+        pbar (bool, optional):
+            Do you want to show a progress bar? It is automatically set if
+            tqdm is successfully imported. Defaults to False.
+        cols (str, optional):
+            List of columns to get data for. Empty is all. Defaults to 'all'.
+        help (bool, optional):
+            Prints time and variable info. Defaults to False.
+
+    Raises:
+        ValueError: if t_start_idx and t_end_idx are not both given
+
+    Returns:
+        dict:
+            Dictionary of SAMI data with keys: ['grid', 'data']
+            data is in np arrays with the shape [nlt,nf,nz]
+        np.array:
+            Times of the data
+"""
 
 
 import datetime
@@ -217,7 +239,12 @@ def make_times(nt, sami_data_path, dtime_storm_start, dtime_sim_start,
         end_idx = len(times)
     if help:
         print(times, '\n', hrs_since_storm_start)
-    return times, hrs_since_storm_start, (start_idx, end_idx)
+
+    if plot_start_delta is None and plot_end_delta is None:
+        return times, hrs_since_storm_start
+
+    else:
+        return times, hrs_since_storm_start, (start_idx, end_idx)
 
 
 def get_sami_grid(sami_data_path, nlt, nf, nz):
@@ -355,5 +382,58 @@ def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
         file.close()
     if pbar:
         progress.close()
+
+    return sami_data, np.array(times)
+
+
+def read_sami_dene_tec(sami_data_path, reshape=True):
+    """ Read in TEC (and interpolated dene) data!
+
+    """
+    # TODO: Add in all of the data files. This is just a placeholder
+    data_files = {'edens': 'dene0B.dat', 'tec': 'tecuB.dat'}
+
+    sami_data = {'grid': {}, 'data': {}}
+
+    # Get the grid
+    geo_grid_files = {
+        'glat': 'glat0B.dat', 'glon': 'glon0B.dat', 'alt': 'zalt0B.dat',
+        'mlat': 'blat0.dat', 'mlon': 'blon0.dat', 'malt': 'balt0.dat'}
+
+    grid = {}
+
+    for f in geo_grid_files:
+        file = open(os.path.join(sami_data_path, geo_grid_files[f]), 'rb')
+        raw = np.fromfile(file, dtype='float32')[1:-1].copy()
+        file.close()
+
+        sami_data['grid'][f] = raw
+
+    for f in data_files:
+        file = open(os.path.join(sami_data_path, data_files[f]), 'rb')
+        raw = np.fromfile(file, dtype='float32')[1:-1].copy()
+        file.close()
+
+        sami_data['data'][f] = raw
+
+    # Reshape everything!
+    if reshape:
+        sami_data['data']['edens'] = sami_data['data']['edens'].reshape(
+            625, 80, 100, 100)
+        sami_data['data']['tec'] = sami_data['data']['tec'].reshape(
+            625, 80, 100)
+        sami_data['grid']['glat'] = sami_data['grid']['glat'].reshape(
+            80, 100, 100)
+        sami_data['grid']['glon'] = sami_data['grid']['glon'].reshape(
+            80, 100, 100)
+
+    with open(os.path.join(sami_data_path, 'time.dat'), 'r') as fp:
+        lines = fp.readlines()
+        nt = len(lines) - 1
+
+    times, hrs_since_storm_start = make_times(
+        nt, sami_data_path,
+        dtime_storm_start=datetime.datetime(2011, 5, 21, 12),
+        dtime_sim_start=datetime.datetime(2011, 5, 20))
 
     return sami_data, np.array(times)
