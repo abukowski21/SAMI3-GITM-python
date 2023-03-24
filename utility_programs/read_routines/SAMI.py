@@ -1,3 +1,4 @@
+
 """read sami data.
 
 call:
@@ -36,10 +37,7 @@ read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
             data is in np arrays with the shape [nlt,nf,nz]
         np.array:
             Times of the data
-
-
-
-    """
+"""
 
 
 import datetime
@@ -290,7 +288,7 @@ def get_sami_grid(sami_data_path, nlt, nf, nz):
 
 def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
                    t_start_idx=None, t_end_idx=None, pbar=False,
-                   cols='all', help=False, chop_times=False):
+                   cols='all', help=False):
     """Automatically read in SAMI data.
 
     Args:
@@ -375,14 +373,12 @@ def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
                   'the model results may not be in the path you specified:')
             raise
 
-        for t in range(end_idx):
+        for t in range(start_idx, end_idx):
             raw = np.fromfile(file, dtype='float32', count=(nz*nf*nlt)+2)[1:-1]
-            if t >= start_idx:
-                sami_data['data'][f][:, :, :,
-                                     t - start_idx] = raw.reshape(
-                                         nlt, nf, nz).copy()
-                if pbar:
-                    progress.update(1)
+            sami_data['data'][f][:, :, :, t - start_idx] = raw.reshape(
+                nlt, nf, nz).copy()
+            if pbar:
+                progress.update(1)
         file.close()
     if pbar:
         progress.close()

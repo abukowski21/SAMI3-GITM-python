@@ -1,5 +1,5 @@
 {
-    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Enabled": false,
     "python.linting.enabled": true,
     "python.linting.mypyEnabled": false,
     "python.linting.prospectorEnabled": false,
@@ -15,5 +15,6 @@
         "--aggressive",
         "--aggressive",
         "--aggressive",
+        "--line-length","79"
     ],
-}
+    "python.formatting.provider": "autopep8",}
