@@ -7,7 +7,7 @@ from aetherpy.io import read_routines
 from tqdm.auto import tqdm
 
 
-def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
+def read_gitm_into_nparrays(gitm_dir, dtime_storm_start=None,
                             gitm_file_pattern='3DALL*.bin',
                             cols=['all'],
                             t_start_idx=0, t_end_idx=-1,
@@ -61,17 +61,18 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
                 "GITM file name does not match expected format,",
                 "filename %s cannot be parsed" % i)
 
-    if t_start_idx != 0:
-        start_idx = gitm_dtimes.index(
-            dtime_storm_start - datetime.timedelta(hours=t_start_idx))
-        gitm_dtimes = gitm_dtimes[start_idx:]
-        flist = flist[start_idx:]
+    if dtime_storm_start is not None:
+        if t_start_idx != 0:
+            start_idx = gitm_dtimes.index(
+                dtime_storm_start - datetime.timedelta(hours=t_start_idx))
+            gitm_dtimes = gitm_dtimes[start_idx:]
+            flist = flist[start_idx:]
 
-    if t_end_idx != -1:
-        end_idx = gitm_dtimes.index(
-            dtime_storm_start + datetime.timedelta(hours=t_end_idx))
-        gitm_dtimes = gitm_dtimes[:end_idx]
-        flist = flist[:end_idx]
+        if t_end_idx != -1:
+            end_idx = gitm_dtimes.index(
+                dtime_storm_start + datetime.timedelta(hours=t_end_idx))
+            gitm_dtimes = gitm_dtimes[:end_idx]
+            flist = flist[:end_idx]
 
     f = read_routines.read_gitm_file(flist[0])
     if '3DALL' in gitm_file_pattern:
