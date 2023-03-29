@@ -1,4 +1,4 @@
-# import aacgmv2, time
+
 import pandas as pd
 import numpy as np
 from multiprocessing import Pool
@@ -8,127 +8,285 @@ import shutil
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 import time
-# from scipy.io import readsav
-# import pymap3d as pm
-# import glob
 import datetime
-# from aetherpy.io import read_routines
-# from math import cos, radians, sin, sqrt
 from scipy import spatial, signal
 
-# from spacepy.coordinates import Coords
-# from spacepy.time import Ticktock
-# import fnmatch
-#
+import sys
+import geopandas
 import gc
 
-import sys
-from mpl_toolkits.basemap import Basemap
-import geopandas
-
 from scipy.interpolate import LinearNDInterpolator, interp1d, griddata
+from utility_programs.plot_help import UT_from_Storm_onset
+from utility_programs.read_routines import SAMI
+
+import argparse
 
 
-def make_a_plot(data, x_label=None, y_label=None, title=None,
-                cbar_lims=None, cbar_label=None, save_or_show='show',
-                fname=None, plot_extent=None):
-    # Clean inputs:
-    if cbar_lims == None:
-        cbar_lims = [np.min(data), np.max(data)]
+def main(args):
+    data_path = args.sami_data_path
 
-    # Plots have to be done in weird ways.
-    # this will make calling things easier...
-    ismap = False
-    iskeo = False
+    global dtime_storm_start
+    dtime_storm_start = datetime.datetime.strptime(
+        args.dtime_storm_start.ljust(14, '0'), '%Y%m%d%H%M%S')
 
-    if plot_extent is None:
-        if data.shape == (65, 75):
-            plot_extent = [-180, 180, np.min(lats), np.max(lats)]
-            x_label = 'Longitude(deg)'
-            y_label = 'Latitude (deg)'
-            ismap = True
-        if data.shape == (144, 65):
-            plot_extent = [np.min(hrs), np.max(
-                hrs), np.min(lats), np.max(lats)]
-            x_label = 'Hours from storm onset'
-            y_label = 'Latitude (deg)'
-            iskeo = True
+    global dtime_sim_start
+    dtime_sim_start = datetime.datetime.strptime(
+        args.dtime_sim_start.ljust(14, '0'), '%Y%m%d%H%M%S')
 
-    if ismap:
+    global times, sami_data
+    sami_data, times = SAMI.read_sami_data(sami_data_path=data_path,
+                                           dtime_sim_start=dtime_sim_start,
+                                           dtime_storm_start=dtime_storm_start,
+                                           t_start_idx=args.plot_start_delta,
+                                           t_end_idx=args.plot_end_delta,
+                                           pbar=True)
 
-        # Need to get the data from -180-180 not 0-360...
+    if args.cols == 'all':
+        cols_to_plot = sami_data['data'].keys()
+    else:
+        cols_to_plot = args.cols
 
-        # Fix the ordering of the longitudes and go from -180-180 not 0->360
-        newlons_for_order = []
-        newlons = np.zeros_like(lons)
-        for ilon in lons:
-            oldlon = ilon
-            if oldlon <= 180:
-                newlons_for_order.append(int(oldlon))
+    if args.plot_type == 'all':
+        plot_type = ['raw', 'bandpass', 'diff']
+    else:
+        plot_type = [args.plot_type]
 
-            else:
-                newlons_for_order.append(int(oldlon)-360)
+    if args.map:
+        global world
+        world = geopandas.read_file(
+            geopandas.datasets.get_path('naturalearth_lowres'))
 
-        new_lons_sorted = np.sort(newlons_for_order)
-        new_order = np.array([newlons_for_order.index(
-            new_lons_sorted[i]) for i in range(len(new_lons_sorted))])
 
-        fig, ax = plt.subplots(figsize=(10, 5))
-        world.plot(ax=ax, color='white', edgecolor='black', zorder=1)
+def call_maps(col, real_time, real_alt, figtype='all', save_or_show='show'):
 
-        p = ax.imshow(data[:, new_order], extent=plot_extent,
-                      vmin=cbar_lims[0], vmax=cbar_lims[1], origin='lower',
-                      aspect='auto', interpolation='bicubic',
-                      interpolation_stage='rgba', label=cbar_label, zorder=10,
-                      alpha=0.9)
-        fig.colorbar(p, label=cbar_label)
+    itime = np.where(times == real_time)[0][0]
+    ialt = np.where(alts == real_alt)[0][0]
 
-    elif iskeo:
-        plt.figure(figsize=(10, 5))
-        plt.imshow(data.T, extent=plot_extent, vmin=cbar_lims[0],
-                   vmax=cbar_lims[1], origin='lower', aspect='auto',
-                   interpolation='bicubic', interpolation_stage='rgba',
-                   label=cbar_label)
-        plt.colorbar()
+    raw = data_dict[col][itime, :, :, ialt]
+    fit = fits[col][itime, :, :, ialt]
 
-    plt.ylabel(y_label)
-    plt.xlabel(x_label)
+    diff = 100*(raw - fit)/fit
 
-    plt.title(title)
+    fname = os.path.join(sami_map_save_path, col, 'plot_type', str(
+        int(real_alt)), str(itime).rjust(3, '0') + '.png')
 
-    if save_or_show == 'show':
-        plt.show()
-        plt.close()
-        if fname:
-            print(fname)
-    elif save_or_show == 'save':
-        if not fname:
-            raise ValueError('plot save path must be given!')
-        else:
-            # fname = fname.replace(' ','')
-            try:
-                plt.savefig(fname)
-            except FileNotFoundError:
-                try:
-                    directory_list = os.path.join(fname).split('/')[:-1]
-                    os.makedirs('/'+os.path.join(*directory_list))
-                    plt.savefig(fname)
-                except FileExistsError:
-                    # sometimes when we make too many plots in the same
-                    # directory, it fails. this fixes that.
-                    time.sleep(2)
-                    try:
-                        plt.savefig(fname)
-                    except FileNotFoundError:
-                        time.sleep(2)
-                        plt.savefig(fname)
+    ut_diff = UT_from_Storm_onset(real_time)
 
-            except:
-                print(fname)
-                raise ValueError
+    plotted = False
+
+    if figtype == 'all' or 'raw' in figtype:
+        title = '%s at %s from storm onset \n %i km altitude' % (
+            col, ut_diff, int(real_alt))
+        make_a_plot(raw, title=title, save_or_show=save_or_show,
+                    fname=fname.replace('plot_type', 'raw'))
+        plotted = True
+
+    if figtype == 'all' or 'bandpass' in figtype:
+        title = '%s at %s from storm onset \n %i km altitude' % (
+            col, ut_diff, int(real_alt))
+        make_a_plot(fit, title=title, save_or_show=save_or_show,
+                    fname=fname.replace('plot_type', 'bandpass'))
+        plotted = True
+
+    if figtype == 'all' or 'diff' in figtype:
+        title = '%s at %s from storm onset \n %i km altitude' % (
+            col, ut_diff, int(real_alt))
+        for v in diff_vs:
+            make_a_plot(diff, title=title, save_or_show=save_or_show,
+                        fname=fname.replace('plot_type', 'filt-' + str(v)),
+                        cbar_label='% over background', cbar_lims=[-v, v])
+
+        plotted = True
+    plt.close('all')
+    gc.collect()
+    if not plotted:
+        raise ValueError(
+            "no plots were made. options are 'diff', 'bandpass', 'raw',",
+            "or 'all', you gave %s" % (figtype))
+
+
+def thread_call_maps(arg_arr):
+    call_maps(arg_arr[0], arg_arr[1], arg_arr[2],
+              figtype=arg_arr[3], save_or_show=arg_arr[4])
+
+
+def call_keos(col, real_lon, real_alt, figtype='all', save_or_show='show',
+              cbar_lims=None):
+
+    ilon = np.argmin(np.abs(lons - real_lon))
+    ialt = np.argmin(np.abs(alts - real_alt))
+
+    real_lon = lons[ilon]
+    real_alt = alts[ialt]
+
+    raw = data_dict[col][:, :, ilon, ialt]
+    fit = fits[col][:, :, ilon, ialt]
+
+    diff = 100*(raw - fit)/fit
+
+    fname = os.path.join(sami_keo_save_path, col, 'plot_type', str(
+        int(real_alt)), 'lon' + str(int(real_lon)) + '.png')
+
+    plotted = False
+
+    if figtype == 'all' or 'raw' in figtype:
+        title = '%s at %i (deg) glon \n %i km altitude' % (
+            col, int(real_lon), int(real_alt))
+        make_a_plot(raw, title=title, save_or_show=save_or_show,
+                    fname=fname.replace('plot_type', 'raw'))
+        plotted = True
+
+    if figtype == 'all' or 'bandpass' in figtype:
+        title = '%s at %i (deg) glon \n %i km altitude' % (
+            col, int(real_lon), int(real_alt))
+        make_a_plot(fit, title=title, save_or_show=save_or_show,
+                    fname=fname.replace('plot_type', 'bandpass'))
+        plotted = True
+
+    if figtype == 'all' or 'diff' in figtype:
+        title = '%s at %i (deg) glon \n %i km altitude' % (
+            col, int(real_lon), int(real_alt))
+        for v in diff_vs:
+            make_a_plot(diff, title=title, save_or_show=save_or_show,
+                        fname=fname.replace('plot_type', 'filt-' + str(v)),
+                        cbar_label='% over background', cbar_lims=[-v, v])
+        plotted = True
+
+    if not plotted:
+        raise ValueError(
+            "no plots were made. options are 'diff', 'bandpass', 'raw',",
+            "or 'all', you gave %s" % (figtype))
+
+
+def thread_call_keos(arg_arr):
+    call_keos(arg_arr[0], arg_arr[1], arg_arr[2],
+              figtype=arg_arr[3], save_or_show=arg_arr[4])
+
+
+def loop_maps(cols=cols, times=times, alts=alts, thread=True, plottype='all',
+              save_or_show='save'):
+
+    if thread:
+        arg_arr = []
+        for col in cols:
+            for itime in times:
+                for alt in alts:
+                    arg_arr.append([col, itime, alt, plottype, 'save'])
+
+        with Pool(num_pool_workers) as pool:
+            with tqdm(desc='making maps!', total=len(arg_arr)) as pbar:
+                for _ in pool.imap_unordered(thread_call_maps, arg_arr):
+                    pbar.update(1)
 
     else:
-        raise ValueError(
-            'save_or_show input is invalid. Accepted inputs are "save"',
-            'or "show", you gave ', save_or_show)
-    plt.close()
+        for col in cols:
+            for itime in times:
+                for alt in alts:
+                    call_maps(col, itime, alt, figtype=plottype,
+                              save_or_show=save_or_show)
+
+
+def loop_keos(cols=cols, lon_keos=lon_keos, alts=alts, thread=True,
+              plottype='all'):
+
+    if thread:
+        arg_arr = []
+        for col in cols:
+            for lon in lon_keos:
+                for alt in alts:
+                    arg_arr.append([col, lon, alt, plottype, 'save'])
+
+        with Pool(num_pool_workers) as pool:
+            with tqdm(desc='making keos!', total=len(arg_arr)) as pbar:
+                for _ in pool.imap_unordered(thread_call_keos, arg_arr):
+                    pbar.update(1)
+
+    else:
+        for col in cols:
+            for lon in lon_keos:
+                for alt in alts:
+                    call_keos(col, lon, alt, figtype=plottype,
+                              save_or_show=save_or_show)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        'dtime_storm_start',
+        help='Datetime of storm start. Format YYYYMMDDHHmmss',
+        action='store')
+
+    parser.add_argument(
+        'dtime_sim_start',
+        help='Datetime of the start of the silulations',
+        action='store')
+
+    parser.add_argument(
+        '-sami_data_path', type=str,
+        help='Path to sami data', default='./sami_dir', action='store')
+
+    parser.add_argument(
+        '--out_path', type=str,
+        help='path to where plots are saved', default='./', action='store')
+
+    parser.add_argument(
+        '--cols', nargs="+", type=str,
+        help='Which columns to plot. Default: all', default='all')
+
+    parser.add_argument(
+        '--plot_start_delta', type=int,
+        action='store', default=-1, required=False)
+
+    parser.add_argument(
+        '--plot_end_delta', type=int,
+        action='store', default=-1, required=False)
+
+    parser.add_argument(
+        '--save_or_show', type=str,
+        action='store', default='save', required=False,
+        help='Save or show plots. Default: save')
+
+    parser.add_argument(
+        '--keo_lons', type=float, nargs="+",
+        action='store', default=[-90, 2, 90, -178], required=False,
+        help='Lons to plot keograms for. Default: -90,2,90,-178')
+
+    parser.add_argument(
+        '--figtype', type=str, action='store', default='all',
+        help='Which type of plot to make.' +
+        'Options: raw, filt, diffs. Default: all')
+
+    parser.add_argument(
+        "--keo_lat_lim", type=float, default=90, action='store',
+        help="limit plotted latitudes to this +/- in keos")
+
+    parser.add_argument(
+        '--threading',
+        help='Use threading. Default: False',
+        action='store_true', default=False, required=False)
+
+    parser.add_argument(
+        '--num_workers', type=int,
+        help='Number of workers to use. Default: 48',
+        action='store', default=os.cpu_count(), required=False)
+
+    parser.add_argument(
+        "-f", "--file-type", type=str, nargs="+",
+        default="3DALL*",
+        help="which filetype to plot, e.g. 3DALL* or 2DANC*",)
+
+    parser.add_argument(
+        "-o", "--outliers", action="store_true",
+        help="do you want to remove outliers")
+
+    parser.add_argument(
+        "-d", "--diff", type=int, nargs="+", default=None,
+        help="Specify the colorbar limits for 'diff' plots.")
+
+    parser.add_argument(
+        "-k", "--keogram", action="store_true",
+        help="do you want to make a keogram?")
+
+    parser.add_argument(
+        "-m", "--map", action="store_true", help="do you want to make a map?")
