@@ -39,8 +39,7 @@ matplotlib.use("Agg")
 
 
 def main(args):
-
-    gitm_colnames_friendly_3DALL = {
+    """gitm_colnames_friendly_3DALL = {
         "Rho": "Total Neutral Density",
         "[O(!U3!NP)]": "O(3P)",
         "[O!D2!N]": "O2",
@@ -85,7 +84,7 @@ def main(args):
         "Vertical TEC": "Vertical TEC",
         "AltIntJouleHeating (W/m2)": "Joule Heating",
         # TODO: ADD THIS
-    }
+    }"""
 
     global TWO_FILES
     if args.gitm_data_path2 is not None:
@@ -94,10 +93,7 @@ def main(args):
     else:
         gitm_path = [args.gitm_data_path]
         TWO_FILES = False
-        
-    
 
-        
         """
     global cols, gitm_colnames_friendly
     cols = []
