@@ -355,7 +355,7 @@ def read_sami_data(sami_data_path, dtime_sim_start,
 
     elif t_start_idx is not None or t_end_idx is not None:
         times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
-            nt, sami_data_path, dtime_storm_start, dtime_sim_start,
+            nt, sami_data_path, dtime_sim_start, dtime_storm_start,
             t_start_idx, t_end_idx, help)
     else:
         times, hrs_since_storm_start = make_times(
@@ -368,7 +368,7 @@ def read_sami_data(sami_data_path, dtime_sim_start,
         return
 
     if pbar:
-        progress = tqdm(total=len(cols) * ntimes, desc='reading SAMI data')
+        progress = tqdm(total=len(cols) * nt, desc='reading SAMI data')
 
     sami_data['data'] = {}
     for f in cols:
@@ -385,15 +385,18 @@ def read_sami_data(sami_data_path, dtime_sim_start,
                   'the model results may not be in the path you specified:')
             raise
 
-        for t in range(start_idx, end_idx):
+        for t in range(nt):
             raw = np.fromfile(file, dtype='float32', count=(nz*nf*nlt)+2)[1:-1]
-            sami_data['data'][f][:, :, :, t - start_idx] = raw.reshape(
-                nlt, nf, nz).copy()
+            if t in range(start_idx, end_idx):
+                sami_data['data'][f][:, :, :, t-start_idx] = raw.reshape(
+                    nlt, nf, nz).copy()
             if pbar:
                 progress.update(1)
         file.close()
     if pbar:
         progress.close()
+        
+    print(sami_data['data']['edens'].shape, len(times), start_idx, end_idx)
 
     return sami_data, np.array(times)
 

@@ -30,10 +30,10 @@ def make_filter(params=None):
     return sos
 
 
-def remove_background(time_series, sos):
+def remove_background(time_series, sos, axis = 0):
 
     # Apply the filter to the time series
-    filtered_data = signal.sosfiltfilt(sos, time_series)
+    filtered_data = signal.sosfiltfilt(sos, time_series, axis)
 
     return filtered_data
 
@@ -54,7 +54,8 @@ def draw_field_line_plot(x, y, z, title, interpolate=False,
     x = x[plot_mask]
     y = y[plot_mask]
     z = z[plot_mask]
-    fpeak_col = fpeak_col[plot_mask]
+    if fpeak_col is not None:
+        fpeak_col = fpeak_col[plot_mask]
 
     if interpolate:
 
@@ -152,6 +153,7 @@ def main(args):
                                            dtime_storm_start=dtime_storm_start,
                                            t_start_idx=args.plot_start_delta,
                                            t_end_idx=args.plot_end_delta,
+                                           cols=args.cols,
                                            pbar=True)
 
     mlons = np.unique(sami_data['grid']['mlon'].round(2))
@@ -180,17 +182,17 @@ def main(args):
 
             for type in plot_type:
                 if type == 'raw':
-                    data_src = sami_data['data'][col][mask, :]
+                    data_src = sami_data['data'][col][mask, :].copy()
                     cbar_lims = [np.min(data_src), np.max(data_src)]
                 elif type == 'bandpass':
-                    data_raw = sami_data['data'][col][mask, :]
+                    data_raw = sami_data['data'][col][mask, :].copy()
                     sos = make_filter()
-                    data_src = remove_background(data_raw, sos)
+                    data_src = remove_background(data_raw, sos, axis = 1)
                     cbar_lims = [np.min(data_src), np.max(data_src)]
                 elif type == 'diff':
-                    data_raw = sami_data['data'][col][mask, :]
+                    data_raw = sami_data['data'][col][mask, :].copy()
                     sos = make_filter()
-                    data_src = remove_background(data_raw, sos)
+                    data_src = remove_background(data_raw, sos, axis = 1)
                     data_src = 100*(data_raw - data_src)/data_raw
                     cbar_lims = [-3, 3]
                 else:
