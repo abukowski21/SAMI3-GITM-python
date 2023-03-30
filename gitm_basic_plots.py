@@ -289,6 +289,9 @@ def make_a_keo(
         Defaults to save. You can instead 'show' the plots.
 
     """
+
+    fname = fname.replace(' ', '')
+
     if fname is not None and os.path.exists(fname) and save_or_show == "save":
         if not OVERWRITE:
             raise ValueError("We cannot overwrite the file: " + str(fname))
@@ -322,16 +325,26 @@ def make_a_keo(
         if not fname:
             raise ValueError("plot save path must be given!")
         else:
+            fname = fname.replace(" ", "")
             try:
                 plt.savefig(fname)
             except FileNotFoundError:
                 try:
-                    directory_list = os.path.join(fname).split("/")[:-1]
-                    os.makedirs(os.path.join(*directory_list))
+                    last_slash = fname.rfind('/')
+                    os.makedirs(fname[:last_slash])
                     plt.savefig(fname)
-                except PermissionError:
-                    print("Permission denied. Cannot save plot.")
-                    print(" tried writing to: ", fname)
+                except FileExistsError:
+                    # sometimes when we make too many plots in the same
+                    # directory, it fails. this fixes that.
+                    time.sleep(2)
+                    try:
+                        plt.savefig(fname)
+                    except FileNotFoundError:
+                        time.sleep(2)
+                        plt.savefig(fname)
+
+            except PermissionError:
+                print(fname, 'Has permission errors')
             plt.close("all")
     else:
         raise ValueError(
@@ -454,7 +467,6 @@ def call_keos(
         made_plot = True
 
     if figtype == "all" or "diff" in figtype:
-        # (bandpass - raw)/ raw
         title = "Keogram of %s along %i deg Longitude at %i km" % (
             gitm_colnames_friendly[namecol].replace(
                 "(", "[").replace(")", "]"),
@@ -505,7 +517,7 @@ def draw_map(
         plot_extent=[-180, 180, -90, 90],
         OVERWRITE=False):
 
-    if os.path.exists(fname):
+    if os.path.exists(fname.replace(' ', '')):
         if not OVERWRITE:
             return
 
@@ -544,8 +556,8 @@ def draw_map(
                 plt.savefig(fname)
             except FileNotFoundError:
                 try:
-                    directory_list = os.path.join(fname).split("/")[:-1]
-                    os.makedirs(os.path.join(*directory_list))
+                    last_slash = fname.rfind('/')
+                    os.makedirs(fname[:last_slash])
                     plt.savefig(fname)
                 except FileExistsError:
                     # sometimes when we make too many plots in the same
@@ -557,9 +569,8 @@ def draw_map(
                         time.sleep(2)
                         plt.savefig(fname)
 
-            except FileNotFoundError:
-                print(fname)
-                raise ValueError
+            except PermissionError:
+                print(fname, 'Has permission errors')
             plt.close("all")
     else:
         raise ValueError(
@@ -617,7 +628,7 @@ def call_maps(
     raw = gitm_bins[dtime_index, numcol, :, :, alt_idx].copy()
     bandpass = fits_gitm[dtime_index, numcol, :, :, alt_idx].copy()
     real_alt = alts[alt_idx]
-    percent = 100 * (bandpass - raw) / raw
+    percent = 100 * (raw - bandpass) / raw
 
     if outliers:
         raw = remove_outliers(raw)
