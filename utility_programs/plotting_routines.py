@@ -71,8 +71,8 @@ def make_a_keo(
                 plt.savefig(fname)
             except FileNotFoundError:
                 try:
-                    directory_list = os.path.join(fname).split("/")[:-1]
-                    os.makedirs(os.path.join(*directory_list))
+                    last_slash = fname.rfind('/')
+                    os.makedirs(fname[:last_slash])
                     plt.savefig(fname)
                 except PermissionError:
                     print("Permission denied. Cannot save plot.")
@@ -137,8 +137,9 @@ def draw_map(
                 plt.savefig(fname)
             except FileNotFoundError:
                 try:
-                    directory_list = os.path.join(fname).split("/")[:-1]
-                    os.makedirs(os.path.join(*directory_list))
+                    last_slash = fname.rfind('/')
+                    print(fname[:last_slash])
+                    os.makedirs(fname[:last_slash])
                     plt.savefig(fname)
                 except FileExistsError:
                     # sometimes when we make too many plots in the same
@@ -150,10 +151,11 @@ def draw_map(
                         time.sleep(2)
                         plt.savefig(fname)
 
-            except FileNotFoundError:
+            except PermissionError:
                 print(fname)
                 raise ValueError
             plt.close("all")
+
     else:
         raise ValueError(
             'save_or_show input is invalid. Accepted inputs are "save" or',
