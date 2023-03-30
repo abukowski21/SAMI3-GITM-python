@@ -353,7 +353,7 @@ def read_sami_data(sami_data_path, dtime_sim_start,
     if dtime_storm_start is None:
         times = make_times(nt, sami_data_path)
 
-    elif t_start_idx is None or t_end_idx is None:
+    elif t_start_idx is not None or t_end_idx is not None:
         times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
             nt, sami_data_path, dtime_storm_start, dtime_sim_start,
             t_start_idx, t_end_idx, help)
