@@ -138,7 +138,6 @@ def draw_map(
             except FileNotFoundError:
                 try:
                     last_slash = fname.rfind('/')
-                    print(fname[:last_slash])
                     os.makedirs(fname[:last_slash])
                     plt.savefig(fname)
                 except FileExistsError:
@@ -152,8 +151,7 @@ def draw_map(
                         plt.savefig(fname)
 
             except PermissionError:
-                print(fname)
-                raise ValueError
+                print(fname, 'Has permission errors')
             plt.close("all")
 
     else:
