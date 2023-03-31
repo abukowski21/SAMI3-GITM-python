@@ -419,9 +419,15 @@ def read_sami_dene_tec(sami_data_path, dtime_sim_start,
         'mlat': 'blat0.dat', 'mlon': 'blon0.dat', 'malt': 'balt0.dat'}
 
     for f in geo_grid_files:
-        file = open(os.path.join(sami_data_path, geo_grid_files[f]), 'rb')
-        raw = np.fromfile(file, dtype='float32')[1:-1].copy()
-        file.close()
+        try:
+            file = open(os.path.join(sami_data_path, geo_grid_files[f]), 'rb')
+            raw = np.fromfile(file, dtype='float32')[1:-1].copy()
+            file.close()
+        except FileNotFoundError:
+            print("No TEC/BtoG files found. Make sure:")
+            print(geo_grid_files.keys())
+            print("exist in %s directory." %(str(sami_data_path)))
+            print("hint: you may need to run post-processing scripts")
 
         sami_data['grid'][f] = raw
 
