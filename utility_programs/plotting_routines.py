@@ -2,6 +2,8 @@ import os
 from matplotlib import pyplot as plt
 import geopandas
 import time
+from scipy.interpolate import LinearNDInterpolator
+import numpy as np
 
 world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
 
@@ -15,8 +17,9 @@ def make_a_keo(
         x_label="Hours since storm onset",
         save_or_show="save",
         fname=None,
-        plot_extent=None,
-        OVERWRITE=False):
+        ylims = None,
+        OVERWRITE=False,
+        **kwargs):
     """
     Inputs a data array and then generates a keogram.
 
@@ -48,17 +51,22 @@ def make_a_keo(
 
     plt.imshow(
         arr.T,
-        extent=plot_extent if plot_extent else None,
         aspect="auto",
         cmap="viridis",
         origin="lower",
         vmin=cbarlims[0],
         vmax=cbarlims[1],
-    )
+        interpolation="bicubic",
+        interpolation_stage="rgba",
+         **kwargs)
+    
     plt.ylabel(y_label)
     plt.xlabel(x_label)
     plt.title(title)
     plt.colorbar(label=cbar_name)
+
+    if ylims is not None:
+        plt.ylim(ylims)
 
     if save_or_show == "show":
         plt.show()
@@ -90,13 +98,15 @@ def draw_map(
         data_arr,
         title,
         cbarlims,
+        ylims = None,
         cbar_label=None,
         y_label="Latitude (deg)",
         x_label="Longitude (deg)",
         save_or_show="save",
         fname=None,
         plot_extent=[-180, 180, -90, 90],
-        OVERWRITE=False):
+        OVERWRITE=False,
+        **kwargs):
 
     if os.path.exists(fname):
         if not OVERWRITE:
@@ -115,10 +125,15 @@ def draw_map(
         vmin=cbarlims[0],
         vmax=cbarlims[1],
         interpolation="bicubic",
-        interpolation_stage="rgba",)
+        interpolation_stage="rgba",
+        **kwargs)
+
     plt.title(title)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
+
+    if ylims is not None:
+        plt.ylim(ylims)
 
     if not cbar_label:
         fig.colorbar(data)
@@ -159,3 +174,32 @@ def draw_map(
             'save_or_show input is invalid. Accepted inputs are "save" or',
             '"show", you gave ',
             save_or_show,)
+
+
+
+def interpolate_2d_plot(x,y,c,nx_out, ny_out, map = False):
+
+    x = np.array(x)
+    y = np.array(y)
+    c = np.array(c)
+
+    if map:
+        in_x = x
+        in_y = y
+    else:
+        in_x, in_y = np.meshgrid(x,y)
+    
+    out_x, out_y = np.meshgrid(
+        np.linspace(min(x), max(x), nx_out),
+        np.linspace(min(y), max(y), ny_out))
+
+
+    interp = LinearNDInterpolator(
+        np.array([in_x.flatten(), in_y.flatten()]).T, c.T.flatten(),
+        rescale=True)
+    znew = interp(list(zip(out_x.flatten(), out_y.flatten())))
+    znew = znew.reshape(out_x.shape)
+
+    p_extent = [min(x), max(x), min(y), max(y)]
+
+    return znew, p_extent
