@@ -187,8 +187,9 @@ def make_times(nt, sami_data_path,  dtime_sim_start, dtime_storm_start=None,
         time_here = pd.Timestamp(dtime_sim_start) + \
             t * pd.Timedelta(5, 'minutes')
         times.append(time_here.to_pydatetime())
-        hrs = (time_here - dtime_storm_start)/pd.Timedelta(1, 'hour')
-        hrs_since_storm_start.append(hrs)
+        if dtime_storm_start:
+            hrs = (time_here - dtime_storm_start)/pd.Timedelta(1, 'hour')
+            hrs_since_storm_start.append(hrs)
 
     times_df = pd.read_fwf(os.path.join(sami_data_path, 'time.dat'),
                            names=['istep', 'hour', 'minute', 'second',
@@ -395,14 +396,15 @@ def read_sami_data(sami_data_path, dtime_sim_start,
         file.close()
     if pbar:
         progress.close()
-        
+
     print(sami_data['data']['edens'].shape, len(times), start_idx, end_idx)
 
     return sami_data, np.array(times)
 
 
-def read_sami_dene_tec(sami_data_path, dtime_storm_start=None,
-                       dtime_sim_start=None, reshape=True):
+def read_sami_dene_tec(sami_data_path, dtime_sim_start, 
+                       dtime_storm_start=None,
+                       reshape=True):
     """ Read in TEC (and interpolated dene) data!
 
     """
@@ -445,9 +447,7 @@ def read_sami_dene_tec(sami_data_path, dtime_storm_start=None,
         lines = fp.readlines()
         nt = len(lines) - 1
 
-    times, hrs_since_storm_start = make_times(
-        nt, sami_data_path,
-        dtime_storm_start=dtime_storm_start,
-        dtime_sim_start=dtime_sim_start)
+    times = make_times(
+        nt, sami_data_path, dtime_sim_start=dtime_sim_start)
 
     return sami_data, np.array(times)
