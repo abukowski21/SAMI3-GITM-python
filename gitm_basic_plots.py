@@ -302,7 +302,7 @@ def make_a_keo(
         hrs_end = hrs_since_storm_onset[-1]
         lat_start = -keo_lat_lim
         lat_end = keo_lat_lim
-        plot_extent = [hrs_start, hrs_end, lat_start, lat_end]
+        plot_extent = [hrs_start, hrs_end, -90, 90]
 
     plt.imshow(
         arr.T,
@@ -313,6 +313,7 @@ def make_a_keo(
         vmin=cbarlims[0],
         vmax=cbarlims[1],
     )
+    plt.ylim([lat_start, lat_end])
     plt.ylabel(y_label)
     plt.xlabel(x_label)
     plt.title(title)
