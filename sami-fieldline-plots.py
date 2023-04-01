@@ -67,7 +67,7 @@ def draw_field_line_plot(x, y, z, title, interpolate=False,
 
         loc_grid = list(zip(x, y))
         interp = LinearNDInterpolator(
-            np.array([in_x.flatten(), in_y.flatten()]).T, z,
+            loc_grid, z,
             rescale=True)
 
         znew = interp(list(zip(grid_x.flatten(), grid_y.flatten())))
