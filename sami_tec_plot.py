@@ -56,7 +56,7 @@ def main(args):
     if args.sami_data_path2:
         TWO_FILES = True
         global times2, sami_data2
-        sami_data2, times2 = SAMI.read_dene_tec(
+        sami_data2, times2 = SAMI.read_sami_dene_tec(
             args.sami_data_path2, dtime_sim_start,
             reshape=True)
 
@@ -134,8 +134,8 @@ def main(args):
         if DO_ALT_PLOTS:
             raise ValueError("Not yet compatible with alt plots.")
 
-        sami_tec2 = sami_data2['data'][tec][ins].reshape(
-            [len(times), len(lons), len(lats)])
+        sami_tec2 = sami_data2['data']['tec'][ins].reshape(
+            [len(times), nlons, nlats])
         global fits_sami2
         fits_sami2 = filters.make_fits(sami_tec2)
 
