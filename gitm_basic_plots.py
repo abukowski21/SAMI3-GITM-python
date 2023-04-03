@@ -15,6 +15,7 @@ from scipy import signal
 from tqdm.auto import tqdm
 
 from utility_programs.plot_help import UT_from_Storm_onset
+from utility_programs.plotting_routines import make_a_keo, draw_map
 
 matplotlib.use("Agg")
 
@@ -92,8 +93,8 @@ def main(args):
     global gitm_keo_lons
     gitm_keo_lons = args.keo_lons
 
-    global keo_lat_lim
-    keo_lat_lim = args.keo_lat_lim
+    global lat_lim
+    lat_lim = args.lat_lim
 
     global out_path
     out_path = args.out_path
@@ -159,7 +160,7 @@ def main(args):
                         call_keos(alt_idx=alt_idx, real_lon=real_lon,
                                   namecol=col, save_or_show=args.save_or_show,
                                   outliers=args.outliers,
-                                  keo_lat_lim=args.keo_lat_lim,
+                                  ylims=[-lat_lim, lat_lim],
                                   figtype=args.figtype)
                         pbar.update()
             pbar.close()
@@ -253,108 +254,6 @@ def remove_outliers(array):
 # KEO MAKING FUNCTIONS:
 
 
-def make_a_keo(
-        arr,
-        title,
-        cbarlims,
-        cbar_name,
-        y_label="Latitude (deg)",
-        x_label="Hours since storm onset",
-        save_or_show="save",
-        fname=None,
-        keo_lat_lim=90,
-        plot_extent=None,
-        OVERWRITE=False):
-    """
-    Inputs a data array and then generates a keogram.
-
-    Parameters:
-    -----------
-    arr: np array
-        The data array to be plotted. If grabbing from the gitm array,
-        you do not need to transpose.
-    extent: tuple/list
-        The limits of the plot. [left, right, bottom, top]
-    xlabel: string
-        self-explanitory
-    y-label: string
-        self-explanitory
-    title: string
-        self-explanitory
-    cbar limes: tuple/list
-        vmin, vmax for the colorbar to be plot.
-    cbar_name: string.
-        Label for the colorbar.
-    save_or_show: string
-        Defaults to save. You can instead 'show' the plots.
-
-    """
-
-    fname = fname.replace(' ', '')
-
-    if fname is not None and os.path.exists(fname) and save_or_show == "save":
-        if not OVERWRITE:
-            raise ValueError("We cannot overwrite the file: " + str(fname))
-    fig = plt.figure(figsize=(10, 7))
-
-    if plot_extent is None:
-        hrs_start = hrs_since_storm_onset[0]
-        hrs_end = hrs_since_storm_onset[-1]
-        lat_start = -keo_lat_lim
-        lat_end = keo_lat_lim
-        plot_extent = [hrs_start, hrs_end, -90, 90]
-
-    plt.imshow(
-        arr.T,
-        extent=plot_extent,
-        aspect="auto",
-        cmap="viridis",
-        origin="lower",
-        vmin=cbarlims[0],
-        vmax=cbarlims[1],
-    )
-    plt.ylim([lat_start, lat_end])
-    plt.ylabel(y_label)
-    plt.xlabel(x_label)
-    plt.title(title)
-    plt.colorbar(label=cbar_name)
-
-    if save_or_show == "show":
-        plt.show()
-        plt.close(fig)
-    elif save_or_show == "save":
-        if not fname:
-            raise ValueError("plot save path must be given!")
-        else:
-            fname = fname.replace(" ", "")
-            try:
-                plt.savefig(fname)
-            except FileNotFoundError:
-                try:
-                    last_slash = fname.rfind('/')
-                    os.makedirs(fname[:last_slash])
-                    plt.savefig(fname)
-                except FileExistsError:
-                    # sometimes when we make too many plots in the same
-                    # directory, it fails. this fixes that.
-                    time.sleep(2)
-                    try:
-                        plt.savefig(fname)
-                    except FileNotFoundError:
-                        time.sleep(2)
-                        plt.savefig(fname)
-
-            except PermissionError:
-                print(fname, 'Has permission errors')
-            plt.close("all")
-    else:
-        raise ValueError(
-            'save_or_show input is invalid. Accepted inputs are "save" or',
-            '"show", you gave ',
-            save_or_show,
-        )
-
-
 def call_keos(
         alt_idx,
         real_lon,
@@ -363,7 +262,7 @@ def call_keos(
         save_or_show="show",
         return_figs=False,
         figtype="all",
-        keo_lat_lim=90,
+        lat_lim=90,
         outliers=False,
         vlims=None):
 
@@ -434,13 +333,14 @@ def call_keos(
             "lon" + str(int(real_lon)),
             gitm_colnames_friendly[namecol] + ".png",)
         make_a_keo(
-            bandpass,
-            title,
+            arr=bandpass,
+            title=title,
             cbarlims=(vmin_fits, vmax_fits),
             cbar_name=color_label,
-            keo_lat_lim=keo_lat_lim,
+            ylims=[-lat_lim,lat_lim],
             save_or_show=save_or_show,
-            fname=fname,)
+            fname=fname,
+            extent=[-180.180,-90,90],)
         made_plot = True
 
     if figtype == "all" or "raw" in figtype:
@@ -458,13 +358,14 @@ def call_keos(
             "lon" + str(int(real_lon)),
             gitm_colnames_friendly[namecol] + ".png",)
         make_a_keo(
-            data,
-            title,
-            keo_lat_lim=keo_lat_lim,
+            arr=data,
+            title=title,
+            ylims=[-lat_lim,lat_lim],
             cbarlims=(vmin_bins, vmax_bins),
             cbar_name=color_label,
             save_or_show=save_or_show,
-            fname=fname,)
+            fname=fname,
+            extent=[-180.180,-90,90],)
         made_plot = True
 
     if figtype == "all" or "diff" in figtype:
@@ -481,13 +382,14 @@ def call_keos(
             "lon" + str(int(real_lon)),
             gitm_colnames_friendly[namecol] + ".png",)
         make_a_keo(
-            percent,
-            title,
-            keo_lat_lim=keo_lat_lim,
+            arr=percent,
+            title=title,
+            ylims=[-lat_lim,lat_lim],
             cbarlims=(vmin_diffs, vmax_diffs),
             cbar_name=color_label,
             save_or_show=save_or_show,
-            fname=fname,)
+            fname=fname,
+            extent=[-180.180,-90,90],)
         made_plot = True
 
     if not made_plot:
@@ -506,79 +408,6 @@ def thread_call_keos(args):
         figtype="all")
 
 
-def draw_map(
-        data_arr,
-        title,
-        cbarlims,
-        cbar_label=None,
-        y_label="Latitude (deg)",
-        x_label="Longitude (deg)",
-        save_or_show="save",
-        fname=None,
-        plot_extent=[-180, 180, -90, 90],
-        OVERWRITE=False):
-
-    if os.path.exists(fname.replace(' ', '')):
-        if not OVERWRITE:
-            return
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-    world.plot(ax=ax, color="white", edgecolor="black", zorder=1)
-    data = ax.imshow(
-        data_arr.T,
-        cmap="viridis",
-        aspect="auto",
-        extent=plot_extent,
-        origin="lower",
-        zorder=10,
-        alpha=0.8,
-        vmin=cbarlims[0],
-        vmax=cbarlims[1],
-        interpolation="bicubic",
-        interpolation_stage="rgba",)
-    plt.title(title)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-
-    if not cbar_label:
-        fig.colorbar(data)
-    else:
-        fig.colorbar(data, label=cbar_label)
-
-    if save_or_show == "show":
-        plt.show()
-        plt.close()
-    elif save_or_show == "save":
-        if not fname:
-            raise ValueError("plot save path must be given!")
-        else:
-            fname = fname.replace(" ", "")
-            try:
-                plt.savefig(fname)
-            except FileNotFoundError:
-                try:
-                    last_slash = fname.rfind('/')
-                    os.makedirs(fname[:last_slash])
-                    plt.savefig(fname)
-                except FileExistsError:
-                    # sometimes when we make too many plots in the same
-                    # directory, it fails. this fixes that.
-                    time.sleep(2)
-                    try:
-                        plt.savefig(fname)
-                    except FileNotFoundError:
-                        time.sleep(2)
-                        plt.savefig(fname)
-
-            except PermissionError:
-                print(fname, 'Has permission errors')
-            plt.close("all")
-    else:
-        raise ValueError(
-            'save_or_show input is invalid. Accepted inputs are "save" or',
-            '"show", you gave ',
-            save_or_show,)
-
 
 def call_maps(
         alt_idx,
@@ -589,7 +418,7 @@ def call_maps(
         save_or_show="show",
         return_figs=False,
         figtype="all",
-        lat_lim=[-90, 90],
+        lat_lim=90,
         diffs=[1, 2, 3, 5, 10, 30, 50],
         outliers=False):
 
@@ -654,7 +483,8 @@ def call_maps(
             gitm_colnames_friendly[namecol],
             str(dtime_index).rjust(3, "0") + ".png",)
         cbarlims = [vmin_bins, vmax_bins]
-        draw_map(raw, title, cbarlims, fname=fname, save_or_show=save_or_show)
+        draw_map(raw, title, cbarlims, fname=fname, 
+            save_or_show=save_or_show,ylims=[-lat_lim,lat_lim])
         made_plot = True
 
     # filter map
@@ -675,12 +505,13 @@ def call_maps(
         cbarlims = [vmin_fits, vmax_fits]
         cbar_label = "Bandpass Filtered " + gitm_colnames_friendly[namecol]
         draw_map(
-            bandpass,
-            title,
-            cbarlims,
+            data_arr=bandpass,
+            title=title,
+            cbarlims=cbarlims,
             save_or_show=save_or_show,
             cbar_label=cbar_label,
-            fname=fname,)
+            fname=fname,
+            ylims=[-lat_lim,lat_lim],)
         made_plot = True
 
     # diffs
@@ -704,12 +535,13 @@ def call_maps(
                 cbarlims = [-v_lim, v_lim]
                 cbar_label = "% over Background"
                 draw_map(
-                    percent,
-                    title,
-                    cbarlims,
+                    data_arr=percent,
+                    title=title,
+                    cbarlims=cbarlims,
                     save_or_show=save_or_show,
                     cbar_label=cbar_label,
-                    fname=fname,)
+                    fname=fname,
+                    ylims=[-lat_lim,lat_lim],)
         else:
             fname = os.path.join(
                 out_path, 'maps'
@@ -720,12 +552,13 @@ def call_maps(
             cbarlims = [vmin_diffs, vmax_diffs]
             cbar_label = "% over Background"
             draw_map(
-                percent,
-                title,
-                cbarlims,
+                data_arr=percent,
+                title=title,
+                cbarlims=cbarlims,
                 save_or_show=save_or_show,
                 cbar_label=cbar_label,
-                fname=fname,)
+                fname=fname,
+                ylims=[-lat_lim,lat_lim],)
             made_plot = True
 
     if not made_plot:
@@ -791,8 +624,8 @@ if __name__ == "__main__":
         'Options: raw, filt, diffs. Default: all')
 
     parser.add_argument(
-        "--keo_lat_lim", type=float, default=90, action='store',
-        help="limit plotted latitudes to this +/- in keos")
+        "--lat_lim", type=float, default=90, action='store',
+        help="limit plotted latitudes to this +/- in keos & maps")
 
     parser.add_argument(
         '--threading',
