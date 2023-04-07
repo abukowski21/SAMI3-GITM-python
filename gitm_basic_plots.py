@@ -160,8 +160,8 @@ def main(args):
                         call_keos(alt_idx=alt_idx, real_lon=real_lon,
                                   namecol=col, save_or_show=args.save_or_show,
                                   outliers=args.outliers,
-                                  lat_lim=lat_lim,
-                                  figtype=args.figtype, vlims = args.cbarlims)
+                                  ylims=[-lat_lim, lat_lim],
+                                  figtype=args.figtype)
                         pbar.update()
             pbar.close()
 
@@ -189,7 +189,7 @@ def main(args):
                 for nalt in gitm_alt_idxs:
                     for dtime_real in times:
                         call_maps(nalt, dtime_real=dtime_real,
-                                  numcol=numcol, lat_lim = lat_lim,
+                                  numcol=numcol,
                                   save_or_show=args.save_or_show,
                                   figtype=args.figtype,
                                   outliers=args.outliers)
@@ -287,7 +287,6 @@ def call_keos(
         vmax_diffs = np.max(100 * (fits_gitm[:, numcol, :, :, alt_idx]
                                    - gitm_bins[:, numcol, :, :, alt_idx])
                             / gitm_bins[:, numcol, :, :, alt_idx])
-        print("here and i shouldn't be...")
 
     else:
         vmin = -vlims
@@ -341,8 +340,7 @@ def call_keos(
             ylims=[-lat_lim,lat_lim],
             save_or_show=save_or_show,
             fname=fname,
-            extent=[min(hrs_since_storm_onset), max(hrs_since_storm_onset)
-                ,-90,90],)
+            extent=[-180.180,-90,90],)
         made_plot = True
 
     if figtype == "all" or "raw" in figtype:
@@ -367,8 +365,7 @@ def call_keos(
             cbar_name=color_label,
             save_or_show=save_or_show,
             fname=fname,
-            extent=[min(hrs_since_storm_onset), max(hrs_since_storm_onset)
-                ,-90,90],)
+            extent=[-180.180,-90,90],)
         made_plot = True
 
     if figtype == "all" or "diff" in figtype:
@@ -392,8 +389,7 @@ def call_keos(
             cbar_name=color_label,
             save_or_show=save_or_show,
             fname=fname,
-            extent=[min(hrs_since_storm_onset), max(hrs_since_storm_onset)
-                ,-90,90],)
+            extent=[-180.180,-90,90],)
         made_plot = True
 
     if not made_plot:
@@ -642,11 +638,6 @@ if __name__ == "__main__":
         action='store', default=48, required=False)
 
     parser.add_argument(
-        '--cbarlims', type=int,
-        help='Set the limits of the colorbars on the plots made.',
-        action='store', default=None, required=False)
-
-    parser.add_argument(
         "-f", "--file-type", type=str, nargs="+",
         default="3DALL*",
         help="which filetype to plot, e.g. 3DALL* or 2DANC*",)
@@ -654,6 +645,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outliers", action="store_true",
         help="do you want to remove outliers")
+
+    parser.add_argument(
+        "-d", "--diff", type=int, nargs="+",
+        help="do you want to plot the difference between the reg and raw ",)
 
     parser.add_argument(
         "-k", "--keogram", action="store_true",
