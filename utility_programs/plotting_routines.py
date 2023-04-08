@@ -137,10 +137,9 @@ def draw_map(
         interpolation="bicubic",
         interpolation_stage="rgba",
         **kwargs)
-
-    if title is not None:
-        plt.title(title)
+        
     if save_or_show != "return":
+        plt.title(title)
         plt.xlabel(x_label)
         plt.ylabel(y_label)
 
