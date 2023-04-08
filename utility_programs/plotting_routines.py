@@ -68,7 +68,10 @@ def make_a_keo(
     if ylims is not None:
         plt.ylim(ylims)
 
-    if save_or_show == "show":
+    if save_or_show == "return":
+        return(fig)
+    
+    elif save_or_show == "show":
         plt.show()
         plt.close(fig)
     elif save_or_show == "save":
@@ -96,23 +99,30 @@ def make_a_keo(
 
 def draw_map(
         data_arr,
-        title,
         cbarlims,
+        title = None,
         ylims = None,
         cbar_label=None,
         y_label="Latitude (deg)",
         x_label="Longitude (deg)",
         save_or_show="save",
+        ax=None,
         fname=None,
         plot_extent=[-180, 180, -90, 90],
         OVERWRITE=False,
         **kwargs):
 
-    if os.path.exists(fname):
-        if not OVERWRITE:
-            return
+    if save_or_show == "save":
+        if os.path.exists(fname):
+            if not OVERWRITE:
+                return
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    if ax is None and save_or_show != "return":
+        fig, ax = plt.subplots(figsize=(10, 5))
+        
+    elif ax is None and save_or_show == "return":
+        raise ValueError("Cannot return figure if ax is not given.")
+    
     world.plot(ax=ax, color="white", edgecolor="black", zorder=1)
     data = ax.imshow(
         data_arr.T,
@@ -128,19 +138,24 @@ def draw_map(
         interpolation_stage="rgba",
         **kwargs)
 
-    plt.title(title)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
+    if title is not None:
+        plt.title(title)
+    if save_or_show != "return":
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
 
     if ylims is not None:
         plt.ylim(ylims)
 
-    if not cbar_label:
+    if not cbar_label and save_or_show != "return":
         fig.colorbar(data)
-    else:
+    elif save_or_show != "return":
         fig.colorbar(data, label=cbar_label)
 
-    if save_or_show == "show":
+    if save_or_show == "return":
+        return data
+    
+    elif save_or_show == "show":
         plt.show()
         plt.close()
     elif save_or_show == "save":
@@ -170,11 +185,21 @@ def draw_map(
             plt.close("all")
 
     else:
-        raise ValueError(
-            'save_or_show input is invalid. Accepted inputs are "save" or',
-            '"show", you gave ',
-            save_or_show,)
+        if save_or_show != "return":
+            raise ValueError(
+                'save_or_show input is invalid. Accepted inputs are "save",',
+                '"show" or "return", you gave ',
+                save_or_show,)
 
+
+def polar_dial_plot(data,
+                    title = None,
+                    save_or_show = "save",
+                    hemisphere='North',
+                    **kwargs):
+    
+    gs1 = GridSpec(nrows=2, ncols=2, wspace=.1, hspace=.1)
+    
 
 
 def interpolate_2d_plot(x,y,c,nx_out, ny_out, map = False):
