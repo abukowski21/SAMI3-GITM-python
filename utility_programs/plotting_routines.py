@@ -141,7 +141,6 @@ def draw_map(
         extent=plot_extent,
         origin="lower",
         zorder=10,
-        ax=ax,
         alpha=0.8,
         vmin=cbarlims[0],
         vmax=cbarlims[1],
