@@ -3,7 +3,7 @@ import glob
 import os
 
 import numpy as np
-from aetherpy.io import read_routines
+from utility_programs.read_routines import aether_read_routines as rr
 from tqdm.auto import tqdm
 
 
@@ -74,7 +74,7 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start=None,
             gitm_dtimes = gitm_dtimes[:end_idx]
             flist = flist[:end_idx]
 
-    f = read_routines.read_gitm_file(flist[0])
+    f = rr.read_gitm_file(flist[0])
     if '3DALL' in gitm_file_pattern:
         gitmgrid = {f["vars"][k].lower(): f[k][2:-2, 2:-2, 2:-2]
                     for k in [0, 1, 2]}
@@ -104,7 +104,7 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start=None,
                          '\n flist, gitmvars, nlons, nlats, nalts')
 
     for ifile, file_name in enumerate(tqdm(flist)):
-        f = read_routines.read_gitm_file(file_name)
+        f = rr.read_gitm_file(file_name)
 
         for num_var, real_var in enumerate(gitmvars):
             num_v_src = f["vars"].index(real_var)
