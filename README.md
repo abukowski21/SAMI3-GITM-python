@@ -41,8 +41,6 @@ To make some beautiful maps and keograps (assuming you set the directories like 
 
 `python gitm_basic_plots.py -gitm_data_path gitm_data 201105211340 -k -m --cols Rho [e-] --plot_start_delta=3 --plot_end_delta=8 --save_or_show=show -lat_lim 65`
 
-This one may or may not work:
+`python sami-fieldline-plots.py 2011052112 20110520 ~/scratch/GITM-simstorm-run1/sami-gitm-coupled -out_path . --plot_start_delta 2 --plot_end_delta 6 --cols "edens" --interpolate --plot_type diff --fpeak`
 
-`python gitm_complicated_plots.py 201105211340 -gitm_data_path gitm_data --out_path out_plots_gitm --plot_start_delta=3 --plot_end_delta=8 --data_to_plot=all -m -k  -OVERWRITE`
-
-These takes a little while though. To make it faster change the plot_start_delta and plot_end_delta to 1 to read in less data, but the plots won't be as beautiful. I use the 1's for testing.
+These takes a litle while, though progress bars will be displayed.
