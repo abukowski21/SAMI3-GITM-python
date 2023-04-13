@@ -5,6 +5,7 @@ import os
 import numpy as np
 from aetherpy.io import read_routines
 from tqdm.auto import tqdm
+from struct import unpack
 
 
 def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
@@ -138,3 +139,174 @@ def read_gitm_into_nparrays(gitm_dir, dtime_storm_start,
         return gitm_dtimes, gitmgrid, gitmbins, gitmvars
     else:
         return gitm_dtimes, gitmgrid, gitmbins
+    
+    
+
+def read_gitm_bin_xarray(filename, 
+                        add_time=True,
+                        drop_ghost_cells=True,
+                        cols=None):
+
+    if not os.path.isfile(filename):
+        raise IOError('input file does not exist')
+
+    with open(filename, 'rb') as fin:
+        # Determine the correct endian
+        end_char = '>'
+        raw_rec_len = fin.read(4)
+        rec_len = (unpack(end_char + 'l', raw_rec_len))[0]
+        if rec_len > 10000 or rec_len < 0:
+            # Ridiculous record length implies wrong endian.
+            end_char = '<'
+            rec_len = (unpack(end_char + 'l', raw_rec_len))[0]
+
+
+
+        # Read version; read fortran footer+data.
+        version = unpack(end_char + 'd', fin.read(rec_len))[0]
+
+        _, rec_len = unpack(end_char + '2l', fin.read(8))
+
+        # Read grid size information.
+        nlons, nlats, nalts = unpack(
+            end_char + 'lll', fin.read(rec_len))
+        _, rec_len = unpack(end_char + '2l', fin.read(8))
+
+        # Read number of variables.
+        num_vars = unpack(end_char + 'l', fin.read(rec_len))[0]
+        _, rec_len = unpack(end_char + '2l', fin.read(8))
+
+        file_vars = np.arange(0, num_vars, 1)
+
+        varnames = []
+
+        # Collect variable names in a list
+        for ivar in range(num_vars):
+            vcode = unpack(end_char + '%is' % (rec_len),
+                           fin.read(rec_len))[0]
+            var = vcode.decode('utf-8').replace(" ", "")
+            var=var.replace('!N','').replace('!U','').replace('!D','')\
+                .replace('[','').replace('[','').replace(']','')
+            varnames.append(var)
+            dummy, rec_lec = unpack(end_char + '2l', fin.read(8))
+
+        # Extract time
+        rec_time = np.array(unpack(end_char + 'lllllll', fin.read(28)))
+        rec_time[-1] *= 1000  # convert from millisec to microsec
+        time_here = datetime(*rec_time)
+
+        # Header is this length:
+        # Version + start/stop byte
+        # nlons, nlats, nalts + start/stop byte
+        # num_vars + start/stop byte
+        # variable names + start/stop byte
+        # time + start/stop byte
+
+        iheader_length = 84 + num_vars * 48
+
+        ntotal = nlons * nlats * nalts
+        idata_length = ntotal * 8 + 8
+
+        data_vars={}
+
+        # Save the data for the desired variables
+        dimnames=['lon','lat','alt']
+        
+        for ivar in file_vars:
+            fin.seek(iheader_length + ivar * idata_length)
+            sdata = unpack(end_char + 'l', fin.read(4))[0]
+
+            if ivar == 0:
+                lons =  np.rad2deg(np.unique(np.array(
+                        unpack(end_char + '%id' % (ntotal), fin.read(sdata))).reshape(
+                        (nlons, nlats, nalts), order="F")))
+
+            elif ivar == 1:
+                lats =  np.rad2deg(np.unique(np.array(
+                        unpack(end_char + '%id' % (ntotal), fin.read(sdata))).reshape(
+                        (nlons, nlats, nalts), order="F")))
+
+            elif ivar == 2:
+                alts =  np.unique(np.array(
+                        unpack(end_char + '%id' % (ntotal), fin.read(sdata))).reshape(
+                        (nlons, nlats, nalts), order="F"))/1000
+
+
+            else:
+                data_vars[varnames[ivar]] = dimnames,np.array(
+                    unpack(end_char + '%id' % (ntotal), fin.read(sdata))).reshape(
+                        (nlons, nlats, nalts), order="F")
+                # break
+    ds = xr.Dataset(coords={'time':[time_here],'lon':lons,'lat':lats,'alt':alts},
+                    data_vars=data_vars,
+                    attrs={'version':version,
+                          'dropped-ghost-cells':str(drop_ghost_cells),
+                          'with_time':str(add_time)})
+
+    if drop_ghost_cells:
+        if nalts > 1:
+            ds = ds.drop_isel(lat=[0,1,-2,-1],lon=[0,1,-1,-2],alt=[0,1,-1,-2])
+        else:
+            ds = ds.drop_isel(lat=[0,1,-2,-1],lon=[0,1,-1,-2])
+    if not add_time:
+        ds = ds.drop_vars('time')
+
+    if cols is not None:
+        ds = ds.get(cols)
+                
+    return ds
+
+
+def gitm_times_from_filelist(file_list, century_prefix='20'):
+    gitm_dtimes = []
+    for i in file_list:
+        yy, MM, dd = i[-17:-15], i[-15:-13], i[-13:-11]
+        hr, mm, sec = i[-10:-8], i[-8:-6], i[-6:-4]
+        try:
+            gitm_dtimes.append(
+                datetime(
+                    int(century_prefix + yy), int(MM), int(dd),
+                    int(hr), int(mm), int(sec)))
+        except ValueError:
+            raise ValueError(
+                "GITM file name does not match expected format,",
+                "filename %s cannot be parsed" % i)
+    return gitm_dtimes
+
+
+
+def read_gitm_multiple_bins(file_list,
+                            start_dtime=None,
+                            end_dtime=None,
+                            start_idx=0,
+                            end_idx=-1,
+                            drop_ghost_cells=False,
+                            cols=None):
+    
+    # Check inputs! Cannot specify start time & idx:
+    if start_dtime is not None and start_idx is not None:
+        raise ValueError("Cannot specify both Start idx & dtime")
+    if end_dtime is not None and end_idx is not None:
+        raise ValueError("Cannot specify both End idx & dtime")
+
+    file_list=file_list[start_idx:end_idx]
+    
+    if start_dtime is not None or end_dtime is not None:
+        times = gitm_times_from_filelist(file_list)
+    if start_dtime is not None:
+        time_mask = np.where(times>=start_dtime)
+        file_list = file_list[time_mask]
+        times = times[time_mask]
+    if end_dtime is not None:
+        time_mask = np.where(times<=end_dtime)
+        file_list = file_list[time_mask]
+    
+    ds=[]
+    for file in file_list:
+        ds.append(read_gitm_bin_xarray(file,
+                                       drop_ghost_cells=drop_ghost_cells,
+                                       cols=cols))
+        
+    ds = xr.concat(ds,'time')
+    
+    return ds
