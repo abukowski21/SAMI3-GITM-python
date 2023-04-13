@@ -394,11 +394,12 @@ def read_multiple_bins_to_xarray(file_list,
 
 def process_all_to_cdf(gitm_dir,
                        delete_bins=False,
-                       replace_cdf=False,
+                       replace_cdfs=False,
                        progress_bar=True,
                        drop_ghost_cells=True,
                        drop_before=None,
                        drop_after=None,
+                       skip_existing=False,
                        ):
 
     if not drop_ghost_cells:
@@ -418,15 +419,36 @@ def process_all_to_cdf(gitm_dir,
             mask = np.where(times >= drop_before)
             times = times[mask]
             files = files[mask]
-        print('filtered %i out of %i files' % (b4 - len(files), b4))
+        print('filtered %i out of %i files by time' % (b4 - len(files), b4))
 
     indiv_ends = []
+
     for i in files:
         if i[-19:] not in indiv_ends:
             indiv_ends.append(i[-19:])
 
+    num_existing_cdfs = len(glob.glob(os.path.join(gitm_dir, '*.nc')))
+    if len(indiv_ends) == num_existing_cdfs and not replace_cdfs:
+        print('looks like all files have already been processed.',
+              'you can run again if you need to reprocess all netcdfs')
+    elif num_existing_cdfs != 0 and not skip_existing:
+        import warnings
+        warnings.warn(
+            'There are %i existing netcdfs in this directory,\n'
+            ' but only %i should be made. This may be because you\n'
+            ' have already processed some of these files.\n'
+            ' It is possible that some files have been deleted,\n'
+            ' or that the writing of a file was interrupted.\n'
+            ' If you want to skip existing files, set skip_existing=True\n'
+            % (num_existing_cdfs, len(indiv_ends)))
+
     if progress_bar:
-        pbar = tqdm(total=len(indiv_ends))
+        if skip_existing:
+            pbar = tqdm(total=len(indiv_ends)-num_existing_cdfs)
+        else:
+            pbar = tqdm(total=len(indiv_ends))
+
+    to_remove = []
 
     for fileend in indiv_ends:
         files_here = glob.glob(gitm_dir + '/*' + fileend)
@@ -434,10 +456,11 @@ def process_all_to_cdf(gitm_dir,
         outfile = os.path.join(
             gitm_dir,
             fileend[fileend.rfind('t'):].replace('.bin', '.nc'))
-        if os.path.exists(outfile):
-            if not replace_cdf:
-                print('File %s already exists, skipping' % outfile, flush=True)
-                pbar.update()
+
+        if skip_existing:
+            if os.path.exists(outfile):
+                if progress_bar:
+                    pbar.update()
                 continue
 
         for f in files_here:
@@ -446,6 +469,7 @@ def process_all_to_cdf(gitm_dir,
                 drop_ghost_cells=drop_ghost_cells,
                 add_time=True,
                 cols='all'))
+            to_remove.append(f)
 
         ds_now = xr.combine_by_coords(
             ds_now, combine_attrs='drop_conflicts')
@@ -459,7 +483,7 @@ def process_all_to_cdf(gitm_dir,
         print('FILES WILL BE DELETED. YOU HAVE BEEN WARNED.')
         import time
         time.sleep(10)
-        os.remove(np.sort(glob.glob(os.path.join(gitm_dir, '*.bin'))))
+        os.remove(to_remove)
 
     print('Done!')
 
