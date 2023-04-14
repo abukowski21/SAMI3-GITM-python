@@ -38,8 +38,8 @@ sami_og_vars = {
     'u1pu.dat': 'mer_exb',
     'u3hu.dat': 'zon_exb',
     'u1u.dat': 'zon_neut',
-    'u2u.dat': 'mer_neut',
-}
+    'u2u.dat': 'mer_neut', }
+# Needed for all reads.
 
 
 def get_grid_elems_from_parammod(sami_data_path):
@@ -134,7 +134,8 @@ def make_times(nt, sami_data_path, dtime_sim_start,
                dtime_storm_start=None,
                hrs_before_storm=None, hrs_after_storm=None,
                help=False):
-    """_summary_
+    """Make a list of datetime objects for each time step from
+            the time.dat file.
 
     Args:
         nt (int):
@@ -258,7 +259,6 @@ def get_sami_grid(sami_data_path, nlt, nf, nz):
             'glat': 'glatu.dat', 'glon': 'glonu.dat',
             'alt': 'zaltu.dat', 'mlat': 'blatu.dat',
             'mlon': 'blonu.dat', 'malt': 'baltu.dat'}.
-            TODO: Maybe move this to a regular definition?
 
     Returns:
         dict:
@@ -318,23 +318,24 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
 
     """
 
-    # TODO: Add in all of the data files. This is just a placeholder
-    data_files = {'edens': 'deneu.dat', 'hplusdens': 'deni1u.dat',
-                  'oplusdens': 'deni2u.dat', 'noplusdens': 'deni3u.dat',
-                  'o2plusdens': 'deni4u.dat', 'heplusdens': 'deni5u.dat',
-                  'n2plusdens': 'deni6u.dat', 'nplusdens': 'deni7u.dat',
-                  'hdens': 'denn1u.dat', 'odens': 'denn2u.dat',
-                  'nodens': 'denn3u.dat', 'o2dens': 'denn4u.dat',
-                  'hedens': 'denn5u.dat', 'n2dens': 'denn6u.dat',
-                  'ndens': 'denn7u.dat'}
-
     sami_data = {}
 
     # Check cols:
     if cols == 'all':
-        cols = data_files.keys()
+        cols = sami_og_vars.values()
+    else:
+        if type(cols) is str:
+            cols = [cols]
+    data_files = {}
+    for ftype in sami_og_vars:
+        if sami_og_vars[ftype] in cols:
+            data_files[ftype] = ftype
+        else:
+            print('skipping', ftype, 'because it is not in cols')
+            help = True
     if help:
-        print('the available columns are: \n', data_files.keys())
+        print('the available columns are: \n', cols)
+        return
 
     # Get the grid
     nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
@@ -394,7 +395,8 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
     """ Read in TEC (and interpolated dene) data!
 
     """
-    # TODO: Add in all of the data files. This is just a placeholder
+    # TODO: Add in all of the data files. This is just a placeholder.
+    # TODO: remove hard-coding shapes.
     data_files = {'edens': 'dene0B.dat', 'tec': 'tecuB.dat'}
 
     sami_data = {'grid': {}, 'data': {}}
@@ -449,6 +451,39 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
                        start_dtime=None, end_dtime=None,
                        start_idx=None, end_idx=None,
                        progress_bar=False):
+    """Read in (raw) SAMI data and return an xarray dataset.
+        ! This only works on raw, pre-processed SAMI data!
+            (not TEC or anything like that)
+
+    Args:
+        sami_data_path (str- path-like): Directory of SAMI files.
+        dtime_sim_start (datetime): Start time of simulation.
+        cols (str or list-like, optional): Model outputs to read.
+            Defaults to 'all'.
+        hrs_before_storm_start (int, optional): Hours before storm onset
+            to read data from. Need to set dtime_storm_start. Defaults to None.
+        hrs_after_storm_start (int, optional): Hours after storm onset
+            to read data from. Need to set dtime_storm_start. Defaults to None.
+        dtime_storm_start (datetime, optional): storm/event start time.
+            Only used if hrs_before/after is set. Defaults to None.
+        start_dtime (datetime, optional): datetime to start reading data.
+            Defaults to None.
+        end_dtime (datetime, optional): datetime to stop reading data.
+            Defaults to None.
+        start_idx (int, optional): Index of time list to start.
+            Defaults to None.
+        end_idx (int, optional): Index of time list to stop.
+            Defaults to None.
+        progress_bar (bool, optional): Show progress bar. Defaults to False.
+            (Requires tqdm)
+
+    Raises:
+        ValueError: Invalid inputs
+        ValueError: Missing Files
+
+    Returns:
+        xarray.Dataset: Dataset of SAMI data.
+    """
 
     import xarray as xr
 
@@ -545,6 +580,41 @@ def process_bins_to_netcdf(sami_data_path,
                            low_mem=False,
                            cols='all'
                            ):
+    """Process SAMI binary files to netcdf format.
+
+    Args:
+        sami_data_path (str): Path to SAMI data.
+        dtime_sim_start (datetime): Simulation start time.
+        progress_bar (bool, optional): Show progress bar. Defaults to False.
+            Requires tqdm
+        start_dtime (datetime, optional): datetime to start reading data.
+            Defaults to None.
+        end_dtime (datetime, optional): datetime to stop reading data.
+            Defaults to None.
+        out_dir (str, optional): Directory to save netcdf files.
+            Defaults to sami_data_path.
+        split_by_time (bool, optional): Split files by time. Defaults to False.
+        split_by_var (bool, optional): Split files by variable.
+            Defaults to False.
+        whole_file (bool, optional): Save whole model run (in time range)
+            as one netcdf. Defaults to False.
+        OVERWRITE (bool, optional): Overwrite existing files.
+            Defaults to False.
+        append_files (bool, optional): Append to existing files.
+        low_mem (bool, optional): Read data in chunks to save memory.
+            Defaults to False.
+        cols (list-like or str, optional): List of columns to read.
+            Defaults to 'all'.
+
+    Raises:
+        ValueError: If incorrect time args are given.
+        ValueError: If files exist and OVERWRITE is False.
+        ValueError: If cols is not in available columns.
+
+    returns:
+        None
+
+    """
 
     if out_dir is None:
         out_dir = sami_data_path
@@ -730,7 +800,6 @@ def auto_read(sami_dir,
               split_by_time=False,
               split_by_var=False,
               whole_run=False,
-              return_vars=False,
               return_xarray=True,
               force_nparrays=False,
               dtime_sim_start=None,
@@ -744,6 +813,56 @@ def auto_read(sami_dir,
               dtime_storm_start=None,
               progress_bar=False,
               ):
+    """Automatically reads in SAMI data and returns it in a format of your
+    choice.
+        - Preference is to read/return xarray datasets, but can
+            read and return numpy arrays.
+        - Prefer whole files, fall back on time, variable, split.
+
+
+    Args:
+        sami_dir (str: path-like): Path to the directory containing the SAMI
+            data
+        cols (str or list-like, optional): Variables to return.
+            Defaults to 'all'.
+        split_by_time (bool, optional): If files are output by time
+            (and whether to prefer those files). Defaults to False.
+        split_by_var (bool, optional): If files are output by variable.
+            And to prefer those files. Defaults to False.
+        whole_run (bool, optional): If the whole run is in one file.
+            Defaults to False.
+        return_xarray (bool, optional): Return xarray dataset?
+            Defaults to True.
+        force_nparrays (bool, optional): Force program to return dicts of numpy
+            arrays. Defaults to False.
+        dtime_sim_start (datetime, optional): Datetime of the start of the
+            simulation. Defaults to None. Required if netCDF files aren't made.
+        parallel (bool, optional): Force parallel reading of files.
+            NetCDF files are read weird. Might be buggy. Defaults to True.
+        start_dtime (datetime, optional): Datetime to start reading data.
+            Defaults to None.
+        start_idx (int, optional): Index of the first time to read.
+            Defaults to None.
+        end_dtime (datetime, optional): Datetime to stop reading data.
+            Defaults to None
+        end_idx (int, optional): Index of the last time to read.
+            Defaults to None.
+        hrs_before_storm_start (int, optional): Hours before the storm start
+            to read data. Defaults to None. (dtime_storm_start must be set)
+        hrs_after_storm_start (int, optional): Hours after the storm start
+            to read data. Defaults to None. (dtime_storm_start must be set)
+        dtime_storm_start (datetime, optional): Datetime of the storm start.
+            Defaults to None. (hrs_before_storm_start and hrs_after_storm_start
+            must be set)
+        progress_bar (bool, optional): Show progress bar? Defaults to False.
+            Requires tqdm.
+
+    Returns:
+        xarray Dataset: Dataset of the SAMI data
+            (If return_xarray is True)
+        dict: Dictionary of numpy arrays of the SAMI data
+            (If force_nparrays is False)
+    """
 
     from glob import glob
 
@@ -813,6 +932,9 @@ def auto_read(sami_dir,
             print('found netcdf files but forcing nparray read')
 
     if return_xarray and not force_nparrays:
+        if dtime_sim_start is None:
+            raise ValueError(
+                'dtime_sim_start must be set if not reading netcdf files')
         ds = read_raw_to_xarray(sami_dir, dtime_sim_start,
                                 progress_bar=progress_bar, cols=cols,
                                 hrs_before_storm_start=hrs_before_storm_start,
