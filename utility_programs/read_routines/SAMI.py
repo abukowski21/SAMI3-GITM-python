@@ -1,42 +1,7 @@
 
 """read sami data.
 
-call:
 
-read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
-                   t_start_idx=None, t_end_idx=None, pbar=False,
-                   cols='all', help=False, chop_times=False
-
- Automatically read in SAMI data.
-
-    Args:
-        sami_data_path (str):
-            Path to SAMI data
-        dtime_storm_start (datetime.datetime):
-            Datetime of the start of the storm
-        dtime_sim_start (datetime.datetime):
-            Datetime of the start of the simulation
-        t_start_idx (int, optional):
-            Time index of the start of the data return. Defaults to None.
-        t_end_idx (int, optional):
-            Time index of the end of the data return. Defaults to None.
-        pbar (bool, optional):
-            Do you want to show a progress bar? It is automatically set if
-            tqdm is successfully imported. Defaults to False.
-        cols (str, optional):
-            List of columns to get data for. Empty is all. Defaults to 'all'.
-        help (bool, optional):
-            Prints time and variable info. Defaults to False.
-
-    Raises:
-        ValueError: if t_start_idx and t_end_idx are not both given
-
-    Returns:
-        dict:
-            Dictionary of SAMI data with keys: ['grid', 'data']
-            data is in np arrays with the shape [nlt,nf,nz]
-        np.array:
-            Times of the data
 """
 
 
@@ -45,12 +10,6 @@ import os
 
 import numpy as np
 import pandas as pd
-
-try:
-    from tqdm import tqdm
-    pbar = True
-except ImportError:
-    pbar = False
 
 
 def get_grid_elems_from_parammod(sami_data_path):
@@ -141,22 +100,24 @@ def get_grid_elems_from_parammod(sami_data_path):
         return nz, nf, numwork*(nl - 2), nt
 
 
-def make_times(nt, sami_data_path, dtime_storm_start, dtime_sim_start,
-               plot_start_delta=None, plot_end_delta=None, help=False):
+def make_times(nt, sami_data_path, dtime_sim_start,
+               dtime_storm_start=None,
+               hrs_before_storm=None, hrs_after_storm=None,
+               help=False):
     """_summary_
 
     Args:
         nt (int):
-            Number of time steps
+            Number of time steps (from get_grid_elems_from_parammod)
         sami_data_path (str):
             Path to sami data
         dtime_storm_start (datetime.datetime):
             Datetime of the start of the storm
-        plot_start_delta (int, optional):
+        hrs_before_storm (int, optional):
             Hours from the onset of the storm to begin processing.
             Set to -1 to run for the whole entire simulation.
             Defaults to None.
-        plot_end_delta (int, optional): Hours from the end of the
+        hrs_after_storm (int, optional): Hours from the end of the
             storm to stop processing.
             Set to -1 to run for the whole entire simulation.
             Defaults to None.
@@ -166,29 +127,34 @@ def make_times(nt, sami_data_path, dtime_storm_start, dtime_sim_start,
 
     Raises:
         ValueError: Sometimes SAMI outputs fake time steps.
-        ValueError: You only set one of plot_start_delta or plot_end_delta.
+        ValueError: You only set one of hrs_before_storm or hrs_after_storm.
 
     Returns:
         times (list):
             List of datetime objects for each time step
+
+        Optional: (if dtime_storm_start is given)
         hrs_since_storm_start (list):
             List of (float) hours since the storm start
         start_idx (int, optional):
-            Start index for the times list, calculated from plot_start_delta
+            Start index for the times list, calculated from hrs_before_storm
         end_idx (int, optional):
-            End index for the times list, calculated from plot_end_delta
+            End index for the times list, calculated from hrs_after_storm
 
     """
 
     times = []
-    hrs_since_storm_start = []
+    if dtime_storm_start is not None:
+        hrs_since_storm_start = []
 
     for t in range(nt):
         time_here = pd.Timestamp(dtime_sim_start) + \
             t * pd.Timedelta(5, 'minutes')
         times.append(time_here.to_pydatetime())
-        hrs = (time_here - dtime_storm_start)/pd.Timedelta(1, 'hour')
-        hrs_since_storm_start.append(hrs)
+
+        if dtime_storm_start is not None:
+            hrs = (time_here - dtime_storm_start)/pd.Timedelta(1, 'hour')
+            hrs_since_storm_start.append(hrs)
 
     times_df = pd.read_fwf(os.path.join(sami_data_path, 'time.dat'),
                            names=['istep', 'hour', 'minute', 'second',
@@ -210,38 +176,37 @@ def make_times(nt, sami_data_path, dtime_storm_start, dtime_sim_start,
     # maybe chop the time lists, depending on if the plot start/end are given.
     # adjusted to allow for -1 in plot start/end deltas (plot all times)
 
-    if plot_start_delta and plot_end_delta:
-        if plot_start_delta != -1:
+    if hrs_before_storm is not None and hrs_after_storm is not None:
+        if dtime_storm_start is None:
+            raise ValueError('cant cal. hrs from storm without storm info')
+        if hrs_before_storm is not None:
             start_idx = np.argmin(np.abs(
                 np.array(times)
                 - (dtime_storm_start
-                   - pd.Timedelta(plot_start_delta, 'hour'))))
+                   - pd.Timedelta(hrs_before_storm, 'hour'))))
         else:
             start_idx = 0
 
-        if plot_end_delta != -1:
+        if hrs_after_storm is not None:
             end_idx = np.argmin(np.abs(
                 np.array(times)
                 - (dtime_storm_start
-                   + pd.Timedelta(plot_end_delta, 'hour'))))
-        elif plot_end_delta == -1:
-            end_idx = len(times)
+                   + pd.Timedelta(hrs_after_storm, 'hour'))))
         else:
             end_idx = len(times)
+
         times = times[start_idx:end_idx]
         hrs_since_storm_start = hrs_since_storm_start[start_idx:end_idx]
         times_list = times_list[start_idx:end_idx]
 
-    elif plot_start_delta != plot_end_delta:
+    elif hrs_before_storm is not None or hrs_after_storm is not None:
         raise ValueError('You cannot specify one and not the other!')
-    else:
-        start_idx = 0
-        end_idx = len(times)
+
     if help:
         print(times, '\n', hrs_since_storm_start)
 
-    if plot_start_delta is None and plot_end_delta is None:
-        return times, hrs_since_storm_start
+    if dtime_storm_start is None:
+        return times
 
     else:
         return times, hrs_since_storm_start, (start_idx, end_idx)
@@ -286,9 +251,10 @@ def get_sami_grid(sami_data_path, nlt, nf, nz):
     return grid
 
 
-def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
-                   t_start_idx=None, t_end_idx=None, pbar=False,
-                   cols='all', help=False):
+def read_to_nparray(sami_data_path, dtime_sim_start,
+                    dtime_storm_start=None,
+                    t_start_idx=None, t_end_idx=None, pbar=False,
+                    cols='all', help=False):
     """Automatically read in SAMI data.
 
     Args:
@@ -345,9 +311,15 @@ def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
 
     grid = get_sami_grid(sami_data_path, nlt, nf, nz)
     sami_data['grid'] = grid
-    times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
-        nt, sami_data_path, dtime_storm_start, dtime_sim_start,
-        t_start_idx, t_end_idx, help)
+
+    if dtime_storm_start is not None:
+        times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
+            nt, sami_data_path, dtime_storm_start, dtime_sim_start,
+            t_start_idx, t_end_idx, help)
+    else:
+        times = make_times(nt, sami_data_path, dtime_sim_start)
+        start_idx = 0
+        end_idx = len(times)
 
     ntimes = len(times)
 
@@ -356,6 +328,7 @@ def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
         return
 
     if pbar:
+        from tqdm.auto import tqdm
         progress = tqdm(total=len(cols) * ntimes, desc='reading SAMI data')
 
     sami_data['data'] = {}
@@ -373,10 +346,11 @@ def read_sami_data(sami_data_path, dtime_sim_start, dtime_storm_start,
                   'the model results may not be in the path you specified:')
             raise
 
-        for t in range(start_idx, end_idx):
+        for t in range(len(times)):
             raw = np.fromfile(file, dtype='float32', count=(nz*nf*nlt)+2)[1:-1]
-            sami_data['data'][f][:, :, :, t - start_idx] = raw.reshape(
-                nlt, nf, nz).copy()
+            if t < start_idx and t < end_idx:
+                sami_data['data'][f][:, :, :, t - start_idx] = raw.reshape(
+                    nlt, nf, nz).copy()
             if pbar:
                 progress.update(1)
         file.close()
@@ -400,8 +374,6 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
         'glat': 'glat0B.dat', 'glon': 'glon0B.dat', 'alt': 'zalt0B.dat',
         'mlat': 'blat0.dat', 'mlon': 'blon0.dat', 'malt': 'balt0.dat'}
 
-    grid = {}
-
     for f in geo_grid_files:
         file = open(os.path.join(sami_data_path, geo_grid_files[f]), 'rb')
         raw = np.fromfile(file, dtype='float32')[1:-1].copy()
@@ -417,6 +389,7 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
         sami_data['data'][f] = raw
 
     # Reshape everything!
+    # TODO: Make this more general
     if reshape:
         sami_data['data']['edens'] = sami_data['data']['edens'].reshape(
             625, 80, 100, 100)
