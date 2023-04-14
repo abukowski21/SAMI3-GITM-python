@@ -538,21 +538,21 @@ def find_variable(gitm_dir, varname=None,
                         print('Found %s in %s' % (varname, f))
 
 
-def auto_gitm_read(gitm_dir,
-                   single_file=False,
-                   start_dtime=None,
-                   start_idx=None,
-                   end_dtime=None,
-                   end_idx=None,
-                   cols='all',
-                   progress_bar=True,
-                   drop_ghost_cells=True,
-                   file_type=None,
-                   return_vars=False,
-                   return_xarray=True,
-                   force_dict=False,
-                   parallel=True,
-                   ):
+def auto_read(gitm_dir,
+              single_file=False,
+              start_dtime=None,
+              start_idx=None,
+              end_dtime=None,
+              end_idx=None,
+              cols='all',
+              progress_bar=True,
+              drop_ghost_cells=True,
+              file_type=None,
+              return_vars=False,
+              return_xarray=True,
+              force_dict=False,
+              parallel=True,
+              ):
 
     if single_file:
         try:
@@ -621,7 +621,9 @@ def auto_gitm_read(gitm_dir,
             files = files[(gitm_times_from_filelist(files) >= start_dtime) &
                           (gitm_times_from_filelist(files) <= end_dtime)]
 
-        ds = xr.open_mfdataset(files, combine='by_coords', parallel=parallel,
-                               combine_attrs='drop_conflicts', data_vars=cols,)
+        ds = xr.open_mfdataset(files, parallel=parallel,
+                               combine_attrs='drop_conflicts', data_vars=cols,
+                               concat_dim="time", combine="nested",
+                               coords='minimal', compat='override')
 
         return ds
