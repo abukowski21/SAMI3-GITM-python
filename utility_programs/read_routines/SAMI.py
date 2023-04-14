@@ -12,6 +12,36 @@ import numpy as np
 import pandas as pd
 
 
+global sami_og_vars
+sami_og_vars = {
+    'deneu.dat': 'edens',
+    'deni1u.dat': 'h+dens',
+    'deni2u.dat': 'o+dens',
+    'deni3u.dat': 'n+odens',
+    'deni4u.dat': 'o2+dens',
+    'deni5u.dat': 'he+dens',
+    'deni6u.dat': 'n2+dens',
+    'deni7u.dat': 'n+dens',
+    'denn1u.dat': 'hdens',
+    'denn2u.dat': 'odens',
+    'denn3u.dat': 'nodens',
+    'denn4u.dat': 'o2dens',
+    'denn5u.dat': 'hedens',
+    'denn6u.dat': 'n2dens',
+    'denn7u.dat': 'ndens',
+    'teu.dat': 'etemp',
+    'ti1u.dat': 'h+temp',
+    'ti2u.dat': 'o+temp',
+    'ti5u.dat': 'he+temp',
+    'vsi1u.dat': 'h+vel_parallel',
+    'vsi2u.dat': 'o+vel_parallel',
+    'u1pu.dat': 'mer_exb',
+    'u3hu.dat': 'zon_exb',
+    'u1u.dat': 'zon_neut',
+    'u2u.dat': 'mer_neut',
+}
+
+
 def get_grid_elems_from_parammod(sami_data_path):
     """Go into sami data directory and get the grid elements
             from the parameter_mod.f90 file.
@@ -410,3 +440,394 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
         dtime_sim_start=datetime.datetime(2011, 5, 20))
 
     return sami_data, np.array(times)
+
+
+def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
+                       hrs_before_storm_start=None,
+                       hrs_after_storm_start=None,
+                       dtime_storm_start=None,
+                       start_dtime=None, end_dtime=None,
+                       start_idx=None, end_idx=None,
+                       progress_bar=False):
+
+    import xarray as xr
+
+    nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
+    times = make_times(nt, sami_data_path, dtime_sim_start)
+    grid = get_sami_grid(sami_data_path, nlt, nf, nz)
+
+    if start_idx is None and end_idx is None:
+        if dtime_storm_start is not None:
+            if hrs_before_storm_start is not None:
+                start_idx = np.argmin(np.abs(
+                    times - (start_dtime - np.abs(hrs_before_storm_start))))
+            if hrs_after_storm_start is not None:
+                end_idx = np.argmin(
+                    np.abs(times - (start_dtime + hrs_after_storm_start)))
+            if start_idx is None and end_idx is None:
+                raise ValueError(
+                    'You must specify either start_idx or end_idx',
+                    'to use dtime_storm_start')
+        elif hrs_after_storm_start is not None or\
+                hrs_before_storm_start is not None:
+            raise ValueError(
+                'why did you give storm start time but no time args?')
+        elif start_dtime is not None or end_dtime is not None:
+            if end_dtime is not None:
+                start_idx = np.argmin(np.abs(times - start_dtime))
+            if end_dtime is not None:
+                end_idx = np.argmin(np.abs(times - end_dtime))
+
+        if start_idx is None:
+            start_idx = 0
+        if end_idx is None:
+            end_idx = nt
+    nt = end_idx - start_idx
+
+    ds = xr.Dataset(
+        coords=dict(
+            time=(('time'), times),
+            mlat=(('nlt', 'nf', 'nz'), grid['mlat'].round(2)),
+            mlon=(('nlt', 'nf', 'nz'), grid['mlon'].round(2)),
+            malt=(('nlt', 'nf', 'nz'), grid['malt'].round(2)),
+            glat=(('nlt', 'nf', 'nz'), grid['glat'].round(2)),
+            glon=(('nlt', 'nf', 'nz'), grid['glon'].round(2)),
+            alt=(('nlt', 'nf', 'nz'), grid['alt'].round(2)),)
+    )
+
+    dimnames = ('time', 'nlt', 'nf', 'nz')
+
+    if progress_bar:
+        from tqdm.auto import tqdm
+        pbar1 = tqdm(total=len(sami_og_vars), desc='Reading SAMI binaries')
+
+    if cols != 'all':
+        if type(cols) == str:
+            cols = [cols]
+
+    for fname in sami_og_vars:
+        if cols != 'all':
+            if sami_og_vars[fname] not in cols:
+                continue
+        curr_arr = np.zeros((len(times), nlt, nf, nz))
+        try:
+            with open(os.path.join(sami_data_path, fname), 'rb') as f:
+                t_ins = 0
+                for t in range(len(times)):
+                    raw = np.fromfile(f, dtype='float32',
+                                      count=(nz*nf*nlt)+2)[1:-1]
+                    if t > start_idx and t <= end_idx:
+                        curr_arr[t_ins] = raw.reshape(nlt, nf, nz).copy()
+                        t_ins += 1
+
+                ds[sami_og_vars[fname]] = (dimnames, curr_arr)
+
+                if progress_bar:
+                    pbar1.update()
+        except FileNotFoundError:
+            print(f'File {fname} not found!\n',
+                  'in directory {sami_data_path}')
+
+    return ds
+
+
+def process_bins_to_netcdf(sami_data_path,
+                           dtime_sim_start,
+                           progress_bar=False,
+                           start_dtime=None,
+                           end_dtime=None,
+                           out_dir=None,
+                           split_by_time=False,
+                           split_by_var=False,
+                           whole_file=False,
+                           OVERWRITE=False,
+                           append_files=False,
+                           low_mem=False,
+                           cols='all'
+                           ):
+
+    if out_dir is None:
+        out_dir = sami_data_path
+
+    if progress_bar:
+        from tqdm.auto import tqdm
+
+    if low_mem:
+        if cols != 'all':
+            if type(cols) == str:
+                cols = [cols]
+            for c in cols:
+                if c not in sami_og_vars.values():
+                    raise ValueError(
+                        f'Column {c} not in available columns!\n',
+                        ' available columns are:\n',
+                        ' '.join(sami_og_vars.values()))
+        else:
+            cols = sami_og_vars.values()
+
+        if progress_bar:
+            total = len(cols) * np.sum(
+                [split_by_time, split_by_var, whole_file])
+            pbar = tqdm(total=total,
+                        desc='processing in low mem mode...')
+
+        did_one = False
+
+        if split_by_time:
+            # import xarray as xr
+
+            nz, nf, nlt, nt = get_grid_elems_from_parammod(
+                sami_data_path)
+            times = make_times(nt, sami_data_path, dtime_sim_start)
+            # So this gets complicated. First check the files.
+            # Then go ahead and process...
+
+            for t in times:
+                fname = 't'+t.strftime('%y%m%d_%H%M%S')
+                out_file = os.path.join(out_dir, fname + '.nc')
+                if os.path.exists(out_file):
+                    if OVERWRITE:
+                        os.remove(out_file)
+                    else:
+                        raise FileExistsError(
+                            out_file,
+                            ' already exists! Cannot rewrite!')
+            # it's faster to read the datasets by time, concat them,
+            # and then write that than to go thru appending everything.
+            if progress_bar:
+                pbar2 = tqdm(total=nt*len(cols), desc='splitting by time...')
+
+            for ftype in sami_og_vars:
+                ds = read_raw_to_xarray(
+                    sami_data_path=sami_data_path,
+                    dtime_sim_start=dtime_sim_start,
+                    cols=sami_og_vars[ftype],
+                    start_dtime=start_dtime,
+                    end_dtime=end_dtime)
+                for time in times:
+                    ds.sel(time=time).to_netcdf(os.path.join(
+                        out_dir, 't'+time.strftime('%y%m%d_%H%M%S') + '.nc'),
+                        mode='a')
+                    pbar2.update()
+
+            # for ftype in sami_og_vars:
+            #     dss = []
+            #     for nt, tval in enumerate(times):
+            #         dss.append(read_raw_to_xarray(
+            #             sami_data_path=sami_data_path,
+            #             dtime_sim_start=dtime_sim_start,
+            #             cols=sami_og_vars[ftype],
+            #             start_idx=nt,
+            #             end_idx=nt+1))
+            #         pbar2.update()
+            #     ds = xr.concat(dss, dim='time')
+            #     ds.to_netcdf(out_file, mode='a')
+            #     did_one = True
+            #     if progress_bar:
+            #         pbar.update()
+
+        for ftype in sami_og_vars:
+            did_var = False
+            if sami_og_vars[ftype] in cols:
+
+                ds = read_raw_to_xarray(sami_data_path, dtime_sim_start,
+                                        cols=sami_og_vars[ftype])
+
+                if start_dtime is not None or end_dtime is not None:
+                    if start_dtime is not None:
+                        start_idx = np.argmin(
+                            np.abs(ds.time.values - start_dtime))
+                    else:
+                        start_idx = 0
+                    if end_dtime is not None:
+                        end_idx = np.argmin(np.abs(ds.time.values - end_dtime))
+                    else:
+                        end_idx = len(ds.time)
+                    ds = ds.isel(time=slice(start_idx, end_idx))
+
+                if split_by_var:
+                    out_file = os.path.join(
+                        out_dir, f'{sami_og_vars[ftype]}.nc')
+                    ds.to_netcdf(out_file, mode='a')
+                    did_one = True
+                    did_var = True
+                if whole_file:
+                    ds.to_netcdf(os.path.join(out_dir, 'sami_data.nc'),
+                                 mode='a')
+                    did_one = True
+                    did_var = True
+
+                if did_var and progress_bar:
+                    pbar.update()
+
+        if not did_one:
+            raise ValueError('Your columns were not found in the data!')
+
+    else:
+        ds = read_raw_to_xarray(sami_data_path, dtime_sim_start,
+                                progress_bar=progress_bar, cols=cols)
+
+        if start_dtime is not None or end_dtime is not None:
+            if start_dtime is not None:
+                start_idx = np.argmin(np.abs(ds.time.values - start_dtime))
+            else:
+                start_idx = 0
+
+            if end_dtime is not None:
+                end_idx = np.argmin(np.abs(ds.time.values - end_dtime))
+            else:
+                end_idx = len(ds.time)
+
+            ds = ds.isel(time=slice(start_idx, end_idx))
+
+        write_mode = 'w'
+
+        if split_by_time:
+            if progress_bar:
+                pbar = tqdm(total=len(ds.time.values),
+                            desc='Saving to netcdf')
+            for t in ds.time.values:
+                fname = 't'+pd.Timestamp(t).strftime('%y%m%d_%H%M%S')
+                if os.path.exists(os.path.join(out_dir, f'{fname}.nc')):
+                    if OVERWRITE and not append_files:
+                        os.remove(os.path.join(out_dir, f'{fname}.nc'))
+                    elif append_files:
+                        write_mode = 'a'
+                    else:
+                        raise FileExistsError(f'{fname}.nc already exists!')
+
+                ds.sel(time=t).to_netcdf(os.path.join(out_dir, f'{fname}.nc'),
+                                         mode=write_mode)
+
+                if progress_bar:
+                    pbar.update()
+
+        elif split_by_var:
+            if progress_bar:
+                pbar = tqdm(total=len(ds.time.values),
+                            desc='Saving to netcdf')
+            for var in ds.data_vars:
+                if os.path.exists(os.path.join(out_dir, f'{var}.nc')):
+                    if OVERWRITE and not append_files:
+                        os.remove(os.path.join(out_dir, f'{var}.nc'))
+                    elif append_files:
+                        write_mode = 'a'
+                    else:
+                        raise FileExistsError(f'{var}.nc already exists!')
+
+                ds[var].to_netcdf(os.path.join(out_dir, f'{var}.nc',
+                                               mode=write_mode))
+                if progress_bar:
+                    pbar.update()
+
+        else:
+            print('Saving to single file...')
+            ds.to_netcdf(os.path.join(out_dir, 'sami_data.nc'))
+
+
+def auto_read(sami_dir,
+              cols='all',
+              split_by_time=False,
+              split_by_var=False,
+              whole_run=False,
+              return_vars=False,
+              return_xarray=True,
+              force_nparrays=False,
+              dtime_sim_start=None,
+              parallel=True,
+              start_dtime=None,
+              start_idx=None,
+              end_dtime=None,
+              end_idx=None,
+              hrs_before_storm_start=None,
+              hrs_after_storm_start=None,
+              dtime_storm_start=None,
+              progress_bar=False,
+              ):
+
+    from glob import glob
+
+    ncfiles = glob(os.path.join(sami_dir, '*.nc'))
+    if len(ncfiles) > 0:
+        if len(glob(os.path.join(sami_dir, 't*.nc'))) > 0:
+            split_by_time = True
+        if len(glob(os.path.join(sami_dir, 'sami_data.nc'))) > 0:
+            whole_run = True
+        if cols != 'all':
+            if type(cols) is str:
+                cols = [cols]
+            multivars = []
+            for col in cols:
+                p = os.path.join(sami_dir, f'{col}.nc')
+                if os.path.exists():
+                    split_by_var = True
+                    multivars.append(p)
+
+        if not force_nparrays:
+            import xarray as xr
+
+            if whole_run:
+                ds = xr.open_dataset(os.path.join(sami_dir, 'sami_data.nc'))
+
+            elif split_by_var:
+                ds = xr.open_mfdataset(os.path.join(sami_dir, '*.nc'),
+                                       parallel=parallel,
+                                       combine_attrs='drop_conflicts',
+                                       data_vars='minimal',
+                                       concat_dim="time", combine="nested",
+                                       coords='minimal', compat='override')
+
+            elif split_by_time:
+                ds = xr.open_mfdataset(os.path.join(sami_dir, 't*.nc'),
+                                       parallel=parallel,
+                                       combine_attrs='drop_conflicts',
+                                       data_vars='minimal',
+                                       concat_dim="time", combine="nested",
+                                       coords='minimal', compat='override')
+
+            else:
+                print('Something went wrong with naming netcdf files.\n',
+                      'Switching to nparray read')
+
+            if ds is not None:
+                if cols != 'all':
+                    if type(cols) is str:
+                        cols = [cols]
+                    ds = ds[cols]
+                if start_dtime is not None or end_dtime is not None:
+                    if start_dtime is not None:
+                        start_idx = np.argmin(
+                            np.abs(ds.time.values - start_dtime))
+                    if end_dtime is not None:
+                        end_idx = np.argmin(np.abs(ds.time.values - end_dtime))
+
+                if start_idx is not None or end_idx is not None:
+                    if start_idx is None:
+                        start_idx = 0
+                    if end_idx is None:
+                        end_idx = len(ds.time.values)
+                    ds = ds.isel(time=slice(start_idx, end_idx))
+                return ds
+
+        else:
+            print('found netcdf files but forcing nparray read')
+
+    if return_xarray and not force_nparrays:
+        ds = read_raw_to_xarray(sami_dir, dtime_sim_start,
+                                progress_bar=progress_bar, cols=cols,
+                                hrs_before_storm_start=hrs_before_storm_start,
+                                hrs_after_storm_start=hrs_after_storm_start,
+                                dtime_storm_start=dtime_storm_start,
+                                start_dtime=start_dtime,
+                                end_dtime=end_dtime, start_idx=start_idx,
+                                end_idx=end_idx)
+        return ds
+
+    else:
+        sami_data = read_to_nparray(sami_dir, dtime_sim_start,
+                                    dtime_storm_start=dtime_storm_start,
+                                    t_end_idx=start_idx,
+                                    t_start_idx=end_idx,
+                                    pbar=progress_bar, cols=cols,)
+
+        return sami_data
