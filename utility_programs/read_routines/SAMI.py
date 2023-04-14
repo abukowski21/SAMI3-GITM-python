@@ -878,7 +878,7 @@ def auto_read(sami_dir,
             multivars = []
             for col in cols:
                 p = os.path.join(sami_dir, f'{col}.nc')
-                if os.path.exists():
+                if os.path.exists(p):
                     split_by_var = True
                     multivars.append(p)
 
