@@ -483,13 +483,14 @@ def process_all_to_cdf(gitm_dir,
         print('FILES WILL BE DELETED. YOU HAVE BEEN WARNED.')
         import time
         time.sleep(10)
-        os.remove(to_remove)
+        for f in glob.glob(gitm_dir + '/*.bin'):
+            os.remove(f)
 
     print('Done!')
 
 
-def find_variable(gitm_dir, varhelp=False,
-                  varname=None, nc=True,
+def find_variable(gitm_dir, varname=None,
+                  varhelp=False, nc=True,
                   just_checking=False):
 
     if not varhelp and varname is None:
@@ -497,45 +498,44 @@ def find_variable(gitm_dir, varhelp=False,
 
     if nc:
         files = np.sort(glob.glob(os.path.join(gitm_dir, '*.nc')))
+        if len(files) == 0:
+            nc = False
+            print('no netcdf files found, trying binary files')
+    if nc:
         ftypes_checked = []
-        for f in files:
-            ftype = f.split('/')[-1][:5]
-            if ftype not in ftypes_checked:
-                ftypes_checked.append(ftype)
-                ds = xr.open_dataset(f)
-                if varname in list(ds.data_vars.keys()):
+        ds = xr.open_dataset(files[0])
+        if varname in list(ds.data_vars.keys()):
+            print('Found %s in %s' % (varname, files[0]))
+
+        else:
+            print('Did not find %s in %s\n' % (varname, files[0]),
+                  'Instead found: \n', list(ds.data_vars.keys()),
+                  '\nmoving to bin files')
+
+        ds.close()
+
+    files = np.sort(glob.glob(os.path.join(gitm_dir, '*.bin')))
+    if len(files) == 0:
+        print('no binary files found, exiting')
+    ftypes_checked = []
+    for f in files:
+        ftype = f.split('/')[-1][:5]
+        if ftype not in ftypes_checked:
+            ftypes_checked.append(ftype)
+            binary = read_routines.read_gitm_file(f)
+            for col in binary['vars']:
+                if col == varname:
                     if just_checking:
                         print('Found %s in %s' % (varname, f))
                     else:
                         return ftype
-                ds.close()
-        raise ValueError('Could not find %s in any of the files.\n' % varname,
-                         'Found these filetypes: \n %s' % str(ftypes_checked))
-
-    else:
-        files = np.sort(glob.glob(os.path.join(gitm_dir, '*.bin')))
-        ftypes_checked = []
-        for f in files:
-            ftype = f.split('/')[-1][:5]
-            if ftype not in ftypes_checked:
-                ftypes_checked.append(ftype)
-                binary = read_routines.read_gitm_file(f)
-                for col in binary['vars']:
+                else:
+                    col = col.replace('!N', '').replace('!U', '')\
+                        .replace('!D', '').replace('[', '')\
+                        .replace('[', '').replace(']', '')\
+                        .replace('/', '-')
                     if col == varname:
-                        if just_checking:
-                            print('Found %s in %s' % (varname, f))
-                        else:
-                            return ftype
-                    else:
-                        col = col.replace('!N', '').replace('!U', '')\
-                            .replace('!D', '').replace('[', '')\
-                            .replace('[', '').replace(']', '')\
-                            .replace('/', '-')
-                        if col == varname:
-                            if just_checking:
-                                print('Found %s in %s' % (varname, f))
-                            else:
-                                return ftype
+                        print('Found %s in %s' % (varname, f))
 
 
 def auto_gitm_read(gitm_dir,
@@ -622,6 +622,6 @@ def auto_gitm_read(gitm_dir,
                           (gitm_times_from_filelist(files) <= end_dtime)]
 
         ds = xr.open_mfdataset(files, combine='by_coords', parallel=parallel,
-                               combine_attrs='drop_conflicts', data_vars=cols)
+                               combine_attrs='drop_conflicts', data_vars=cols,)
 
         return ds
