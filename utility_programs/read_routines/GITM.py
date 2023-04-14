@@ -23,7 +23,6 @@ def read_bin_to_nparrays(gitm_dir,
 
     Args:
         gitm_dir (str): path to gitm files
-        dtime_storm_start (datetime.datetime): time of storm onset
         gitm_file_pattern (str, optional): file pattern to match.
             Defaults to '3DALL*.bin'.
         cols (list, optional): which columns to read (strs).
@@ -32,16 +31,14 @@ def read_bin_to_nparrays(gitm_dir,
             Defaults to 0 (all data).
         dtime_end (datetime, optional): datetime to end read.
             Defaults to -1 (all data).
-        start_idx (int, optional): index to start at.
-        end_idx (int, optional): index to end at.
+        start_idx (int, optional): index to start reading at.
+        end_idx (int, optional): index to end reading at.
         century_prefix (str, optional): century. Defaults to '20'.
         progress_bar (bool, optional):
             show progress bar. Defaults to False. (Requires tqdm)
 
     Raises:
-        ValueError: _description_
-        ValueError: _description_
-        ValueError: _description_
+        ValueError: If GITM files don't exist or are in a weird format.
 
     Returns:
         dict: dictionary of numpy arrays
@@ -49,7 +46,7 @@ def read_bin_to_nparrays(gitm_dir,
                 gitmdtimes: times of gitm outputs
                 gitmbins: gitm data
                 gitmgrid: dictionary of grid variables
-                gitmvars (only returned if return_vars):
+                gitmvars (optional: only returned if return_vars):
                     list of variables
 
     """
@@ -166,16 +163,19 @@ def read_bin_to_xarray(filename,
                        cols='all'):
     """Reads GITM binary file into xarray
     Works for all GITM files, including 3DALL, 2DALL, 2DANC, etc.
+    - (Taken and modified from aetherpy)
 
     Args:
         filename (str, path): Path to the file to read.
         add_time (bool, optional): Add time to attrs. Defaults to True.
+            Needs to be True for built-in multi-file reads.
+            You can set to False if you are only reading one file.
         drop_ghost_cells (bool, optional):
-            Drop GITM ghost cells. See manual for details
+            Drop GITM ghost cells. See GITM manual for details
             on ghost cells. Defaults to True.
         cols (str/list-like, optional):
             Set which columns to read. On systems with limited memory
-            this will make large datasets fit into memory.
+            this will make datasets too large to fit into memory.
             Defaults to 'all' (all columns).
 
     Raises:
@@ -184,6 +184,7 @@ def read_bin_to_xarray(filename,
     Returns:
         xarray.Dataset: Dataset holding the data.
             Indexed with glat, glon, alt (converted to deg, deg, km)
+
     """
 
     if not os.path.isfile(filename):
@@ -357,6 +358,35 @@ def read_multiple_bins_to_xarray(file_list,
                                  drop_ghost_cells=True,
                                  cols='all',
                                  pbar=False):
+    """Read a list-like of GITM files into an xarray Dataset.
+
+    Args:
+        file_list (list-like): files to pull from.
+        start_dtime (datetime, optional):
+            Time to start read at. Not necessary (especially if you have
+             pre-filtered the file_list. Defaults to None.
+        end_dtime (datetime, optional):
+            Time to end reads at. See above. Can be used exclusively.
+             Defaults to None.
+        start_idx (int, optional): Index of file_list to start reading.
+            Defaults to 0.
+        end_idx (int, optional): Index of file_list to end reading at.
+            Defaults to -1.
+        drop_ghost_cells (bool, optional): Remove Ghost cells?
+            Defaults to True.
+        cols (str or list-like, optional): Specific columns to read.
+            Defaults to 'all'.
+        pbar (bool, optional): Whether or not to show progress bar.
+            Requires tqdm. Defaults to False.
+
+    Raises:
+        ValueError: If start/end inputs are mixed up.
+
+    Returns:
+        xarray.Dataset:
+            Dataset containing all variables in the file_list at the
+             times specified.
+    """
 
     # Check inputs! Cannot specify start time & idx:
     if start_dtime is not None and start_idx is not None:
@@ -401,10 +431,31 @@ def process_all_to_cdf(gitm_dir,
                        drop_after=None,
                        skip_existing=False,
                        ):
+    """Process all GITM .bin files in a directory to .cdf files.
+
+    Args:
+        gitm_dir (str: path-like): Directory containing GITM .bin files.
+        delete_bins (bool, optional): Delete GITM bins after making Datasets?
+            Defaults to False.
+        replace_cdfs (bool, optional): Replace pre-existing netCDF files?
+            Defaults to False.
+        progress_bar (bool, optional):  Whether or not to show progress bar.
+            Requires tqdm. Defaults to True.
+        drop_ghost_cells (bool, optional): Drop GITM ghost cells?
+            Defaults to True.
+        drop_before (datetime, optional): Similar to start_dtime.
+            When to start processing files. Will delete files before this time.
+                Defaults to None.
+        drop_after (datetime, optional): Similar to start_dtime.
+            When to start processing files. Will delete files before this time.
+                Defaults to None.
+        skip_existing (bool, optional): Skip existing netCDF files?
+            Defaults to False.
+    """
 
     if not drop_ghost_cells:
         print('Not dropping Ghost cells.',
-              'This will cause issues if you have 3DALL and 2DANC files.')
+              'This will cause issues if you have both 3D and 2D files.')
 
     files = np.sort(glob.glob(os.path.join(gitm_dir, '*.bin')))
 
@@ -492,6 +543,28 @@ def process_all_to_cdf(gitm_dir,
 def find_variable(gitm_dir, varname=None,
                   varhelp=False, nc=True,
                   just_checking=False):
+    """Help function. Finds a variable in a directory of GITM files.
+            Return the filetype and/or all of the variables available.
+
+
+    Args:
+        gitm_dir (str: path-like): Directory of GITM files.
+        varname (str, optional): Variable you're looking for. Not setting this
+            will just print all variables.
+            Defaults to None.
+        varhelp (bool, optional): If True, will print out all vaiables
+            available. Think of it as "just checking".
+            Defaults to False.
+        nc (bool, optional): Whether to only look at .nc files.
+            Defaults to True.
+
+    Raises:
+        ValueError: If you don't specify either varhelp or varname.
+
+    Returns:
+        str (optional): The filetype holding the variable you're loooking for.
+
+    """
 
     if not varhelp and varname is None:
         raise ValueError('Must specify either varhelp or varname')
@@ -525,7 +598,7 @@ def find_variable(gitm_dir, varname=None,
             binary = read_routines.read_gitm_file(f)
             for col in binary['vars']:
                 if col == varname:
-                    if just_checking:
+                    if varhelp:
                         print('Found %s in %s' % (varname, f))
                     else:
                         return ftype
@@ -551,8 +624,41 @@ def auto_read(gitm_dir,
               return_vars=False,
               return_xarray=True,
               force_dict=False,
-              parallel=True,
-              ):
+              parallel=True,):
+    """Automatically reads in a directory of GITM files.
+
+    Args:
+        gitm_dir (str: path-like): Directory of GITM files.
+        single_file (bool, optional): Whether to read in a single file.
+            Defaults to False.
+        start_dtime (datetime, optional): Start time of the data you want.
+            Defaults to None.
+        start_idx (int, optional): Start index of the data you want.
+            Defaults to None.
+        end_dtime (datetime, optional): End time of the data you want.
+            Defaults to None.
+        end_idx (int, optional): End index of the data you want.
+            Defaults to None.
+        cols (list-like or str, optional): List of columns you want to read in.
+            Defaults to 'all'.
+        progress_bar (bool, optional): Whether to show a progress bar.
+            Defaults to True. Requires tqdm.
+        drop_ghost_cells (bool, optional): Whether to drop ghost cells.
+            Defaults to True.
+        file_type (str, optional): File type of the data you want to read in.
+            Defaults to None.
+        return_vars (bool, optional): Whether to return the variables.
+            Defaults to False.
+        return_xarray (bool, optional): Whether to return an xarray.
+            Defaults to True.
+        force_dict (bool, optional): Whether to force a dictionary return.
+            Defaults to False.
+        parallel (bool, optional): Whether to read in files in parallel.
+            Defaults to True. This will use Dask, which can get hairy.
+            If you're having issues, try setting this to False.
+            Needs dask and dask.distributed, and debugging!
+
+    """
 
     if single_file:
         try:
