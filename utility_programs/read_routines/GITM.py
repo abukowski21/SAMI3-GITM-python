@@ -423,6 +423,7 @@ def read_multiple_bins_to_xarray(file_list,
 
 
 def process_all_to_cdf(gitm_dir,
+                       dtime_storm_start=None,
                        delete_bins=False,
                        replace_cdfs=False,
                        progress_bar=True,
@@ -524,6 +525,10 @@ def process_all_to_cdf(gitm_dir,
 
         ds_now = xr.combine_by_coords(
             ds_now, combine_attrs='drop_conflicts')
+
+        if dtime_storm_start is not None:
+            ds_now = ds_now.assign_attrs(
+                dtime_event_start=dtime_storm_start,)
 
         ds_now.to_netcdf(outfile, mode='w')
 

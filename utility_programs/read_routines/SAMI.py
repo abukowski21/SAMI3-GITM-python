@@ -527,8 +527,14 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
             malt=(('nlt', 'nf', 'nz'), grid['malt'].round(2)),
             glat=(('nlt', 'nf', 'nz'), grid['glat'].round(2)),
             glon=(('nlt', 'nf', 'nz'), grid['glon'].round(2)),
-            alt=(('nlt', 'nf', 'nz'), grid['alt'].round(2)),)
+            alt=(('nlt', 'nf', 'nz'), grid['alt'].round(2)),),
+        attrs=dict(
+            dtime_storm_start=dtime_storm_start,)
     )
+
+    if dtime_storm_start is not None:
+        ds = ds.assign_attrs(
+            dtime_event_start=dtime_storm_start,)
 
     dimnames = ('time', 'nlt', 'nf', 'nz')
 
@@ -568,6 +574,7 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
 
 def process_bins_to_netcdf(sami_data_path,
                            dtime_sim_start,
+                           dtime_storm_start=None,
                            progress_bar=False,
                            start_dtime=None,
                            end_dtime=None,
