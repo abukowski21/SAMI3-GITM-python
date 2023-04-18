@@ -886,7 +886,8 @@ def auto_read(sami_dir,
             import xarray as xr
 
             if whole_run:
-                ds = xr.open_dataset(os.path.join(sami_dir, 'sami_data.nc'))
+                ds = xr.open_dataset(os.path.join(sami_dir, 'sami_data.nc'),
+                                     chunks='auto')
 
             elif split_by_var:
                 ds = xr.open_mfdataset(os.path.join(sami_dir, '*.nc'),
