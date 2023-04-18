@@ -423,6 +423,7 @@ def read_multiple_bins_to_xarray(file_list,
 
 
 def process_all_to_cdf(gitm_dir,
+                       out_dir=None,
                        dtime_storm_start=None,
                        delete_bins=False,
                        replace_cdfs=False,
@@ -436,6 +437,8 @@ def process_all_to_cdf(gitm_dir,
 
     Args:
         gitm_dir (str: path-like): Directory containing GITM .bin files.
+        out_dir (str: path-like, optional): Directory to output .cdf files.
+            If not set, will go into the same directory as the .bin files.
         delete_bins (bool, optional): Delete GITM bins after making Datasets?
             Defaults to False.
         replace_cdfs (bool, optional): Replace pre-existing netCDF files?
@@ -456,7 +459,11 @@ def process_all_to_cdf(gitm_dir,
 
     if not drop_ghost_cells:
         print('Not dropping Ghost cells.',
-              'This will cause issues if you have both 3D and 2D files.')
+              'This will cause issues if you are processing both 3D and 2D',
+              'files. Not robust enough to deal with that, unfortunately.')
+
+    if out_dir is None:
+        out_dir = gitm_dir
 
     files = np.sort(glob.glob(os.path.join(gitm_dir, '*.bin')))
 
