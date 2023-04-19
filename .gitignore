@@ -23,3 +23,5 @@ sami_dir
 out_plots_gitm
 out_plots_sami
 gitm_out_plots
+PET0.RegridWeightGen.Log
+PET0.ESMF_LogFile
