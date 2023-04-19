@@ -452,7 +452,7 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
                        start_idx=None, end_idx=None,
                        progress_bar=False):
     """Read in (raw) SAMI data and return an xarray dataset.
-        ! This only works on raw, pre-processed SAMI data!
+        ! This only works on raw, pre-processed SAMI data !
             (not TEC or anything like that)
 
     Args:
