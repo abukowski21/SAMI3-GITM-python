@@ -104,10 +104,6 @@ def main(args):
         regrid = True
         if len(sami_files_nc) != 0:
 
-            if args.verbose:
-                print('found netCDF files in samidir: {}'.format(
-                    sami_files_nc))
-
             if not args.replace:
                 process_from_scratch = False
             for f in sami_files_nc:
@@ -166,7 +162,7 @@ if __name__ == '__main__':
                         help='SAMI directory. Defaults to ./sami_data')
     parser.add_argument('--dont_regrid', action='store_false',
                         help='Regrid SAMI data? (Default: True)')
-    parser.add_argument('--low_mem', action='store_false',
+    parser.add_argument('--low_mem', type=bool, default = True,
                         help='Process SAMI files in low memory mode?'
                         'Default: True')
     parser.add_argument('-out', '--output_dir', type=str, default=None,

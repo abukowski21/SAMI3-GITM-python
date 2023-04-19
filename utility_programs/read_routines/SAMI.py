@@ -749,22 +749,7 @@ def process_all_to_cdf(sami_data_path,
                         out_dir, 't'+time.strftime('%y%m%d_%H%M%S') + '.nc'),
                         mode='a')
                     pbar2.update()
-
-            # for ftype in sami_og_vars:
-            #     dss = []
-            #     for nt, tval in enumerate(times):
-            #         dss.append(read_raw_to_xarray(
-            #             sami_data_path=sami_data_path,
-            #             dtime_sim_start=dtime_sim_start,
-            #             cols=sami_og_vars[ftype],
-            #             start_idx=nt,
-            #             end_idx=nt+1))
-            #         pbar2.update()
-            #     ds = xr.concat(dss, dim='time')
-            #     ds.to_netcdf(out_file, mode='a')
-            #     did_one = True
-            #     if progress_bar:
-            #         pbar.update()
+                pbar.update()
 
         for ftype in sami_og_vars:
             did_var = False
