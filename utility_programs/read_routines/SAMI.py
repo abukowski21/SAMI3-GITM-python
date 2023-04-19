@@ -444,6 +444,67 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
     return sami_data, np.array(times)
 
 
+def make_input_to_esmf(sami_data_path,
+                       alt_min=200,
+                       alt_max=2200,
+                       lat_cut=80,
+                       out_lats=np.arange(-80, 80, 2.0),
+                       out_lons=np.arange(0, 360, 5),
+                       out_alts=np.arange(250, 2000, 50),
+                       ):
+
+    import xarray as xr
+
+    nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
+    grid = {}
+    geo_grid_files = {
+        'lat': 'glatu.dat', 'lon': 'glonu.dat', 'alt': 'zaltu.dat'}
+
+    for f in geo_grid_files:
+        file = open(os.path.join(sami_data_path, geo_grid_files[f]), 'rb')
+        raw = np.fromfile(file, dtype='float32')[1:-1].copy()
+        file.close()
+
+        grid[f] = raw.reshape(nlt, nf, nz).copy()
+
+    ds_in = xr.Dataset(coords={
+        "latitude": (['loc'], grid['lat'].flatten(),
+                     {'units': 'degrees_north'}),
+        "longitude": (["loc"], grid['lon'].flatten(),
+                      {'units': 'degrees_east'}),
+        "height": (["loc"], grid['alt'].flatten()*1000,
+                   {'units': "meters",
+                    "standard_name": "height_above_reference_ellipsoid",
+                    "long_name": "Elevation relative to sea level"}),
+    })
+
+    ds_in = ds_in.where((ds_in.height < alt_max*1000) & (
+        ds_in.height > alt_min*1000), drop=True)
+
+    ds_in.to_netcdf(os.path.join(sami_data_path, 'in.nc'))
+
+    print('ds_in has size: %i. This will take ~%f GB of RAM' %
+          (len(ds_in.latitude), len(ds_in.latitude)*8/1e9))
+
+    ds_out = xr.Dataset({
+        "latitude": (["lat"], out_lats,
+                     {'units': 'degrees_north'}),
+        "longitude": (["lon"], out_lons,
+                      {'units': 'degrees_east'}),
+        "height": (["elevation"], out_alts*1000,
+                   {'units': "meters",
+                    "standard_name": "height_above_reference_ellipsoid",
+                    "long_name": "Elevation relative to sea level"}),
+    })
+
+    ds_out.to_netcdf(os.path.join(sami_data_path, 'out.nc'))
+
+    print('Made! Run this command: (in the right directory) \n',
+          'mpirun -np [num_procs] ESMF_RegridWeightGen -s in.nc -d',
+          'out.nc -w weights.nc -m conserve')
+    return
+
+
 def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
                        hrs_before_storm_start=None,
                        hrs_after_storm_start=None,
@@ -528,8 +589,6 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
             glat=(('nlt', 'nf', 'nz'), grid['glat'].round(2)),
             glon=(('nlt', 'nf', 'nz'), grid['glon'].round(2)),
             alt=(('nlt', 'nf', 'nz'), grid['alt'].round(2)),),
-        attrs=dict(
-            dtime_storm_start=dtime_storm_start,)
     )
 
     if dtime_storm_start is not None:
@@ -572,21 +631,22 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
     return ds
 
 
-def process_bins_to_netcdf(sami_data_path,
-                           dtime_sim_start,
-                           dtime_storm_start=None,
-                           progress_bar=False,
-                           start_dtime=None,
-                           end_dtime=None,
-                           out_dir=None,
-                           split_by_time=True,
-                           split_by_var=False,
-                           whole_file=False,
-                           OVERWRITE=False,
-                           append_files=False,
-                           low_mem=False,
-                           cols='all'
-                           ):
+def process_all_to_cdf(sami_data_path,
+                       dtime_sim_start,
+                       dtime_storm_start=None,
+                       progress_bar=False,
+                       start_dtime=None,
+                       end_dtime=None,
+                       out_dir=None,
+                       split_by_time=True,
+                       split_by_var=False,
+                       whole_file=False,
+                       OVERWRITE=False,
+                       delete_raw=False,
+                       append_files=False,
+                       low_mem=False,
+                       cols='all'
+                       ):
     """Process SAMI binary files to netcdf format.
 
     Args:
@@ -645,8 +705,11 @@ def process_bins_to_netcdf(sami_data_path,
         if progress_bar:
             total = len(cols) * np.sum(
                 [split_by_time, split_by_var, whole_file])
+            print(
+                'Processing in lowmem mode. This will take substantially',
+                'longer than "normal" mode.')
             pbar = tqdm(total=total,
-                        desc='processing in low mem mode...')
+                        desc='Variable loop:')
 
         did_one = False
 
@@ -672,7 +735,7 @@ def process_bins_to_netcdf(sami_data_path,
             # it's faster to read the datasets by time, concat them,
             # and then write that than to go thru appending everything.
             if progress_bar:
-                pbar2 = tqdm(total=nt*len(cols), desc='splitting by time...')
+                pbar2 = tqdm(total=nt*len(cols), desc='Vars & Times:')
 
             for ftype in sami_og_vars:
                 ds = read_raw_to_xarray(
@@ -739,8 +802,18 @@ def process_bins_to_netcdf(sami_data_path,
 
         if not did_one:
             raise ValueError('Your columns were not found in the data!')
+        elif delete_raw:
+            for ftype in sami_og_vars:
+                if sami_og_vars[ftype] in cols:
+                    os.remove(os.path.join(sami_data_path,
+                                           sami_og_vars[ftype]))
 
     else:
+
+        if delete_raw:
+            raise NotImplementedError(
+                'delete_raw not implemented for non-low_mem mode!')
+
         ds = read_raw_to_xarray(sami_data_path, dtime_sim_start,
                                 progress_bar=progress_bar, cols=cols)
 
@@ -844,6 +917,8 @@ def auto_read(sami_dir,
             arrays. Defaults to False.
         dtime_sim_start (datetime, optional): Datetime of the start of the
             simulation. Defaults to None. Required if netCDF files aren't made.
+            If netCDF files are made, You had the option to add
+            this as an attribute to the file.
         parallel (bool, optional): Force parallel reading of files.
             NetCDF files are read weird. Might be buggy. Defaults to True.
         start_dtime (datetime, optional): Datetime to start reading data.
