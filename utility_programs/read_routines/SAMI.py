@@ -965,12 +965,29 @@ def auto_read(sami_dir,
                                        coords='minimal', compat='override')
 
             elif split_by_time:
-                ds = xr.open_mfdataset(os.path.join(sami_dir, 't*.nc'),
+                files = glob(os.path.join(sami_dir, 't*.nc'))
+                ret_early = False
+                if start_idx is None:
+                    start_idx = 0
+                    ret_early = True
+                if end_idx is None:
+                    end_idx = -1
+                    ret_early = True
+                    
+                files = files[start_idx:end_idx]
+                print(files)
+                
+                if len(files) > 1:
+                    ds = xr.open_mfdataset(files,
                                        parallel=parallel,
                                        combine_attrs='drop_conflicts',
                                        data_vars='minimal',
                                        concat_dim="time", combine="nested",
                                        coords='minimal', compat='override')
+                else:
+                    ds = xr.open_dataset(files[0])
+                if ret_early:
+                    return ds
 
             else:
                 print('Something went wrong with naming netcdf files.\n',
@@ -981,6 +998,7 @@ def auto_read(sami_dir,
                     if type(cols) is str:
                         cols = [cols]
                     ds = ds[cols]
+                
                 if start_dtime is not None or end_dtime is not None:
                     if start_dtime is not None:
                         start_idx = np.argmin(
