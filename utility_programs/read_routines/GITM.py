@@ -438,7 +438,7 @@ def process_all_to_cdf(gitm_dir,
     Args:
         gitm_dir (str: path-like): Directory containing GITM .bin files.
         out_dir (str: path-like, optional): Directory to output .cdf files.
-            If not set, will go into the same directory as the .bin files.
+            If None, will go into the same directory as the .bin files.
         delete_bins (bool, optional): Delete GITM bins after making Datasets?
             Defaults to False.
         replace_cdfs (bool, optional): Replace pre-existing netCDF files?
@@ -505,7 +505,7 @@ def process_all_to_cdf(gitm_dir,
         if skip_existing:
             pbar = tqdm(total=len(indiv_ends)-num_existing_cdfs)
         else:
-            pbar = tqdm(total=len(indiv_ends))
+            pbar = tqdm(total=len(indiv_ends), desc='Processing GITM')
 
     to_remove = []
 
