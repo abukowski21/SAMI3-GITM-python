@@ -419,18 +419,25 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
         file.close()
 
         sami_data['data'][f] = raw
+        
+    nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
+    
+    # defaults
+    nx = 100
+    ny = 100
+    
 
     # Reshape everything!
-    # TODO: Make this more general
+    # TODO: (!!) Make this more general
     if reshape:
         sami_data['data']['edens'] = sami_data['data']['edens'].reshape(
-            625, 80, 100, 100)
+            nt, nlt, nx, ny)
         sami_data['data']['tec'] = sami_data['data']['tec'].reshape(
-            625, 80, 100)
+            nt, nlt, nx)
         sami_data['grid']['glat'] = sami_data['grid']['glat'].reshape(
-            80, 100, 100)
+            nlt, nx, ny)
         sami_data['grid']['glon'] = sami_data['grid']['glon'].reshape(
-            80, 100, 100)
+            nlt, nx, ny)
 
     with open(os.path.join(sami_data_path, 'time.dat'), 'r') as fp:
         lines = fp.readlines()
