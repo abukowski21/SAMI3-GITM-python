@@ -493,7 +493,7 @@ def process_all_to_cdf(gitm_dir,
     elif num_existing_cdfs != 0 and not skip_existing:
         import warnings
         warnings.warn(
-            'There are %i existing netcdfs in this directory,\n'
+            '\nThere are %i existing netcdfs in this directory,\n'
             ' but only %i should be made. This may be because you\n'
             ' have already processed some of these files.\n'
             ' It is possible that some files have been deleted,\n'
