@@ -75,7 +75,7 @@ def main(args):
                     'No GITM files found in {}'.format(args.gitm_dir),
                     'And I could not postprocess myself. Go run pGITM.')
 
-        if len(glob.glob(os.path.join(args.gitm_dir, '*.nc'))) > 0:
+        if len(glob.glob(os.path.join(args.output_dir, '*.nc'))) > 0:
             if args.replace:
                 print('Replacing existing netCDF files...')
 
