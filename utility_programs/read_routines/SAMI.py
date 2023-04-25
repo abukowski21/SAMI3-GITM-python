@@ -419,13 +419,12 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
         file.close()
 
         sami_data['data'][f] = raw
-        
+
     nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
-    
+
     # defaults
     nx = 100
     ny = 100
-    
 
     # Reshape everything!
     # TODO: (!!) Make this more general
@@ -647,7 +646,7 @@ def process_all_to_cdf(sami_data_path,
                        out_dir=None,
                        split_by_time=True,
                        split_by_var=False,
-                       whole_file=False,
+                       whole_run=False,
                        OVERWRITE=False,
                        delete_raw=False,
                        append_files=False,
@@ -670,7 +669,7 @@ def process_all_to_cdf(sami_data_path,
         split_by_time (bool, optional): Split files by time. Defaults to False.
         split_by_var (bool, optional): Split files by variable.
             Defaults to False.
-        whole_file (bool, optional): Save whole model run (in time range)
+        whole_run (bool, optional): Save whole model run (in time range)
             as one netcdf. Defaults to False.
         OVERWRITE (bool, optional): Overwrite existing files.
             Defaults to False.
@@ -711,12 +710,12 @@ def process_all_to_cdf(sami_data_path,
 
         if progress_bar:
             total = len(cols) * np.sum(
-                [split_by_time, split_by_var, whole_file])
+                [split_by_time, split_by_var, whole_run])
             print(
                 'Processing in lowmem mode. This will take substantially',
                 'longer than "normal" mode.')
             pbar = tqdm(total=total,
-                        desc='Variable loop:')
+                        desc='Variable loop')
 
         did_one = False
 
@@ -739,10 +738,9 @@ def process_all_to_cdf(sami_data_path,
                         raise FileExistsError(
                             out_file,
                             ' already exists! Cannot rewrite!')
-            # it's faster to read the datasets by time, concat them,
-            # and then write that than to go thru appending everything.
+
             if progress_bar:
-                pbar2 = tqdm(total=nt*len(cols), desc='Vars & Times:')
+                pbar2 = tqdm(total=nt*len(cols), desc='Vars & Times')
 
             for ftype in sami_og_vars:
                 ds = read_raw_to_xarray(
@@ -757,40 +755,44 @@ def process_all_to_cdf(sami_data_path,
                         mode='a')
                     pbar2.update()
                 pbar.update()
+                did_one = True
 
-        for ftype in sami_og_vars:
-            did_var = False
-            if sami_og_vars[ftype] in cols:
+        if split_by_var or whole_run:
 
-                ds = read_raw_to_xarray(sami_data_path, dtime_sim_start,
-                                        cols=sami_og_vars[ftype])
+            for ftype in sami_og_vars:
+                did_var = False
+                if sami_og_vars[ftype] in cols:
 
-                if start_dtime is not None or end_dtime is not None:
-                    if start_dtime is not None:
-                        start_idx = np.argmin(
-                            np.abs(ds.time.values - start_dtime))
-                    else:
-                        start_idx = 0
-                    if end_dtime is not None:
-                        end_idx = np.argmin(np.abs(ds.time.values - end_dtime))
-                    else:
-                        end_idx = len(ds.time)
-                    ds = ds.isel(time=slice(start_idx, end_idx))
+                    ds = read_raw_to_xarray(sami_data_path, dtime_sim_start,
+                                            cols=sami_og_vars[ftype])
 
-                if split_by_var:
-                    out_file = os.path.join(
-                        out_dir, f'{sami_og_vars[ftype]}.nc')
-                    ds.to_netcdf(out_file, mode='a')
-                    did_one = True
-                    did_var = True
-                if whole_file:
-                    ds.to_netcdf(os.path.join(out_dir, 'sami_data.nc'),
-                                 mode='a')
-                    did_one = True
-                    did_var = True
+                    if start_dtime is not None or end_dtime is not None:
+                        if start_dtime is not None:
+                            start_idx = np.argmin(
+                                np.abs(ds.time.values - start_dtime))
+                        else:
+                            start_idx = 0
+                        if end_dtime is not None:
+                            end_idx = np.argmin(
+                                np.abs(ds.time.values - end_dtime))
+                        else:
+                            end_idx = len(ds.time)
+                        ds = ds.isel(time=slice(start_idx, end_idx))
 
-                if did_var and progress_bar:
-                    pbar.update()
+                    if split_by_var:
+                        out_file = os.path.join(
+                            out_dir, f'{sami_og_vars[ftype]}.nc')
+                        ds.to_netcdf(out_file, mode='a')
+                        did_one = True
+                        did_var = True
+                    if whole_run:
+                        ds.to_netcdf(os.path.join(out_dir, 'sami_data.nc'),
+                                     mode='a')
+                        did_one = True
+                        did_var = True
+
+                    if did_var and progress_bar:
+                        pbar.update()
 
         if not did_one:
             raise ValueError('Your columns were not found in the data!')
@@ -980,17 +982,17 @@ def auto_read(sami_dir,
                 if end_idx is None:
                     end_idx = -1
                     ret_early = True
-                    
+
                 files = files[start_idx:end_idx]
                 print(files)
-                
+
                 if len(files) > 1:
                     ds = xr.open_mfdataset(files,
-                                       parallel=parallel,
-                                       combine_attrs='drop_conflicts',
-                                       data_vars='minimal',
-                                       concat_dim="time", combine="nested",
-                                       coords='minimal', compat='override')
+                                           parallel=parallel,
+                                           combine_attrs='drop_conflicts',
+                                           data_vars='minimal',
+                                           concat_dim="time", combine="nested",
+                                           coords='minimal', compat='override')
                 else:
                     ds = xr.open_dataset(files[0])
                 if ret_early:
@@ -1005,7 +1007,7 @@ def auto_read(sami_dir,
                     if type(cols) is str:
                         cols = [cols]
                     ds = ds[cols]
-                
+
                 if start_dtime is not None or end_dtime is not None:
                     if start_dtime is not None:
                         start_idx = np.argmin(
