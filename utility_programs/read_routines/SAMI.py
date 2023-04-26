@@ -127,13 +127,65 @@ def get_grid_elems_from_parammod(sami_data_path):
                          'the file is '
                          'formatted correctly.')
     else:
-        return nz, nf, numwork*(nl - 2), nt
+        return nz, nf, numwork*(nl - 2), nt    
+    
+    
+
+def get_postprocessed_grid(sami_data_path):
+    """Go into sami data directory and get the grid elements
+            from the parameter_mod.f90 file.
+
+    Args:
+        sami_data_path (str): data path for sami outputs
+
+    Returns:
+        nx: num. grid points along each field line
+        ny: num. field lines along each magnetic longitude
+    """
+
+    found = [False, False]
+
+    nx = 0
+    ny = 0
+
+    #try:
+    with open(os.path.join(sami_data_path,'postrun-utils','TEC',
+                               'param_diag.inc'), 'r') as fp:
+            # read all lines in a list
+            lines = fp.readlines()
+            for line in lines:
+                # check if string present on a current line
+                if not found[0]:
+                    if line.find('nx') != -1:
+                        nx0 = []
+                        for char in line:
+                            if char.isdigit():
+                                nx0.append(char)
+                        nx = int(''.join(nx0))
+                        found[0] = True
+
+                if not found[1]:
+                    if line.find('ny') != -1:
+                        ny0 = []
+                        for char in line:
+                            if char.isdigit():
+                                ny0.append(char)
+                        ny = int(''.join(ny0))
+                        found[1] = True
+    if not all(found):
+        print('found nx? %s and ny? %s' %(found[0],found[1]))
+        raise ValueError('Could not find all of the required variables in '
+                         'parameter_mod.f90 and time.dat. Please check that '
+                         'the file is '
+                         'formatted correctly.')
+    else:
+        return nx, ny
 
 
 def make_times(nt, sami_data_path, dtime_sim_start,
                dtime_storm_start=None,
                hrs_before_storm=None, hrs_after_storm=None,
-               help=False):
+               need_help=False):
     """Make a list of datetime objects for each time step from
             the time.dat file.
 
@@ -209,12 +261,14 @@ def make_times(nt, sami_data_path, dtime_sim_start,
 
     if hrs_before_storm is not None and hrs_after_storm is not None:
         if dtime_storm_start is None:
-            raise ValueError('cant cal. hrs from storm without storm info')
+            raise ValueError('cant call hrs from storm without storm info')
+            
         if hrs_before_storm is not None:
             start_idx = np.argmin(np.abs(
                 np.array(times)
                 - (dtime_storm_start
                    - pd.Timedelta(hrs_before_storm, 'hour'))))
+
         else:
             start_idx = 0
 
@@ -233,7 +287,7 @@ def make_times(nt, sami_data_path, dtime_sim_start,
     elif hrs_before_storm is not None or hrs_after_storm is not None:
         raise ValueError('You cannot specify one and not the other!')
 
-    if help:
+    if need_help:
         print(times, '\n', hrs_since_storm_start)
 
     if dtime_storm_start is None:
@@ -284,7 +338,7 @@ def get_sami_grid(sami_data_path, nlt, nf, nz):
 def read_to_nparray(sami_data_path, dtime_sim_start,
                     dtime_storm_start=None,
                     t_start_idx=None, t_end_idx=None, pbar=False,
-                    cols='all', help=False):
+                    cols='all', need_help=False):
     """Automatically read in SAMI data.
 
     Args:
@@ -329,11 +383,11 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     data_files = {}
     for ftype in sami_og_vars:
         if sami_og_vars[ftype] in cols:
-            data_files[ftype] = ftype
+            data_files[ftype] = sami_og_vars[ftype]
         else:
             print('skipping', ftype, 'because it is not in cols')
             help = True
-    if help:
+    if need_help:
         print('the available columns are: \n', cols)
         return
 
@@ -345,16 +399,14 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
 
     if dtime_storm_start is not None:
         times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
-            nt, sami_data_path, dtime_storm_start, dtime_sim_start,
-            t_start_idx, t_end_idx, help)
+            nt, sami_data_path, dtime_sim_start,dtime_storm_start, 
+            t_start_idx, t_end_idx, need_help)
     else:
         times = make_times(nt, sami_data_path, dtime_sim_start)
-        start_idx = 0
-        end_idx = len(times)
-
+    
     ntimes = len(times)
 
-    if help:
+    if need_help:
         print('nz, nlt, nf, ntimes = ', nz, nlt, nf, ntimes)
         return
 
@@ -363,11 +415,11 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
         progress = tqdm(total=len(cols) * ntimes, desc='reading SAMI data')
 
     sami_data['data'] = {}
-    for f in cols:
-        sami_data['data'][f] = np.zeros((nlt, nf, nz, ntimes))
+    for f in data_files:
+        sami_data['data'][data_files[f]] = np.zeros((nlt, nf, nz, ntimes))
 
         try:
-            file = open(os.path.join(sami_data_path, data_files[f]), 'rb')
+            file = open(os.path.join(sami_data_path, f), 'rb')
         except KeyError:
             print('the column name you entered is not valid. \n',
                   'the available columns are: \n', data_files.keys())
@@ -377,10 +429,10 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
                   'the model results may not be in the path you specified:')
             raise
 
-        for t in range(len(times)):
+        for t in range(nt):
             raw = np.fromfile(file, dtype='float32', count=(nz*nf*nlt)+2)[1:-1]
-            if t < start_idx and t < end_idx:
-                sami_data['data'][f][:, :, :, t - start_idx] = raw.reshape(
+            if t > start_idx and t < end_idx:
+                sami_data['data'][data_files[f]][:, :, :, t - start_idx] = raw.reshape(
                     nlt, nf, nz).copy()
             if pbar:
                 progress.update(1)
@@ -391,7 +443,7 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     return sami_data, np.array(times)
 
 
-def read_sami_dene_tec(sami_data_path, reshape=True):
+def read_sami_dene_tec_MAG_GRID(sami_data_path, reshape=True):
     """ Read in TEC (and interpolated dene) data!
 
     """
@@ -421,13 +473,13 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
         sami_data['data'][f] = raw
 
     nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
+    
+    nt +=1
 
     # defaults
-    nx = 100
-    ny = 100
+    nx, ny = get_postprocessed_grid(sami_data_path)
 
     # Reshape everything!
-    # TODO: (!!) Make this more general
     if reshape:
         sami_data['data']['edens'] = sami_data['data']['edens'].reshape(
             nt, nlt, nx, ny)
@@ -442,9 +494,8 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
         lines = fp.readlines()
         nt = len(lines) - 1
 
-    times, hrs_since_storm_start = make_times(
+    times = make_times(
         nt, sami_data_path,
-        dtime_storm_start=datetime.datetime(2011, 5, 21, 12),
         dtime_sim_start=datetime.datetime(2011, 5, 20))
 
     return sami_data, np.array(times)
@@ -556,16 +607,19 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
 
     nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
     times = make_times(nt, sami_data_path, dtime_sim_start)
+    times = np.array(times)
     grid = get_sami_grid(sami_data_path, nlt, nf, nz)
 
     if start_idx is None and end_idx is None:
         if dtime_storm_start is not None:
             if hrs_before_storm_start is not None:
                 start_idx = np.argmin(np.abs(
-                    times - (start_dtime - np.abs(hrs_before_storm_start))))
+                    times - (dtime_storm_start - pd.Timedelta(
+                        np.abs(hrs_before_storm_start), 'hours'))))
             if hrs_after_storm_start is not None:
                 end_idx = np.argmin(
-                    np.abs(times - (start_dtime + hrs_after_storm_start)))
+                    np.abs(times - (dtime_storm_start + pd.Timedelta(
+                        np.abs(hrs_before_storm_start), 'hours'))))
             if start_idx is None and end_idx is None:
                 raise ValueError(
                     'You must specify either start_idx or end_idx',
