@@ -5,12 +5,13 @@
 
 import xarray as xr
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import numpy as np
 
 from scipy.spatial import KDTree
 import os
 from utility_programs.read_routines import SAMI
+from utility_programs.utils import str_to_ut
 import argparse
 
 
@@ -100,6 +101,7 @@ def make_weights(in_cart, out_cart, nearest, old_shape, coords):
 
     weights = np.zeros([len(out_cart[0]), 8])
     src_idxs = np.zeros([len(out_cart[0]), 8])
+    print('Calculating weights...')
     for n, pt in enumerate(tqdm(nearest)):
 
         idxs = [np.ravel_multi_index(c, old_shape) for c in coords[pt]]
@@ -117,6 +119,9 @@ def make_weights(in_cart, out_cart, nearest, old_shape, coords):
             weights[n] = 1/(d)
 
             src_idxs[n] = idxs
+    print('Done, found %i valid points' % np.sum(weights > 0))
+
+    return weights, src_idxs
 
 
 def find_pairs(centers, out_cart):
@@ -126,6 +131,7 @@ def find_pairs(centers, out_cart):
 
 
 def apply_weights(weights,
+                  src_idxs,
                   data_dict,
                   times,
                   altout,
@@ -140,12 +146,12 @@ def apply_weights(weights,
 
     outv = []
     for var in data_dict['data'].keys():
-        t0 = data2['data'][var]
+        t0 = data_dict['data'][var]
         for t in range(t0.shape[-1]):
             outv.append(
-                np.sum(weights['weight'] * np.take(t0[:, :, :, t],
-                                                   weights['srcidxs1d'].astype(int)), axis=1)
-                / np.sum(weights['weight'], axis=1))
+                np.sum(weights * np.take(
+                    t0[:, :, :, t], src_idxs.astype(int)), axis=1)
+                / np.sum(weights, axis=1))
 
         ds[var] = np.array(outv).reshape(
             len(times), len(latout), len(lonout), len(altout))
@@ -156,9 +162,11 @@ def apply_weights(weights,
 def main(
         sami_data_path,
         out_path=None,
-        save_weights=False,
+        save_weights=True,
         use_saved_weights=True,
+        apply_weights=True,
         cols='all',
+        dtime_sim_start=None,
         lat_step=1,
         lon_step=4,
         alt_step=50,
@@ -169,6 +177,10 @@ def main(
 
     if out_path is None:
         out_path = sami_data_path
+
+    if not os.path.exists(out_path):
+        print('making outpath %s' % out_path)
+        os.makedirs(out_path)
 
     # Read in the data
     nz, nf, nlt, nt = SAMI.get_grid_elems_from_parammod(sami_data_path)
@@ -211,12 +223,131 @@ def main(
         weights.tofile(os.path.join(out_path, 'weights'))
         idxs.tofile(os.path.join(out_path, 'indexes'))
 
-    ds = apply_weights(weights,
-                       data_dict,
-                       times,
-                       altout,
-                       latout,
-                       lonout,)
-    ds.to_cdf(os.path.join(out_path, 'sami-regridded'))
+    if apply_weights:
+        if type(cols) == str:
+            cols = ['all']
+
+        print('reading SAMI data...')
+        data, times = SAMI.read_to_nparray(
+            sami_data_path, dtime_sim_start, cols=cols, pbar=True)
+
+        ds = apply_weights(weights, idxs,
+                           data, times,
+                           altout, latout, lonout)
+
+        if 1 not in [lat_finerinterps, lon_finerinterps, alt_finerinterps]:
+
+            if lat_finerinterps > 1:
+                ds = ds.coarsen(lat=lat_finerinterps, boundary='trim').mean()
+            if lon_finerinterps > 1:
+                ds = ds.coarsen(lon=lon_finerinterps, boundary='trim').mean()
+            if alt_finerinterps > 1:
+                ds = ds.coarsen(alt=alt_finerinterps, boundary='trim').mean()
+
+        ds.to_cdf(os.path.join(out_path, 'sami-regridded'))
 
     return
+
+
+if __name__ == main():
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('sami_data_path', type=str, help='path to sami data')
+
+    parser.add_argument('-o', '--out_path', type=str, default=None,
+                        help='path to save regridded data,'
+                        'deafults to sami_data_path')
+    parser.add_argument('-d', '--dtime_sim_start', type=str, default=None,
+                        help='datetime string of simulation start time.'
+                        'Required to read raw SAMI files')
+    parser.add_argument('--save_weights', action='store_true',
+                        help='save weights and indexes')
+    parser.add_argument('--reuse_weights', action='store_true',
+                        help='use saved weights and indexes'
+                        '(helpful if you have already run on other columns)')
+    parser.add_argument('-a', '--apply_weights', action='store_true',
+                        help='apply weights to data. Generates new data file')
+    parser.add_argument('--cols', type=str, default='all', nargs='*',
+                        help='columns to read from sami data. Defaults to all'
+                        'input as a list with spaces between.')
+    parser.add_argument('--custom_grid', type=str, action='store_true',
+                        help='Launches interactive script to set custom grid.'
+                        'Default grid is 4 x 1 deg lonxlat, 50 alts.'
+                        'minimum alt is 100, max is 2200, global lon x lat')
+    parser.add_argument('--lat_step', type=float, default=1,
+                        help='latitude step size in degrees')
+    parser.add_argument('--lon_step', type=float, default=4,
+                        help='longitude step size in degrees')
+    parser.add_argument('--alt_step', type=float, default=50,
+                        help='altitude step size in km')
+    parser.add_argument('--lat_finerinterps', type=int, default=1,
+                        help='Interpolate at a finer resolution in latitude?'
+                        'defaults to 1 (no finer), set to any value > 1 to'
+                        'interpolate at high resolution and then'
+                        'coarsen when writing the files out.')
+    parser.add_argument('--lon_finerinterps', type=int, default=1,
+                        help='Interpolate at a finer resolution in longitude?'
+                        'defaults to 1 (no finer), set to any value > 1 to'
+                        'interpolate at high resolution and then'
+                        'coarsen when writing the files out.')
+    parser.add_argument('--alt_finerinterps', type=int, default=1,
+                        help='Interpolate at a finer resolution in altitude?'
+                        'defaults to 1 (no finer), set to any value > 1 to'
+                        'interpolate at high resolution and then'
+                        'coarsen when writing the files out.')
+
+    args = parser.parse_args()
+
+    if args.custom_grid:
+        print('we are going to set a custom grid for you. ')
+        print('Press enter to accept the default values in parentheses')
+        latstep = input('latitude step size in degrees: (1)', default=1)
+        lonstep = input('longitude step size in degrees: (4)', default=4)
+        altstep = input('altitude step size in km: (50)', default=50)
+        minalt = input('minimum altitude in km: (100)', default=100)
+        maxalt = input('maximum altitude in km: (2200)', default=2200)
+        print('Now for the options to interpolate at a finer resolution'
+              ' and then coarsen afterwards. If you dont know what this'
+              ' means you can run with 1s and it will be faster. if you'
+              ' see weird atrifacts in your outputs you can try '
+              'adjusting this. ')
+        latfiner = input('interpolate at a finer resolution in latitude? (1)',
+                         default=1)
+        lonfiner = input('interpolate at a finer resolution in longitude? (1)',
+                         default=1)
+        altfiner = input('interpolate at a finer resolution in altitude? (1)',
+                         default=1)
+    else:
+        latstep = args.lat_step
+        lonstep = args.lon_step
+        altstep = args.alt_step
+        latfiner = args.lat_finerinterps
+        lonfiner = args.lon_finerinterps
+        altfiner = args.alt_finerinterps
+
+    if args.dtime_sim_start is not None:
+        if args.apply_weights:
+            raise ValueError('You must specify a simulation start time'
+                             'when using apply_weights to read data')
+        dtime_sim_start = str_to_ut(args.dtime_sim_start)
+    if args.reuse_weights:
+        # check if out_weight file exists
+        if not os.path.isfile(os.path.join(args.out_path, 'weights')):
+            raise ValueError('You specified to reuse weights, but no weights'
+                             'file was found in the out_path')
+
+    main(args.sami_data_path,
+         out_path=args.out_path,
+         save_weights=args.save_weights,
+         use_saved_weights=args.reuse_weights,
+         apply_weights=args.apply_weights,
+         cols=args.cols,
+         dtime_sim_start=dtime_sim_start,
+         lat_step=latstep,
+         lon_step=lonstep,
+         alt_step=altstep,
+         minmax_alt=[minalt, maxalt],
+         lat_finerinterps=latfiner,
+         lon_finerinterps=lonfiner,
+         alt_finerinterps=altfiner)
