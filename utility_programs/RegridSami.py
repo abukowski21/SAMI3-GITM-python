@@ -4,20 +4,14 @@
 
 
 import xarray as xr
-import pandas as pd
 
-from glob import glob
 from tqdm import tqdm
 import numpy as np
 
-from datetime import datetime
 from scipy.spatial import KDTree
-
+import os
 from utility_programs.read_routines import SAMI
 import argparse
-
-data2, times = SAMI.read_to_nparray(sami_data_path, dtime_sim_start,
-                                    dtime_event_start, 1, 2, cols='edens')
 
 
 def latlonalt_to_cart(lat, lon, radius):
@@ -29,94 +23,106 @@ def latlonalt_to_cart(lat, lon, radius):
     return np.array([x, y, z])
 
 
-def make_weights(latout,
-                 lonout,
-                 altout,
-                 sami_data_path,
-                 dtime_sim_start):
+def is_inside_cube(x, y, z, xs, ys, zs):
+    if (x > min(xs)) and (x < max(xs)) and (y > min(ys)) and (y < max(ys)) \
+            and (z > min(zs)) and (z < max(zs)):
+        return True
+    else:
+        return False
 
-    nz, nf, nlt, nt = SAMI.get_grid_elems_from_parammod(sami_data_path)
 
-    old_shape = [nlt, nf, nz]
+def generate_interior_points(in_cart, old_shape):
 
-    grid2 = SAMI.get_sami_grid(sami_data_path, nlt, nf, nz)
-    grid = {}
+    nlt, nf, nz = old_shape
+    centers = []
+    coords = []
+    pbar = tqdm(total=np.product(old_shape), desc='Generating interior points')
+    badbadbad = []
 
-    for k in grid2.keys():
-        grid[k] = grid2[k].flatten()
-        grid2[k] = grid2[k]
-        print(k, grid[k].shape, grid2[k].shape)
-    in_cart = latlonalt_to_cart(grid['glat'], grid['glon'], grid['malt'])
+    for lt in range(nlt):
+        for f in range(nf):
+            for z in range(nz):
 
-    out_lats = []
-    out_lons = []
-    out_alts = []
-    for a in latout:
-        for o in lonout:
-            for l in altout:
-                out_lats.append(a)
-                out_lons.append(o)
-                out_alts.append(l)
-    out_cart = latlonalt_to_cart(out_lats, out_lons, np.array(out_alts)+6371)
+                if lt == old_shape[0]-1:
+                    l2 = 0
+                else:
+                    l2 = lt+1
 
-    tree = KDTree(in_cart.T)
-    dists, nearest = tree.query(out_cart.T)
+                if z == 0:
+                    z2 = -1
+                else:
+                    z2 = z-1
 
-    zero1dsrc = np.empty([len(out_cart[0]), 8])
-    weights = {'weight': zero1dsrc.copy(),
-               'srcidxs1d': zero1dsrc.copy(), }
+                f2 = f+1
+                if f == old_shape[1]-1:
+                    badbadbad.append([lt, f, z])
+                    pbar.update()
+                    continue
 
-    for n, i in enumerate(tqdm(nearest)):
-        l, f, z = np.unravel_index(i, old_shape)
+                cs = [[lt,  f,  z],
+                      [lt,  f,  z2],
+                      [l2, f,  z2],
+                      [l2, f,  z],
+                      [lt,  f2, z],
+                      [lt,  f2, z],
+                      [l2, f2, z2],
+                      [l2, f2, z2]]
 
-        if l == old_shape[0]-1:
-            l2 = 0
-        else:
-            l2 = l+1
+                for c in cs:
+                    id_pt = []
+                    xs = []
+                    ys = []
+                    zs = []
+                    for c in cs:
+                        try:
+                            index = np.ravel_multi_index(c, old_shape)
+                        except ValueError:
+                            pbar.update()
+                            break
+                        id_pt.append(index)
 
-        if z == 0:
-            z2 = -1
-        else:
-            z2 = z-1
+                        xs.append(in_cart[0, index])
+                        ys.append(in_cart[1, index])
+                        zs.append(in_cart[2, index])
 
-        f2 = f+1
-        if f == old_shape[1]-1:
-            continue
+                center = np.sum(xs)/8, np.sum(ys)/8, np.sum(zs)/8
 
-        cs = [[l,  f,  z],
-              [l,  f,  z2],
-              [l2, f,  z2],
-              [l2, f,  z],
-              [l,  f2, z],
-              [l,  f2, z],
-              [l2, f2, z2],
-              [l2, f2, z2], ]
+                centers.append(center)
+                coords.append(cs)
+                pbar.update()
+    print('From %i grid points we generated %i cubes'
+          % (len(in_cart[0]), len(centers)))
 
-        id_pt = []
-        xs = []
-        ys = []
-        zs = []
-        for c in cs:
-            try:
-                index = np.ravel_multi_index(c, old_shape)
-            except:
-                break
-            id_pt.append(index)
+    return centers, coords
 
-            xs.append(in_cart[0, index])
-            ys.append(in_cart[1, index])
-            zs.append(in_cart[2, index])
 
-        d = np.sqrt((xs-out_cart[0, n])**2 +
-                    (ys-out_cart[1, n])**2 + (zs-out_cart[2, n])**2)
-        dtot = np.sum(d)
+def make_weights(in_cart, out_cart, nearest, old_shape, coords):
 
-        try:
-            weights['weight'][n] = 1/(d)
-        except ValueError:
-            weights['weight'][n] = 0
-        weights['srcidxs1d'][n] = id_pt
-    return weights
+    weights = np.zeros([len(out_cart[0]), 8])
+    src_idxs = np.zeros([len(out_cart[0]), 8])
+    for n, pt in enumerate(tqdm(nearest)):
+
+        idxs = [np.ravel_multi_index(c, old_shape) for c in coords[pt]]
+
+        xs = in_cart[0, idxs]
+        ys = in_cart[0, idxs]
+        zs = in_cart[2, idxs]
+
+        val = is_inside_cube(out_cart[0, n], out_cart[1, n], out_cart[2, n],
+                             xs, ys, zs)
+        if val:
+            d = np.sqrt((xs-out_cart[0, n])**2 + (ys -
+                        out_cart[1, n])**2 + (zs-out_cart[2, n])**2)
+
+            weights[n] = 1/(d)
+
+            src_idxs[n] = idxs
+
+
+def find_pairs(centers, out_cart):
+    tree = KDTree(centers)
+    _, nearest = tree.query(out_cart.T)
+    return nearest
 
 
 def apply_weights(weights,
@@ -124,8 +130,7 @@ def apply_weights(weights,
                   times,
                   altout,
                   latout,
-                  lonout,
-                  **coarsen_args=None):
+                  lonout):
 
     ds = xr.Dataset(coords={
         'time': (['time'], times),
@@ -145,22 +150,66 @@ def apply_weights(weights,
         ds[var] = np.array(outv).reshape(
             len(times), len(latout), len(lonout), len(altout))
 
-    if **coarsen_args is not None:
-        ds = ds.coarsen(**coarsen_args).mean()
-
     return ds
 
 
-def main(args):
+def main(
+        sami_data_path,
+        out_path=None,
+        save_weights=False,
+        use_saved_weights=True,
+        cols='all',
+        lat_step=1,
+        lon_step=4,
+        alt_step=50,
+        minmax_alt=[100, 2200],
+        lat_finerinterps=1,
+        lon_finerinterps=1,
+        alt_finerinterps=1):
 
-    weights = make_weights(latout,
-                           lonout,
-                           altout,
-                           sami_data_path,
-                           dtime_sim_start)
+    if out_path is None:
+        out_path = sami_data_path
+
+    # Read in the data
+    nz, nf, nlt, nt = SAMI.get_grid_elems_from_parammod(sami_data_path)
+    old_shape = [nlt, nf, nz]
+
+    grid2 = SAMI.get_sami_grid(sami_data_path, nlt, nf, nz)
+
+    grid = {}
+    for k in grid2.keys():
+        grid[k] = grid2[k].flatten()
+        grid2[k] = grid2[k]
+
+    in_cart = latlonalt_to_cart(grid['glat'], grid['glon'], grid['malt'])
+
+    latout = np.arange(-90, 90, lat_step/lat_finerinterps)
+    lonout = np.arange(0, 360, lon_step/lon_finerinterps)
+    altout = np.arange(200, 2200, alt_step/alt_finerinterps)
+
+    out_lats = []
+    out_lons = []
+    out_alts = []
+
+    for a in latout:
+        for o in lonout:
+            for l1 in altout:
+                out_lats.append(a)
+                out_lons.append(o)
+                out_alts.append(l1)
+
+    out_cart = latlonalt_to_cart(out_lats, out_lons, np.array(out_alts)+6371)
+
+    centers, coords = generate_interior_points(in_cart, old_shape)
+
+    nearest = find_pairs(centers, out_cart)
+
+    weights, idxs = make_weights(in_cart, out_cart, nearest, old_shape, coords)
 
     if save_weights:
         # TODO: SAVE WEIGHTS
+        weights.tofile(os.path.join(out_path, 'weights'))
+        idxs.tofile(os.path.join(out_path, 'indexes'))
 
     ds = apply_weights(weights,
                        data_dict,
@@ -169,5 +218,5 @@ def main(args):
                        latout,
                        lonout,)
     ds.to_cdf(os.path.join(out_path, 'sami-regridded'))
-    
+
     return
