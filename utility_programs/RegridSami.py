@@ -173,7 +173,9 @@ def main(
         minmax_alt=[100, 2200],
         lat_finerinterps=1,
         lon_finerinterps=1,
-        alt_finerinterps=1):
+        alt_finerinterps=1,
+        split_by_var=True,
+        single_file=False):
 
     if out_path is None:
         out_path = sami_data_path
@@ -244,7 +246,12 @@ def main(
             if alt_finerinterps > 1:
                 ds = ds.coarsen(alt=alt_finerinterps, boundary='trim').mean()
 
-        ds.to_cdf(os.path.join(out_path, 'sami-regridded'))
+        if split_by_var:
+            for varname in ds.data_vars:
+                ds[varname].to_cdf(
+                    os.path.join(out_path, '%s' % varname))
+        elif single_file:
+            ds.to_cdf(os.path.join(out_path, 'sami-regridded'))
 
     return
 
@@ -271,6 +278,11 @@ if __name__ == main():
     parser.add_argument('--cols', type=str, default='all', nargs='*',
                         help='columns to read from sami data. Defaults to all'
                         'input as a list with spaces between.')
+    parser.add_argument('--split_by_var', action='store_false',
+                        help='Split output files by variable? Default: True')
+    parser.add_argument('--single_file', action='store_true',
+                        help='Write all output datasets to single file?'
+                        'Default: False')
     parser.add_argument('--custom_grid', type=str, action='store_true',
                         help='Launches interactive script to set custom grid.'
                         'Default grid is 4 x 1 deg lonxlat, 50 alts.'
@@ -343,6 +355,10 @@ if __name__ == main():
             raise ValueError('You specified to reuse weights, but no weights'
                              'file was found in the out_path')
 
+    if args.split_by_var and args.single_file:
+        raise ValueError(
+            'You cannot specify both split_by_var and single_file')
+
     main(args.sami_data_path,
          out_path=args.out_path,
          save_weights=args.save_weights,
@@ -356,4 +372,6 @@ if __name__ == main():
          minmax_alt=[minalt, maxalt],
          lat_finerinterps=latfiner,
          lon_finerinterps=lonfiner,
-         alt_finerinterps=altfiner)
+         alt_finerinterps=altfiner,
+         split_by_var=args.split_by_var,
+         single_file=args.single_file,)
