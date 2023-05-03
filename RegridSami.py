@@ -306,7 +306,7 @@ def main(
 
     if apply_weights:
         if type(cols) == str:
-            cols = ['all']
+            cols = [cols]
 
         print('reading SAMI data...')
         data, times = SAMI.read_to_nparray(
@@ -357,9 +357,9 @@ if __name__ == '__main__':
     parser.add_argument('--cols', type=str, default='all', nargs='*',
                         help='columns to read from sami data. Defaults to all'
                         'input as a list with spaces between.')
-    parser.add_argument('--split_by_var', action='store_false',
+    parser.add_argument('--split_by_var', action='store_false', default=True,
                         help='Split output files by variable? Default: True')
-    parser.add_argument('--single_file', action='store_true',
+    parser.add_argument('--single_file', action='store_true', default=False,
                         help='Write all output datasets to single file?'
                         'Default: False')
     parser.add_argument('--custom_grid', action='store_true',
