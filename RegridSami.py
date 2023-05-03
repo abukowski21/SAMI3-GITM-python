@@ -92,7 +92,6 @@ def generate_interior_points(in_cart, old_shape):
                 f2 = f+1
                 if f == old_shape[1]-1:
                     badbadbad.append([lt, f, z])
-                    pbar.update()
                     continue
 
                 cs = [[lt,  f,  z],
@@ -113,7 +112,6 @@ def generate_interior_points(in_cart, old_shape):
                         try:
                             index = np.ravel_multi_index(c, old_shape)
                         except ValueError:
-                            pbar.update()
                             break
                         id_pt.append(index)
 
@@ -126,6 +124,8 @@ def generate_interior_points(in_cart, old_shape):
                 centers.append(center)
                 coords.append(cs)
                 pbar.update()
+    pbar.close()
+
     print('From %i grid points we generated %i cubes'
           % (len(in_cart[0]), len(centers)))
 
