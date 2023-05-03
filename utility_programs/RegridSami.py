@@ -296,27 +296,31 @@ if __name__ == main():
                         'defaults to 1 (no finer), set to any value > 1 to'
                         'interpolate at high resolution and then'
                         'coarsen when writing the files out.')
+    parser.add_argument('--minalt', type=float, default=100,
+                        help='Minimum altitude in km')
+    parser.add_argument('--maxalt', type=float, default=2200,
+                        help='Maximum altitude in km')
 
     args = parser.parse_args()
 
     if args.custom_grid:
-        print('we are going to set a custom grid for you. ')
+        print('We are going to set a custom grid for you. ')
         print('Press enter to accept the default values in parentheses')
-        latstep = input('latitude step size in degrees: (1)', default=1)
-        lonstep = input('longitude step size in degrees: (4)', default=4)
-        altstep = input('altitude step size in km: (50)', default=50)
-        minalt = input('minimum altitude in km: (100)', default=100)
-        maxalt = input('maximum altitude in km: (2200)', default=2200)
+        latstep = input('latitude step size in degrees (1):', default=1)
+        lonstep = input('longitude step size in degrees: (4):', default=4)
+        altstep = input('altitude step size in km (50):', default=50)
+        minalt = input('minimum altitude in km (100):', default=100)
+        maxalt = input('maximum altitude in km (2200):', default=2200)
         print('Now for the options to interpolate at a finer resolution'
               ' and then coarsen afterwards. If you dont know what this'
               ' means you can run with 1s and it will be faster. if you'
-              ' see weird atrifacts in your outputs you can try '
-              'adjusting this. ')
-        latfiner = input('interpolate at a finer resolution in latitude? (1)',
+              ' see weird artifacts in your outputs you can try '
+              ' adjusting this. Number given multiplies the step size')
+        latfiner = input('interpolate a finer resolution in latitude? (1):',
                          default=1)
-        lonfiner = input('interpolate at a finer resolution in longitude? (1)',
+        lonfiner = input('interpolate a finer resolution in longitude? (1):',
                          default=1)
-        altfiner = input('interpolate at a finer resolution in altitude? (1)',
+        altfiner = input('interpolate a finer resolution in altitude? (1):',
                          default=1)
     else:
         latstep = args.lat_step
@@ -325,6 +329,8 @@ if __name__ == main():
         latfiner = args.lat_finerinterps
         lonfiner = args.lon_finerinterps
         altfiner = args.alt_finerinterps
+        minalt = args.minalt
+        maxalt = args.maxalt
 
     if args.dtime_sim_start is not None:
         if args.apply_weights:
