@@ -5,6 +5,10 @@ Process GITM & SAMI data to NetCDF format.
 - More functionality is available in the individual model modules.
 - This program will process every column into netCDF files by time.
 
+##TODO:
+    - Fix to postprocess SAMI correctly.
+    - Double check GITM is postprocessing correctly.
+
 """
 
 import os
@@ -52,7 +56,6 @@ def main(args):
                 os.makedirs(d)
     else:
         need_output_dir = True
-
 
     if pgitm:
         if need_output_dir:
@@ -169,7 +172,7 @@ if __name__ == '__main__':
                         help='SAMI directory. Defaults to ./sami_data')
     parser.add_argument('--dont_regrid', action='store_false',
                         help='Regrid SAMI data? (Default: True)')
-    parser.add_argument('--low_mem', type=bool, default = True,
+    parser.add_argument('--low_mem', type=bool, default=True,
                         help='Process SAMI files in low memory mode?'
                         'Default: True')
     parser.add_argument('-out', '--output_dir', type=str, default=None,
