@@ -293,15 +293,15 @@ def main(
 
     out_cart = latlonalt_to_cart(out_lats, out_lons, np.array(out_alts)+6371)
 
-    centers, coords = generate_interior_points(in_cart, old_shape)
-
-    nearest = find_pairs(centers, out_cart)
-
     if use_saved_weights:
         weights = np.fromfile(os.path.join(out_path, 'weights'))
         idxs = np.fromfile(os.path.join(out_path, 'indexes'))
+        print('using weights from %s' % out_path)
 
     else:
+        centers, coords = generate_interior_points(in_cart, old_shape)
+        nearest = find_pairs(centers, out_cart)
+
         weights, idxs = make_weights(in_cart, out_cart,
                                      nearest, old_shape, coords)
 
