@@ -17,7 +17,6 @@ import subprocess
 from utility_programs.read_routines import GITM, SAMI
 from utility_programs.utils import str_to_ut
 import argparse
-import time
 
 
 def main(args):
