@@ -19,12 +19,12 @@ def latlonalt_to_cart(lat, lon, radius):
     """Convert lat, lon, alt to cartesian coordinates.
 
     Args:
-        lat (numpy array): latitude (in degrees)
-        lon (numpy array): longitude (in degrees)
-        radius (numpy array): radius in Re from center of Earth
+        lat (numpy.ndarray): latitude (in degrees)
+        lon (numpy.ndarray): longitude (in degrees)
+        radius (numpy.ndarray): radius in Re from center of Earth
 
     Returns:
-        numpy array: 3xN array of cartesian coordinates
+        numpy.ndarray: 3xN array of cartesian coordinates
     """
     lat = np.deg2rad(lat)
     lon = np.deg2rad(lon)
@@ -59,11 +59,11 @@ def generate_interior_points(in_cart, old_shape):
     """Generates interior points for each cube in the old grid.
 
     Args:
-        in_cart (numpy array): Cartesian coordinates of the old grid
+        in_cart (numpy.ndarray): Cartesian coordinates of the old grid
         old_shape (list): (nlt, nf, nz) of original sami run.
 
     Returns:
-        centers (numpy array): cartesian coordinates of the center of each
+        centers (numpy.ndarray): cartesian coordinates of the center of each
             cube
         coords (list): list of lists of the coordinates of each corner
             of each cube.
@@ -145,9 +145,9 @@ def make_weights(in_cart, out_cart, nearest, old_shape, coords):
             grid.
 
     Returns:
-        weights (numpy array): Weights to multiply the old grid by to get
+        weights (numpy.ndarray): Weights to multiply the old grid by to get
             the new grid
-        src_idxs (numpy array): Indices of the old grid that contribute to
+        src_idxs (numpy.ndarray): Indices of the old grid that contribute to
             each point in the new grid.
     """
     weights = np.zeros([len(out_cart[0]), 8])
@@ -180,11 +180,11 @@ def find_pairs(centers, out_cart):
             (only works well for cartesian coordinates)
 
     Args:
-        centers (numpy array): Centers of cubes in the old grid
-        out_cart (numpy array): Grid to search from.
+        centers (numpy.ndarray): Centers of cubes in the old grid
+        out_cart (numpy.ndarray): Grid to search from.
 
     Returns:
-        numpy array: indices of the nearest point in the old grid to each
+        numpy.ndarray: indices of the nearest point in the old grid to each
             point in the new grid (out_cart).
     """
     tree = KDTree(centers)
@@ -207,9 +207,9 @@ def numba_do_apply_weights(t0, src_idxs, weights, outv):
     """Speed up applying weight function.
 
     Args:
-        t0 (numpy array): data (all times)
-        src_idxs (numpy array): indexes from dst to src grid
-        weights (numpy array): generated weights.
+        t0 (numpy.ndarray): data (all times)
+        src_idxs (numpy.ndarray): indexes from dst to src grid
+        weights (numpy.ndarray): generated weights.
     """
 
     for t in prange(t0.shape[-1]):
@@ -232,15 +232,15 @@ def do_apply_weights(weights,
         grid.
 
     Args:
-        weights (numpy array): Weights to multiply the old grid by to get
+        weights (numpy.ndarray): Weights to multiply the old grid by to get
             Values of the new grid.
-        src_idxs (numpy array): Indices of the old grid that contribute to
+        src_idxs (numpy.ndarray): Indices of the old grid that contribute to
             each point in the new grid.
         data_dict (dict): Dictionary of data from the old grid.
-        times (numpy array): List of times.
-        altout (numpy array): Altitudes out.
-        latout (numpy array): Latitudes out.
-        lonout (numpy array): Longitudes out.
+        times (numpy.ndarray): List of times.
+        altout (numpy.ndarray): Altitudes out.
+        latout (numpy.ndarray): Latitudes out.
+        lonout (numpy.ndarray): Longitudes out.
 
     Returns:
         xarray Dataset: Dataset of the new grid.
