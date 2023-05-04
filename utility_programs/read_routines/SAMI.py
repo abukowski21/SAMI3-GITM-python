@@ -401,6 +401,8 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
             t_start_idx, t_end_idx, need_help)
     else:
         times = make_times(nt, sami_data_path, dtime_sim_start)
+        start_idx = 0
+        end_idx = len(times)
 
     ntimes = len(times)
 
