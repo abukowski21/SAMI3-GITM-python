@@ -305,8 +305,6 @@ def main(
         idxs.tofile(os.path.join(out_path, 'indexes'))
 
     if apply_weights:
-        if type(cols) == str:
-            cols = [cols]
 
         print('reading SAMI data...')
         data, times = SAMI.read_to_nparray(
