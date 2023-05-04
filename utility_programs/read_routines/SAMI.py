@@ -130,10 +130,61 @@ def get_grid_elems_from_parammod(sami_data_path):
         return nz, nf, numwork*(nl - 2), nt
 
 
+def get_postprocessed_grid(sami_data_path):
+    """Go into sami data directory and get the grid elements
+            from the parameter_mod.f90 file.
+
+    Args:
+        sami_data_path (str): data path for sami outputs
+
+    Returns:
+        nx: num. grid points along each field line
+        ny: num. field lines along each magnetic longitude
+    """
+
+    found = [False, False]
+
+    nx = 0
+    ny = 0
+
+    # try:
+    with open(os.path.join(sami_data_path, 'postrun-utils', 'TEC',
+                           'param_diag.inc'), 'r') as fp:
+        # read all lines in a list
+        lines = fp.readlines()
+        for line in lines:
+            # check if string present on a current line
+            if not found[0]:
+                if line.find('nx') != -1:
+                    nx0 = []
+                    for char in line:
+                        if char.isdigit():
+                            nx0.append(char)
+                    nx = int(''.join(nx0))
+                    found[0] = True
+
+            if not found[1]:
+                if line.find('ny') != -1:
+                    ny0 = []
+                    for char in line:
+                        if char.isdigit():
+                            ny0.append(char)
+                    ny = int(''.join(ny0))
+                    found[1] = True
+    if not all(found):
+        print('found nx? %s and ny? %s' % (found[0], found[1]))
+        raise ValueError('Could not find all of the required variables in '
+                         'parameter_mod.f90 and time.dat. Please check that '
+                         'the file is '
+                         'formatted correctly.')
+    else:
+        return nx, ny
+
+
 def make_times(nt, sami_data_path, dtime_sim_start,
                dtime_storm_start=None,
                hrs_before_storm=None, hrs_after_storm=None,
-               help=False):
+               need_help=False):
     """Make a list of datetime objects for each time step from
             the time.dat file.
 
@@ -209,12 +260,14 @@ def make_times(nt, sami_data_path, dtime_sim_start,
 
     if hrs_before_storm is not None and hrs_after_storm is not None:
         if dtime_storm_start is None:
-            raise ValueError('cant cal. hrs from storm without storm info')
+            raise ValueError('cant call hrs from storm without storm info')
+
         if hrs_before_storm is not None:
             start_idx = np.argmin(np.abs(
                 np.array(times)
                 - (dtime_storm_start
                    - pd.Timedelta(hrs_before_storm, 'hour'))))
+
         else:
             start_idx = 0
 
@@ -233,7 +286,7 @@ def make_times(nt, sami_data_path, dtime_sim_start,
     elif hrs_before_storm is not None or hrs_after_storm is not None:
         raise ValueError('You cannot specify one and not the other!')
 
-    if help:
+    if need_help:
         print(times, '\n', hrs_since_storm_start)
 
     if dtime_storm_start is None:
@@ -284,7 +337,7 @@ def get_sami_grid(sami_data_path, nlt, nf, nz):
 def read_to_nparray(sami_data_path, dtime_sim_start,
                     dtime_storm_start=None,
                     t_start_idx=None, t_end_idx=None, pbar=False,
-                    cols='all', help=False):
+                    cols='all', need_help=False):
     """Automatically read in SAMI data.
 
     Args:
@@ -301,8 +354,8 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
         pbar (bool, optional):
             Do you want to show a progress bar? It is automatically set if
             tqdm is successfully imported. Defaults to False.
-        cols (str, optional):
-            List of columns to get data for. Empty is all. Defaults to 'all'.
+        cols (str or list-like, optional):
+            List of columns to get data for. Defaults to 'all'.
         help (bool, optional):
             Prints time and variable info. Defaults to False.
 
@@ -329,12 +382,11 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     data_files = {}
     for ftype in sami_og_vars:
         if sami_og_vars[ftype] in cols:
-            data_files[ftype] = ftype
-        else:
-            print('skipping', ftype, 'because it is not in cols')
-            help = True
-    if help:
-        print('the available columns are: \n', cols)
+            data_files[ftype] = sami_og_vars[ftype]
+
+    if need_help or len(data_files.keys()) == 0:
+        print('the available data files are: \n', sami_og_vars.keys())
+
         return
 
     # Get the grid
@@ -345,8 +397,8 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
 
     if dtime_storm_start is not None:
         times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
-            nt, sami_data_path, dtime_storm_start, dtime_sim_start,
-            t_start_idx, t_end_idx, help)
+            nt, sami_data_path, dtime_sim_start, dtime_storm_start,
+            t_start_idx, t_end_idx, need_help)
     else:
         times = make_times(nt, sami_data_path, dtime_sim_start)
         start_idx = 0
@@ -354,7 +406,7 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
 
     ntimes = len(times)
 
-    if help:
+    if need_help:
         print('nz, nlt, nf, ntimes = ', nz, nlt, nf, ntimes)
         return
 
@@ -363,11 +415,11 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
         progress = tqdm(total=len(cols) * ntimes, desc='reading SAMI data')
 
     sami_data['data'] = {}
-    for f in cols:
-        sami_data['data'][f] = np.zeros((nlt, nf, nz, ntimes))
+    for f in data_files:
+        sami_data['data'][data_files[f]] = np.zeros((nlt, nf, nz, ntimes))
 
         try:
-            file = open(os.path.join(sami_data_path, data_files[f]), 'rb')
+            file = open(os.path.join(sami_data_path, f), 'rb')
         except KeyError:
             print('the column name you entered is not valid. \n',
                   'the available columns are: \n', data_files.keys())
@@ -377,11 +429,11 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
                   'the model results may not be in the path you specified:')
             raise
 
-        for t in range(len(times)):
+        for t in range(nt):
             raw = np.fromfile(file, dtype='float32', count=(nz*nf*nlt)+2)[1:-1]
-            if t < start_idx and t < end_idx:
-                sami_data['data'][f][:, :, :, t - start_idx] = raw.reshape(
-                    nlt, nf, nz).copy()
+            if t > start_idx and t < end_idx:
+                sami_data['data'][data_files[f]][:, :, :, t - start_idx] = \
+                    raw.reshape(nlt, nf, nz).copy()
             if pbar:
                 progress.update(1)
         file.close()
@@ -391,7 +443,7 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     return sami_data, np.array(times)
 
 
-def read_sami_dene_tec(sami_data_path, reshape=True):
+def read_sami_dene_tec_MAG_GRID(sami_data_path, reshape=True):
     """ Read in TEC (and interpolated dene) data!
 
     """
@@ -420,25 +472,30 @@ def read_sami_dene_tec(sami_data_path, reshape=True):
 
         sami_data['data'][f] = raw
 
+    nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
+
+    nt += 1
+
+    # defaults
+    nx, ny = get_postprocessed_grid(sami_data_path)
+
     # Reshape everything!
-    # TODO: Make this more general
     if reshape:
         sami_data['data']['edens'] = sami_data['data']['edens'].reshape(
-            625, 80, 100, 100)
+            nt, nlt, nx, ny)
         sami_data['data']['tec'] = sami_data['data']['tec'].reshape(
-            625, 80, 100)
+            nt, nlt, nx)
         sami_data['grid']['glat'] = sami_data['grid']['glat'].reshape(
-            80, 100, 100)
+            nlt, nx, ny)
         sami_data['grid']['glon'] = sami_data['grid']['glon'].reshape(
-            80, 100, 100)
+            nlt, nx, ny)
 
     with open(os.path.join(sami_data_path, 'time.dat'), 'r') as fp:
         lines = fp.readlines()
         nt = len(lines) - 1
 
-    times, hrs_since_storm_start = make_times(
+    times = make_times(
         nt, sami_data_path,
-        dtime_storm_start=datetime.datetime(2011, 5, 21, 12),
         dtime_sim_start=datetime.datetime(2011, 5, 20))
 
     return sami_data, np.array(times)
@@ -550,16 +607,19 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
 
     nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
     times = make_times(nt, sami_data_path, dtime_sim_start)
+    times = np.array(times)
     grid = get_sami_grid(sami_data_path, nlt, nf, nz)
 
     if start_idx is None and end_idx is None:
         if dtime_storm_start is not None:
             if hrs_before_storm_start is not None:
                 start_idx = np.argmin(np.abs(
-                    times - (start_dtime - np.abs(hrs_before_storm_start))))
+                    times - (dtime_storm_start - pd.Timedelta(
+                        np.abs(hrs_before_storm_start), 'hours'))))
             if hrs_after_storm_start is not None:
                 end_idx = np.argmin(
-                    np.abs(times - (start_dtime + hrs_after_storm_start)))
+                    np.abs(times - (dtime_storm_start + pd.Timedelta(
+                        np.abs(hrs_before_storm_start), 'hours'))))
             if start_idx is None and end_idx is None:
                 raise ValueError(
                     'You must specify either start_idx or end_idx',
@@ -640,7 +700,7 @@ def process_all_to_cdf(sami_data_path,
                        out_dir=None,
                        split_by_time=True,
                        split_by_var=False,
-                       whole_file=False,
+                       whole_run=False,
                        OVERWRITE=False,
                        delete_raw=False,
                        append_files=False,
@@ -663,7 +723,7 @@ def process_all_to_cdf(sami_data_path,
         split_by_time (bool, optional): Split files by time. Defaults to False.
         split_by_var (bool, optional): Split files by variable.
             Defaults to False.
-        whole_file (bool, optional): Save whole model run (in time range)
+        whole_run (bool, optional): Save whole model run (in time range)
             as one netcdf. Defaults to False.
         OVERWRITE (bool, optional): Overwrite existing files.
             Defaults to False.
@@ -704,12 +764,12 @@ def process_all_to_cdf(sami_data_path,
 
         if progress_bar:
             total = len(cols) * np.sum(
-                [split_by_time, split_by_var, whole_file])
+                [split_by_time, split_by_var, whole_run])
             print(
                 'Processing in lowmem mode. This will take substantially',
                 'longer than "normal" mode.')
             pbar = tqdm(total=total,
-                        desc='Variable loop:')
+                        desc='Variable loop')
 
         did_one = False
 
@@ -732,10 +792,9 @@ def process_all_to_cdf(sami_data_path,
                         raise FileExistsError(
                             out_file,
                             ' already exists! Cannot rewrite!')
-            # it's faster to read the datasets by time, concat them,
-            # and then write that than to go thru appending everything.
+
             if progress_bar:
-                pbar2 = tqdm(total=nt*len(cols), desc='Vars & Times:')
+                pbar2 = tqdm(total=nt*len(cols), desc='Vars & Times')
 
             for ftype in sami_og_vars:
                 ds = read_raw_to_xarray(
@@ -750,40 +809,44 @@ def process_all_to_cdf(sami_data_path,
                         mode='a')
                     pbar2.update()
                 pbar.update()
+                did_one = True
 
-        for ftype in sami_og_vars:
-            did_var = False
-            if sami_og_vars[ftype] in cols:
+        if split_by_var or whole_run:
 
-                ds = read_raw_to_xarray(sami_data_path, dtime_sim_start,
-                                        cols=sami_og_vars[ftype])
+            for ftype in sami_og_vars:
+                did_var = False
+                if sami_og_vars[ftype] in cols:
 
-                if start_dtime is not None or end_dtime is not None:
-                    if start_dtime is not None:
-                        start_idx = np.argmin(
-                            np.abs(ds.time.values - start_dtime))
-                    else:
-                        start_idx = 0
-                    if end_dtime is not None:
-                        end_idx = np.argmin(np.abs(ds.time.values - end_dtime))
-                    else:
-                        end_idx = len(ds.time)
-                    ds = ds.isel(time=slice(start_idx, end_idx))
+                    ds = read_raw_to_xarray(sami_data_path, dtime_sim_start,
+                                            cols=sami_og_vars[ftype])
 
-                if split_by_var:
-                    out_file = os.path.join(
-                        out_dir, f'{sami_og_vars[ftype]}.nc')
-                    ds.to_netcdf(out_file, mode='a')
-                    did_one = True
-                    did_var = True
-                if whole_file:
-                    ds.to_netcdf(os.path.join(out_dir, 'sami_data.nc'),
-                                 mode='a')
-                    did_one = True
-                    did_var = True
+                    if start_dtime is not None or end_dtime is not None:
+                        if start_dtime is not None:
+                            start_idx = np.argmin(
+                                np.abs(ds.time.values - start_dtime))
+                        else:
+                            start_idx = 0
+                        if end_dtime is not None:
+                            end_idx = np.argmin(
+                                np.abs(ds.time.values - end_dtime))
+                        else:
+                            end_idx = len(ds.time)
+                        ds = ds.isel(time=slice(start_idx, end_idx))
 
-                if did_var and progress_bar:
-                    pbar.update()
+                    if split_by_var:
+                        out_file = os.path.join(
+                            out_dir, f'{sami_og_vars[ftype]}.nc')
+                        ds.to_netcdf(out_file, mode='a')
+                        did_one = True
+                        did_var = True
+                    if whole_run:
+                        ds.to_netcdf(os.path.join(out_dir, 'sami_data.nc'),
+                                     mode='a')
+                        did_one = True
+                        did_var = True
+
+                    if did_var and progress_bar:
+                        pbar.update()
 
         if not did_one:
             raise ValueError('Your columns were not found in the data!')
@@ -973,17 +1036,17 @@ def auto_read(sami_dir,
                 if end_idx is None:
                     end_idx = -1
                     ret_early = True
-                    
+
                 files = files[start_idx:end_idx]
                 print(files)
-                
+
                 if len(files) > 1:
                     ds = xr.open_mfdataset(files,
-                                       parallel=parallel,
-                                       combine_attrs='drop_conflicts',
-                                       data_vars='minimal',
-                                       concat_dim="time", combine="nested",
-                                       coords='minimal', compat='override')
+                                           parallel=parallel,
+                                           combine_attrs='drop_conflicts',
+                                           data_vars='minimal',
+                                           concat_dim="time", combine="nested",
+                                           coords='minimal', compat='override')
                 else:
                     ds = xr.open_dataset(files[0])
                 if ret_early:
@@ -998,7 +1061,7 @@ def auto_read(sami_dir,
                     if type(cols) is str:
                         cols = [cols]
                     ds = ds[cols]
-                
+
                 if start_dtime is not None or end_dtime is not None:
                     if start_dtime is not None:
                         start_idx = np.argmin(

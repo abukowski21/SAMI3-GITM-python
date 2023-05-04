@@ -38,20 +38,27 @@ def main(args):
         raise ValueError(
             'You must specify at least one model output directory.')
 
-    made_output_dir = False
+    need_output_dir = False
     if args.output_dir is not None:
-        if not os.path.exists(args.output_dir):
-            print('making output directory: {}'.format(args.output_dir),
-                  'You have 10 seconds to cancel...')
-            time.sleep(10)
-            os.makedirs(args.output_dir)
-            made_output_dir = True
+        if pgitm:
+            d = os.path.join(args.output_dir, 'gitm')
+            if not os.path.exists(d):
+                print('making output directory: {}'.format(d))
+                os.makedirs(d)
+        if psami:
+            d = os.path.join(args.output_dir, 'sami')
+            if not os.path.exists(d):
+                print('making output directory: {}'.format(d))
+                os.makedirs(d)
+    else:
+        need_output_dir = True
+
 
     if pgitm:
-        if made_output_dir:
-            output_dir = args.output_dir
-        else:
+        if need_output_dir:
             output_dir = args.gitm_dir
+        else:
+            output_dir = os.path.join(args.output_dir, 'gitm')
 
         gitm_files = glob.glob(os.path.join(args.gitm_dir, '*.bin'))
         if len(gitm_files) == 0:
@@ -75,7 +82,7 @@ def main(args):
                     'No GITM files found in {}'.format(args.gitm_dir),
                     'And I could not postprocess myself. Go run pGITM.')
 
-        if len(glob.glob(os.path.join(args.gitm_dir, '*.nc'))) > 0:
+        if len(glob.glob(os.path.join(args.output_dir, '*.nc'))) > 0:
             if args.replace:
                 print('Replacing existing netCDF files...')
 
@@ -93,12 +100,12 @@ def main(args):
         )
 
     if psami:
-        if made_output_dir:
-            output_dir = args.output_dir
-        else:
+        if need_output_dir:
             output_dir = args.sami_dir
+        else:
+            output_dir = os.path.join(args.output_dir, 'sami')
 
-        sami_files_nc = glob.glob(os.path.join(args.sami_dir, '*.nc'))
+        sami_files_nc = glob.glob(os.path.join(output_dir, '*.nc'))
 
         process_from_scratch = True
         regrid = True

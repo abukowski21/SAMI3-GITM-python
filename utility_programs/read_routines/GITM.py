@@ -486,14 +486,14 @@ def process_all_to_cdf(gitm_dir,
         if i[-19:] not in indiv_ends:
             indiv_ends.append(i[-19:])
 
-    num_existing_cdfs = len(glob.glob(os.path.join(gitm_dir, '*.nc')))
+    num_existing_cdfs = len(glob.glob(os.path.join(out_dir, '*.nc')))
     if len(indiv_ends) == num_existing_cdfs and not replace_cdfs:
         print('looks like all files have already been processed.',
               'you can run again if you need to reprocess all netcdfs')
     elif num_existing_cdfs != 0 and not skip_existing:
         import warnings
         warnings.warn(
-            'There are %i existing netcdfs in this directory,\n'
+            '\nThere are %i existing netcdfs in this directory,\n'
             ' but only %i should be made. This may be because you\n'
             ' have already processed some of these files.\n'
             ' It is possible that some files have been deleted,\n'
@@ -513,7 +513,7 @@ def process_all_to_cdf(gitm_dir,
         files_here = glob.glob(gitm_dir + '/*' + fileend)
         ds_now = []
         outfile = os.path.join(
-            gitm_dir,
+            out_dir,
             fileend[fileend.rfind('t'):].replace('.bin', '.nc'))
 
         if skip_existing:
