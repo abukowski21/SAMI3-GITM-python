@@ -296,6 +296,8 @@ def main(
     if use_saved_weights:
         weights = np.fromfile(os.path.join(out_path, 'weights'))
         idxs = np.fromfile(os.path.join(out_path, 'indexes'))
+        weights = weights.reshape([int(len(weights)/8), 8])
+        idxs = idxs.reshape([int(len(idxs)/8), 8])
         print('using weights from %s' % out_path)
 
     else:
