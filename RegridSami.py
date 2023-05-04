@@ -312,7 +312,6 @@ def main(
 
     if apply_weights:
 
-        print('reading SAMI data...')
         data, times = SAMI.read_to_nparray(
             sami_data_path, dtime_sim_start, cols=cols, pbar=True)
 
