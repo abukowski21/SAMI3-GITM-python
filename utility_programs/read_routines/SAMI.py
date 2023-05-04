@@ -354,8 +354,8 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
         pbar (bool, optional):
             Do you want to show a progress bar? It is automatically set if
             tqdm is successfully imported. Defaults to False.
-        cols (str, optional):
-            List of columns to get data for. Empty is all. Defaults to 'all'.
+        cols (str or list-like, optional):
+            List of columns to get data for. Defaults to 'all'.
         help (bool, optional):
             Prints time and variable info. Defaults to False.
 
