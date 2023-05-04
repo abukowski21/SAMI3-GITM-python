@@ -297,12 +297,18 @@ def main(
 
     nearest = find_pairs(centers, out_cart)
 
-    weights, idxs = make_weights(in_cart, out_cart, nearest, old_shape, coords)
+    if use_saved_weights:
+        weights = np.fromfile(os.path.join(out_path, 'weights'))
+        idxs = np.fromfile(os.path.join(out_path, 'indexes'))
 
-    if save_weights:
-        # TODO: SAVE WEIGHTS
-        weights.tofile(os.path.join(out_path, 'weights'))
-        idxs.tofile(os.path.join(out_path, 'indexes'))
+    else:
+        weights, idxs = make_weights(in_cart, out_cart,
+                                     nearest, old_shape, coords)
+
+        if save_weights:
+            # TODO: SAVE WEIGHTS
+            weights.tofile(os.path.join(out_path, 'weights'))
+            idxs.tofile(os.path.join(out_path, 'indexes'))
 
     if apply_weights:
 
