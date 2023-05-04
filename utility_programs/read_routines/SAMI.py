@@ -127,9 +127,8 @@ def get_grid_elems_from_parammod(sami_data_path):
                          'the file is '
                          'formatted correctly.')
     else:
-        return nz, nf, numwork*(nl - 2), nt    
-    
-    
+        return nz, nf, numwork*(nl - 2), nt
+
 
 def get_postprocessed_grid(sami_data_path):
     """Go into sami data directory and get the grid elements
@@ -148,32 +147,32 @@ def get_postprocessed_grid(sami_data_path):
     nx = 0
     ny = 0
 
-    #try:
-    with open(os.path.join(sami_data_path,'postrun-utils','TEC',
-                               'param_diag.inc'), 'r') as fp:
-            # read all lines in a list
-            lines = fp.readlines()
-            for line in lines:
-                # check if string present on a current line
-                if not found[0]:
-                    if line.find('nx') != -1:
-                        nx0 = []
-                        for char in line:
-                            if char.isdigit():
-                                nx0.append(char)
-                        nx = int(''.join(nx0))
-                        found[0] = True
+    # try:
+    with open(os.path.join(sami_data_path, 'postrun-utils', 'TEC',
+                           'param_diag.inc'), 'r') as fp:
+        # read all lines in a list
+        lines = fp.readlines()
+        for line in lines:
+            # check if string present on a current line
+            if not found[0]:
+                if line.find('nx') != -1:
+                    nx0 = []
+                    for char in line:
+                        if char.isdigit():
+                            nx0.append(char)
+                    nx = int(''.join(nx0))
+                    found[0] = True
 
-                if not found[1]:
-                    if line.find('ny') != -1:
-                        ny0 = []
-                        for char in line:
-                            if char.isdigit():
-                                ny0.append(char)
-                        ny = int(''.join(ny0))
-                        found[1] = True
+            if not found[1]:
+                if line.find('ny') != -1:
+                    ny0 = []
+                    for char in line:
+                        if char.isdigit():
+                            ny0.append(char)
+                    ny = int(''.join(ny0))
+                    found[1] = True
     if not all(found):
-        print('found nx? %s and ny? %s' %(found[0],found[1]))
+        print('found nx? %s and ny? %s' % (found[0], found[1]))
         raise ValueError('Could not find all of the required variables in '
                          'parameter_mod.f90 and time.dat. Please check that '
                          'the file is '
@@ -262,7 +261,7 @@ def make_times(nt, sami_data_path, dtime_sim_start,
     if hrs_before_storm is not None and hrs_after_storm is not None:
         if dtime_storm_start is None:
             raise ValueError('cant call hrs from storm without storm info')
-            
+
         if hrs_before_storm is not None:
             start_idx = np.argmin(np.abs(
                 np.array(times)
@@ -384,11 +383,10 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     for ftype in sami_og_vars:
         if sami_og_vars[ftype] in cols:
             data_files[ftype] = sami_og_vars[ftype]
-        else:
-            print('skipping', ftype, 'because it is not in cols')
-            help = True
-    if need_help:
-        print('the available columns are: \n', cols)
+
+    if need_help or len(data_files.keys()) == 0:
+        print('the available data files are: \n', sami_og_vars.keys())
+
         return
 
     # Get the grid
@@ -399,11 +397,11 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
 
     if dtime_storm_start is not None:
         times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
-            nt, sami_data_path, dtime_sim_start,dtime_storm_start, 
+            nt, sami_data_path, dtime_sim_start, dtime_storm_start,
             t_start_idx, t_end_idx, need_help)
     else:
         times = make_times(nt, sami_data_path, dtime_sim_start)
-    
+
     ntimes = len(times)
 
     if need_help:
@@ -432,8 +430,8 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
         for t in range(nt):
             raw = np.fromfile(file, dtype='float32', count=(nz*nf*nlt)+2)[1:-1]
             if t > start_idx and t < end_idx:
-                sami_data['data'][data_files[f]][:, :, :, t - start_idx] = raw.reshape(
-                    nlt, nf, nz).copy()
+                sami_data['data'][data_files[f]][:, :, :, t - start_idx] = \
+                    raw.reshape(nlt, nf, nz).copy()
             if pbar:
                 progress.update(1)
         file.close()
@@ -473,8 +471,8 @@ def read_sami_dene_tec_MAG_GRID(sami_data_path, reshape=True):
         sami_data['data'][f] = raw
 
     nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
-    
-    nt +=1
+
+    nt += 1
 
     # defaults
     nx, ny = get_postprocessed_grid(sami_data_path)
