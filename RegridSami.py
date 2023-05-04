@@ -194,14 +194,16 @@ def find_pairs(centers, out_cart):
 
 try:
     from numba import jit
-    print('Numba available!')
+    from numba import prange
+    print('Numba available! This will drastically speed up applying weights,',
+          'but will take all available cores & a lot of memory.')
 except ImportError:
     print('No Numba available')
     def jit(x): return x
 
 
-@jit
-def numba_do_apply_weights(t0, src_idxs, weights):
+@jit(nopython=True, parallel=True)
+def numba_do_apply_weights(t0, src_idxs, weights, outv):
     """Speed up applying weight function.
 
     Args:
@@ -210,10 +212,7 @@ def numba_do_apply_weights(t0, src_idxs, weights):
         weights (numpy array): generated weights.
     """
 
-    outv = np.zeros([t0.shape[-1], len(weights)])
-    src_idxs = src_idxs.astype(int)
-
-    for t in range(t0.shape[-1]):
+    for t in prange(t0.shape[-1]):
         outv[t] += np.sum(weights * np.take(
             t0[:, :, :, t], src_idxs), axis=1) \
             / np.sum(weights, axis=1)
@@ -262,7 +261,6 @@ def do_apply_weights(weights,
     # get data array, make output array.
     t0 = data_dict['data'][varname]
     outv = np.zeros([t0.shape[-1], len(weights)])
-    src_idxs = src_idxs.astype(int)
 
     for t in tqdm(range(t0.shape[-1])):
         outv[t] += np.sum(weights * np.take(
@@ -336,6 +334,7 @@ def main(
         idxs = np.fromfile(os.path.join(out_path, 'indexes'))
         weights = weights.reshape([int(len(weights)/8), 8])
         idxs = idxs.reshape([int(len(idxs)/8), 8])
+        idxs = idxs.astype(int)
         print('using weights from %s' % out_path)
 
     else:
@@ -344,6 +343,7 @@ def main(
 
         weights, idxs = make_weights(in_cart, out_cart,
                                      nearest, old_shape, coords)
+        idxs = idxs.astype(int)
 
         if save_weights:
             # TODO: SAVE WEIGHTS
@@ -387,10 +387,14 @@ def main(
 
                 t0 = data['data'][varname]
 
-                outv = numba_do_apply_weights(t0, idxs, weights)
+                outv = np.zeros([t0.shape[-1], len(weights)])
+                outv = numba_do_apply_weights(t0, idxs, weights, outv)
 
-                ds[varname] = (('time', 'lat', 'lon', 'alt'), np.array(
-                    outv).reshape(
+                print('received weights from numba function, ',
+                      'writing & continuing')
+
+                ds[varname] = (('time', 'lat', 'lon', 'alt'),
+                               np.array(outv).reshape(
                     len(times), len(latout), len(lonout), len(altout)))
 
             else:
@@ -412,10 +416,11 @@ def main(
 
             if split_by_var:
                 for varname in ds.data_vars:
-                    ds.to_cdf(
+                    ds.to_netcdf(
                         os.path.join(out_path, '%s' % varname))
             elif single_file:
-                ds.to_cdf(os.path.join(out_path, 'sami-regridded'), mode='a')
+                ds.to_netcdf(os.path.join(
+                    out_path, 'sami-regridded'), mode='a')
 
     return
 
@@ -477,7 +482,9 @@ if __name__ == '__main__':
     parser.add_argument('--maxalt', type=float, default=2200,
                         help='Maximum altitude in km')
     parser.add_argument('--numba', action='store_true', default=False,
-                        help='Use numba to speed up the interpolation?')
+                        help='Use numba to speed up the interpolation?'
+                        ' Will take all cpu cores & a lot of memory,'
+                        ' but runs much faster than native python.')
 
     args = parser.parse_args()
 
