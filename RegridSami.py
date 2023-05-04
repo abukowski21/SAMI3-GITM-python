@@ -223,17 +223,21 @@ def do_apply_weights(weights,
         'lat': (['lat'], latout),
         'lon': (['lon'], lonout)},)
 
-    outv = []
+    pbar = tqdm(total=len(times)*len(data_dict['data'].keys()),
+                desc='Applying weights: ')
     for var in data_dict['data'].keys():
+        outv = []
         t0 = data_dict['data'][var]
+        print(t0.shape)
         for t in range(t0.shape[-1]):
             outv.append(
                 np.sum(weights * np.take(
                     t0[:, :, :, t], src_idxs.astype(int)), axis=1)
                 / np.sum(weights, axis=1))
+            pbar.update()
 
-        ds[var] = np.array(outv).reshape(
-            len(times), len(latout), len(lonout), len(altout))
+        ds[var] = (('time', 'lat', 'lon', 'alt'), np.array(outv).reshape(
+            len(times), len(latout), len(lonout), len(altout)))
 
     return ds
 
