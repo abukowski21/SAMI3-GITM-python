@@ -62,9 +62,9 @@ def main(args):
         else:
             output_dir = os.path.join(args.output_dir, 'gitm')
 
-        gitm_files = glob.glob(os.path.join(args.gitm_dir, '*.bin'))
-        if len(gitm_files) == 0:
-            print('No GITM files found in {}'.format(args.gitm_dir))
+        header_files = glob.glob(os.path.join(args.gitm_dir, '*.header'))
+        if len(header_files) > 0:
+            print('GITM headers found in {}'.format(args.gitm_dir))
             print('Attempting to postprocess...')
             gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/')]
 
@@ -84,7 +84,7 @@ def main(args):
                     'No GITM files found in {}'.format(args.gitm_dir),
                     'And I could not postprocess myself. Go run pGITM.')
 
-        if len(glob.glob(os.path.join(args.output_dir, '*.nc'))) > 0:
+        if len(glob.glob(os.path.join(args.output_dir, 'GITM*.nc'))) > 0:
             if args.replace:
                 print('Replacing existing netCDF files...')
 
@@ -99,6 +99,7 @@ def main(args):
             replace_cdfs=args.replace,
             drop_ghost_cells=args.ghost_cells,
             progress_bar=args.progress,
+            use_ccmc=args.ccmc,
         )
 
     if psami:
@@ -107,15 +108,15 @@ def main(args):
         else:
             output_dir = os.path.join(args.output_dir, 'sami')
 
-        sami_files_nc = glob.glob(os.path.join(output_dir, '*.nc'))
+        existing_sami_files = glob.glob(os.path.join(output_dir, '*.nc'))
 
         process_from_scratch = True
         regrid = True
-        if len(sami_files_nc) != 0:
+        if len(existing_sami_files) != 0:
 
             if not args.replace:
                 process_from_scratch = False
-            for f in sami_files_nc:
+            for f in existing_sami_files:
                 if 'grid' in f and args.dont_regrid:
                     regrid = False
 
@@ -177,6 +178,9 @@ if __name__ == '__main__':
     parser.add_argument('-out', '--output_dir', type=str, default=None,
                         help='If you want to save the files to another'
                         'directory, specify it here.')
+    parser.add_argument('-c', '--ccmc', action='store', type=bool,
+                        default=True,
+                        help='Use CCMC naming conventions? (Default: True)')
     parser.add_argument('-r', '--replace', action='store_true',
                         help='Replace existing netCDF files? (Default: False)')
     parser.add_argument('-v', '--verbose', action='store_true',
