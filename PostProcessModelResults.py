@@ -58,7 +58,6 @@ def main(args):
             output_dir = args.gitm_dir
         else:
             output_dir = args.output_dir
-            
 
         header_files = glob.glob(os.path.join(args.gitm_dir, '*.header'))
         if len(header_files) > 0:
@@ -107,7 +106,7 @@ def main(args):
             output_dir = args.output_dir
 
         existing_sami_files = glob.glob(os.path.join(output_dir, 'SAMI*.nc'))
-        
+
         do_write_raw = False
         do_write_regrid = False
 
@@ -177,31 +176,31 @@ def main(args):
 
             if args.set_custom_grid:
                 RegridSami.main(sami_data_path=args.sami_dir,
-                           out_path=output_dir,
-                           save_weights=True,
-                           use_saved_weights=weights_exist,
-                           dtime_sim_start=args.dtime_sim_start,
-                           lat_step=latstep,
-                           lon_step=lonstep,
-                           alt_step=altstep,
-                           minmax_alt=[minalt, maxalt],
-                           lat_finerinterps=latfiner,
-                           lon_finerinterps=lonfiner,
-                           alt_finerinterps=altfiner,
-                           use_ccmc=args.ccmc,
-                           split_by_time=args.ccmc,
-                           split_by_var=not args.ccmc,
-                           numba=numba_installed,)
+                                out_path=output_dir,
+                                save_weights=True,
+                                use_saved_weights=weights_exist,
+                                dtime_sim_start=args.dtime_sim_start,
+                                lat_step=latstep,
+                                lon_step=lonstep,
+                                alt_step=altstep,
+                                minmax_alt=[minalt, maxalt],
+                                lat_finerinterps=latfiner,
+                                lon_finerinterps=lonfiner,
+                                alt_finerinterps=altfiner,
+                                use_ccmc=args.ccmc,
+                                split_by_time=args.ccmc,
+                                split_by_var=not args.ccmc,
+                                numba=numba_installed,)
             else:
                 RegridSami.main(sami_data_path=args.sami_dir,
-                           out_path=output_dir,
-                           save_weights=True,
-                           use_saved_weights=weights_exist,
-                           dtime_sim_start=args.dtime_sim_start,
-                           use_ccmc=args.ccmc,
-                           split_by_time=args.ccmc,
-                           split_by_var=not args.ccmc,
-                           numba=numba_installed,)
+                                out_path=output_dir,
+                                save_weights=True,
+                                use_saved_weights=weights_exist,
+                                dtime_sim_start=args.dtime_sim_start,
+                                use_ccmc=args.ccmc,
+                                split_by_time=args.ccmc,
+                                split_by_var=not args.ccmc,
+                                numba=numba_installed,)
 
     return
 
@@ -255,8 +254,8 @@ if __name__ == '__main__':
     if args.sami_type not in opts:
         raise ValueError('sami_type must be one of {}'.format(opts))\
 
-    if args.set_custom_grid and (args.sami_type == 'regrid' \
-            or args.sami_type == 'all'):
+    if args.set_custom_grid and (args.sami_type == 'regrid'
+                                 or args.sami_type == 'all'):
 
         global latstep, lonstep, altstep, minalt, maxalt
         global latfiner, lonfiner, altfiner
@@ -278,7 +277,7 @@ if __name__ == '__main__':
     elif args.set_custom_grid and args.sami_type == 'raw':
         raise ValueError('You cannot set a custom grid for raw SAMI files,'
                          ' since nothing is being regridded.')
-        
+
     print(args.output_dir)
 
     main(args)
