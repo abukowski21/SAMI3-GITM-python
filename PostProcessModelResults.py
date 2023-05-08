@@ -175,10 +175,6 @@ def main(args):
             if os.path.exists(os.path.join(output_dir, 'weights')):
                 weights_exist = True
 
-            else:
-                raise ValueError(
-                    'dtime_sim_start must be specified to read SAMI files.')
-
             if args.set_custom_grid:
                 RegridSami(sami_data_path=args.samidir,
                            out_path=output_dir,
