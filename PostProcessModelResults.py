@@ -175,8 +175,6 @@ def main(args):
             if os.path.exists(os.path.join(output_dir, 'weights')):
                 weights_exist = True
 
-            if args.dtime_sim_start is not None:
-                dtime_sim_start = str_to_ut(in_str=args.dtime_sim_start)
             else:
                 raise ValueError(
                     'dtime_sim_start must be specified to read SAMI files.')
