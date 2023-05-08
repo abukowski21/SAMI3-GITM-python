@@ -58,6 +58,7 @@ def main(args):
             output_dir = args.gitm_dir
         else:
             output_dir = args.output_dir
+            
 
         header_files = glob.glob(os.path.join(args.gitm_dir, '*.header'))
         if len(header_files) > 0:
@@ -87,7 +88,7 @@ def main(args):
 
             else:
                 raise ValueError(
-                    'netCDF files already exist in {}'.format(args.gitm_dir),)
+                    'netCDF files already exist in {}'.format(output_dir),)
 
         GITM.process_all_to_cdf(
             gitm_dir=args.gitm_dir,
@@ -106,6 +107,9 @@ def main(args):
             output_dir = args.output_dir
 
         existing_sami_files = glob.glob(os.path.join(output_dir, 'SAMI*.nc'))
+        
+        do_write_raw = False
+        do_write_regrid = False
 
         if args.sami_type == 'all' or args.sami_type == 'regrid':
             do_write_regrid = True
@@ -257,8 +261,8 @@ if __name__ == '__main__':
     if args.sami_type not in opts:
         raise ValueError('sami_type must be one of {}'.format(opts))\
 
-    if args.set_custom_grid and args.sami_type == 'regrid' \
-            or args.sami_type == 'all':
+    if args.set_custom_grid and (args.sami_type == 'regrid' \
+            or args.sami_type == 'all'):
 
         global latstep, lonstep, altstep, minalt, maxalt
         global latfiner, lonfiner, altfiner
@@ -280,5 +284,7 @@ if __name__ == '__main__':
     elif args.set_custom_grid and args.sami_type == 'raw':
         raise ValueError('You cannot set a custom grid for raw SAMI files,'
                          ' since nothing is being regridded.')
+        
+    print(args.output_dir)
 
     main(args)
