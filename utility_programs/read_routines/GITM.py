@@ -309,7 +309,7 @@ def read_bin_to_xarray(filename,
                    'with_time': str(add_time)})
 
     if drop_ghost_cells:
-        # 2D files don't have ghost cells
+        # 2D files don't have alt ghost cells
         if nalts > 1:
             ds = ds.drop_isel(lat=[0, 1, -2, -1],
                               lon=[0, 1, -1, -2], alt=[0, 1, -1, -2])
