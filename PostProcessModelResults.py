@@ -235,8 +235,8 @@ if __name__ == '__main__':
                         help='Delete binary files after processing? '
                         'Caution: This is irreversible! (Default: False)')
     parser.add_argument('-g', '--ghost_cells', action='store',
-                        default=False, type=bool,
-                        help='Drop Ghost Cells? (Default: False).'
+                        default=True, type=bool,
+                        help='Drop Ghost Cells? (Default: True).'
                         ' Not fully implemented yet.')
     parser.add_argument('-p', '--progress', action='store_true',
                         help='Show progress bar? (Default: False)')
