@@ -195,29 +195,44 @@ def find_pairs(centers, out_cart):
 try:
     from numba import jit
     from numba import prange
-    print('Numba available! This will drastically speed up applying weights,',
-          'but will take all available cores & a lot of memory.')
+    print('Numba available! This will drastically speed up applying weights,')
+    @jit(nopython=True)
+    def numba_do_apply_weights(t0, src_idxs, weights, outv):
+        """Speed up applying weight function.
+
+        Args:
+            t0 (numpy.ndarray): data (all times)
+            src_idxs (numpy.ndarray): indexes from dst to src grid
+            weights (numpy.ndarray): generated weights.
+        """
+
+        for t in prange(t0.shape[-1]):
+            outv[t] += np.sum(weights * np.take(
+                t0[:, :, :, t], src_idxs), axis=1) \
+                / np.sum(weights, axis=1)
+
+        return outv
+
+    
+    
 except ImportError:
     print('No Numba available')
-    def jit(x): return x
+    
+    def numba_do_apply_weights(t0, src_idxs, weights, outv):
+        """Speed up applying weight function.
 
+        Args:
+            t0 (numpy.ndarray): data (all times)
+            src_idxs (numpy.ndarray): indexes from dst to src grid
+            weights (numpy.ndarray): generated weights.
+        """
 
-@jit(nopython=True)
-def numba_do_apply_weights(t0, src_idxs, weights, outv):
-    """Speed up applying weight function.
+        for t in range(t0.shape[-1]):
+            outv[t] += np.sum(weights * np.take(
+                t0[:, :, :, t], src_idxs), axis=1) \
+                / np.sum(weights, axis=1)
 
-    Args:
-        t0 (numpy.ndarray): data (all times)
-        src_idxs (numpy.ndarray): indexes from dst to src grid
-        weights (numpy.ndarray): generated weights.
-    """
-
-    for t in prange(t0.shape[-1]):
-        outv[t] += np.sum(weights * np.take(
-            t0[:, :, :, t], src_idxs), axis=1) \
-            / np.sum(weights, axis=1)
-
-    return outv
+        return outv
 
 
 def do_apply_weights(weights,
@@ -460,7 +475,7 @@ if __name__ == '__main__':
     parser.add_argument('--single_file', action='store_true', default=False,
                         help='Write all output datasets to single file?'
                         'Default: False')
-    parser.add_argument('--custom_grid', action='store_true',
+    parser.add_argument('--custom_grid', action='store_true',default=False,
                         help='Launches interactive script to set custom grid.'
                         'Default grid is 4 x 1 deg lonxlat, 50 alts.'
                         'minimum alt is 100, max is 2200, global lon x lat')
