@@ -16,6 +16,7 @@ import glob
 import subprocess
 from utility_programs.read_routines import GITM, SAMI
 from utility_programs.utils import str_to_ut
+from utility_programs import RegridSami
 import argparse
 
 
@@ -157,19 +158,50 @@ def main(args):
 
         if do_write_regrid:
             print('attempting to regrid!')
-            calc_weight = True
-            if os.path.exists(os.path.join(args.sami_dir, 'weight.nc')):
-                calc_weight = False
-            if os.path.exists(os.path.join(output_dir, 'weight.nc')):
-                calc_weight = False
+            try:
+                # ignore flake8 linting on the following line.
+                import numba  # noqa: F401
+                numba_installed = True
+            except ImportError:
+                numba_installed = False
 
-            if calc_weight:
-                SAMI.make_input_to_esmf(sami_data_path=args.sami_dir,)
-                print('and return here when done.')
-                return
+            weights_exist = False
+            if os.path.exists(os.path.join(output_dir, 'weights')):
+                weights_exist = True
 
-        else:
-            raise NotImplementedError("Haven't gotten here yet.")
+            if args.dtime_sim_start is not None:
+                dtime_sim_start = str_to_ut(in_str=args.dtime_sim_start)
+            else:
+                raise ValueError(
+                    'dtime_sim_start must be specified to read SAMI files.')
+
+            if args.custom_grid:
+                RegridSami(sami_data_path=args.samidir,
+                           out_path=output_dir,
+                           save_weights=True,
+                           use_saved_weights=weights_exist,
+                           dtime_sim_start=dtime_sim_start,
+                           lat_step=latstep,
+                           lon_step=lonstep,
+                           alt_step=altstep,
+                           minmax_alt=[minalt, maxalt],
+                           lat_finerinterps=latfiner,
+                           lon_finerinterps=lonfiner,
+                           alt_finerinterps=altfiner,
+                           use_ccmc=args.ccmc,
+                           split_by_time=args.ccmc,
+                           split_by_var=not args.ccmc,
+                           numba=numba_installed,)
+            else:
+                RegridSami(sami_data_path=args.samidir,
+                           out_path=output_dir,
+                           save_weights=True,
+                           use_saved_weights=weights_exist,
+                           dtime_sim_start=dtime_sim_start,
+                           use_ccmc=args.ccmc,
+                           split_by_time=args.ccmc,
+                           split_by_var=not args.ccmc,
+                           numba=numba_installed,)
 
     return
 
@@ -184,12 +216,15 @@ if __name__ == '__main__':
     parser.add_argument('--sami_type', type=str, default='all',
                         help='Which SAMI data to process? (Default: all)'
                         '(Options: "all", "raw", "regrid")')
+    parser.add_argument('--set_custom_grid', type=bool, default=False,
+                        help='Set a custom grid for SAMI regridding?'
+                        ' Default: False')
     parser.add_argument('--low_mem', type=bool, default=True,
                         help='Process SAMI files in low memory mode?'
-                        'Default: True')
+                        ' Default: True')
     parser.add_argument('-out', '--output_dir', type=str, default=None,
                         help='If you want to save the files to another'
-                        'directory, specify it here.')
+                        ' directory, specify it here.')
     parser.add_argument('-c', '--ccmc', action='store', type=bool,
                         default=True,
                         help='Use CCMC naming conventions? (Default: True)')
@@ -198,7 +233,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Print out more information? (Default: False)')
     parser.add_argument('-d', '--delete_bins', action='store_true',
-                        help='Delete binary files after processing?'
+                        help='Delete binary files after processing? '
                         'Caution: This is irreversible! (Default: False)')
     parser.add_argument('-g', '--ghost_cells', action='store',
                         default=False, type=bool,
@@ -207,10 +242,10 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--progress', action='store_true',
                         help='Show progress bar? (Default: False)')
     parser.add_argument('--dtime_sim_start', type=str, default=None,
-                        help='Start time of the simulation, in the format:'
+                        help='Start time of the simulation, in the format: '
                         'YYYYMMDDHHmmSS Required to process SAMI from *.dat')
     parser.add_argument('--dtime_event_start', type=str, default=None,
-                        help='Event (storm) start time, in the format:'
+                        help='Event (storm) start time, in the format: '
                         'YYYYMMDDHHmmSS (Optional. added as attr to netCDFs)')
 
     args = parser.parse_args()
@@ -218,6 +253,34 @@ if __name__ == '__main__':
     opts = ['all', 'raw', 'regrid']
     # make sure args.sami_type is one of opts
     if args.sami_type not in opts:
-        raise ValueError('sami_type must be one of {}'.format(opts))
+        raise ValueError('sami_type must be one of {}'.format(opts))\
+
+    if args.custom_grid and args.sami_type == 'regrid' \
+            or args.sami_type == 'all':
+
+        global latstep, lonstep, altstep, minalt, maxalt
+        global latfiner, lonfiner, altfiner
+        print('We are going to set a custom grid for your sami Regridding. ')
+        print('Press enter to accept the default values in parentheses')
+        latstep = input('latitude step size in degrees (1):', default=1)
+        lonstep = input('longitude step size in degrees: (4):', default=4)
+        altstep = input('altitude step size in km (50):', default=50)
+        minalt = input('minimum altitude in km (100):', default=100)
+        maxalt = input('maximum altitude in km (2200):', default=2200)
+        print('Now for the options to interpolate at a finer resolution'
+              ' and then coarsen afterwards. If you dont know what this'
+              ' means you can run with 1s and it will be faster. if you'
+              ' see weird artifacts in your outputs you can try '
+              ' adjusting this. Number given multiplies the step size')
+        latfiner = input('interpolate a finer resolution in latitude? (1):',
+                         default=1)
+        lonfiner = input('interpolate a finer resolution in longitude? (1):',
+                         default=1)
+        altfiner = input('interpolate a finer resolution in altitude? (1):',
+                         default=1)
+
+    elif args.custom_grid and args.sami_type == 'raw':
+        raise ValueError('You cannot set a custom grid for raw SAMI files,'
+                         ' since nothing is being regridded.')
 
     main(args)
