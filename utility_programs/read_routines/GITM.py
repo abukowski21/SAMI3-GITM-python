@@ -229,9 +229,13 @@ def read_bin_to_xarray(filename,
             vcode = unpack(end_char + '%is' % (rec_len),
                            fin.read(rec_len))[0]
             var = vcode.decode('utf-8').replace(" ", "")
-            var = var.replace('!N', '').replace('!U', '').replace(
-                '!D', '').replace('[', '').replace('[', '').replace(
-                    ']', '').replace('/', '-')
+            var = var\
+                .replace('!N', '').replace('!U', '').replace('!D', '')\
+                .replace('[', '').replace('[', '').replace(']', '')\
+                .replace('/', '-').replace('(', '_').replace(')', '')\
+                .replace('+', '_plus').replace(',', '_').replace('__', '_')\
+                .replace('-', '_')
+
             varnames.append(var)
             dummy, rec_lec = unpack(end_char + '2l', fin.read(8))
 
@@ -515,6 +519,10 @@ def process_all_to_cdf(gitm_dir,
 
     for fileend in indiv_ends:
         files_here = glob.glob(gitm_dir + '/*' + fileend)
+
+        # make sure 3DALL files are first:
+        if len(files_here) > 1:
+            files_here = np.flip(np.sort(files_here))
         ds_now = []
 
         for f in files_here:
@@ -526,7 +534,7 @@ def process_all_to_cdf(gitm_dir,
             to_remove.append(f)
 
         ds_now = xr.combine_by_coords(
-            ds_now, combine_attrs='drop_conflicts')
+            ds_now, combine_attrs='override')
 
         if dtime_storm_start is not None:
             ds_now = ds_now.assign_attrs(

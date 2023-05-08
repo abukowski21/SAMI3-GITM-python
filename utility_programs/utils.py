@@ -1,4 +1,7 @@
 # Misc Utility Functions
+import numpy as np
+from datetime import datetime
+import pandas as pd
 
 
 def str_to_ut(in_str):
@@ -16,9 +19,7 @@ def str_to_ut(in_str):
 
     """
 
-    import datetime
-
-    return datetime.datetime.strptime(
+    return datetime.strptime(
         in_str.ljust(14, '0'), '%Y%m%d%H%M%S')
 
 
@@ -47,6 +48,8 @@ def make_ccmc_name(
     """
 
     # format ut str as YYYY-MM-DDThh-mm-ss
+    if type(ut) is np.datetime64:
+        ut = pd.Timestamp(ut)
     ut_str = ut.strftime('%Y-%m-%dT%H-%M-%S')
     # Make sure modelname & filt_type is all caps
     modelname = modelname.upper()

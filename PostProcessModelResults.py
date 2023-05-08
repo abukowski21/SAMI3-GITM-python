@@ -43,16 +43,12 @@ def main(args):
 
     need_output_dir = False
     if args.output_dir is not None:
-        if pgitm:
-            d = os.path.join(args.output_dir, 'gitm')
+        if pgitm or psami:
+            d = args.output_dir
             if not os.path.exists(d):
                 print('making output directory: {}'.format(d))
                 os.makedirs(d)
-        if psami:
-            d = os.path.join(args.output_dir, 'sami')
-            if not os.path.exists(d):
-                print('making output directory: {}'.format(d))
-                os.makedirs(d)
+
     else:
         need_output_dir = True
 
@@ -60,7 +56,7 @@ def main(args):
         if need_output_dir:
             output_dir = args.gitm_dir
         else:
-            output_dir = os.path.join(args.output_dir, 'gitm')
+            output_dir = args.output_dir
 
         header_files = glob.glob(os.path.join(args.gitm_dir, '*.header'))
         if len(header_files) > 0:
@@ -106,9 +102,9 @@ def main(args):
         if need_output_dir:
             output_dir = args.sami_dir
         else:
-            output_dir = os.path.join(args.output_dir, 'sami')
+            output_dir = args.output_dir
 
-        existing_sami_files = glob.glob(os.path.join(output_dir, '*.nc'))
+        existing_sami_files = glob.glob(os.path.join(output_dir, 'SAMI*.nc'))
 
         process_from_scratch = True
         regrid = True
@@ -188,8 +184,9 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--delete_bins', action='store_true',
                         help='Delete binary files after processing?'
                         'Caution: This is irreversible! (Default: False)')
-    parser.add_argument('-g', '--ghost_cells', action='store_false',
-                        help='Drop Ghost Cells? (Default: True)')
+    parser.add_argument('-g', '--ghost_cells', action='store',
+                        default=False, type=bool,
+                        help='Drop Ghost Cells? (Default: False)')
     parser.add_argument('-p', '--progress', action='store_true',
                         help='Show progress bar? (Default: False)')
     parser.add_argument('--dtime_sim_start', type=str, default=None,
