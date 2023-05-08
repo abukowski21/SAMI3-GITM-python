@@ -202,7 +202,7 @@ except ImportError:
     def jit(x): return x
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def numba_do_apply_weights(t0, src_idxs, weights, outv):
     """Speed up applying weight function.
 
