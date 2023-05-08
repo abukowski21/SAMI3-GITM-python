@@ -106,23 +106,35 @@ def main(args):
 
         existing_sami_files = glob.glob(os.path.join(output_dir, 'SAMI*.nc'))
 
-        process_from_scratch = True
-        regrid = True
-        if len(existing_sami_files) != 0:
+        if args.sami_type == 'all' or args.sami_type == 'regrid':
+            do_write_regrid = True
+        if args.sami_type == 'all' or args.sami_type == 'raw':
+            do_write_raw = True
 
-            if not args.replace:
-                process_from_scratch = False
-            for f in existing_sami_files:
-                if 'grid' in f and args.dont_regrid:
-                    regrid = False
+        if len(existing_sami_files) > 0:
+            if args.replace:
+                print('Replacing existing netCDF files...')
+            else:
+                if 'RAW' in str(existing_sami_files) and do_write_raw:
+                    raise ValueError(
+                        'RAW files already exist in output_dir. You may want'
+                        ' to set --replace, or delete them.')
+                if 'REGRID' in str(existing_sami_files) and do_write_regrid:
+                    raise ValueError(
+                        'REGRID files already exist in output_dir. You may'
+                        ' want to set --replace, or delete them.')
 
-            if not regrid and not process_from_scratch:
-                raise ValueError(
-                    'Looks like Im not doing anything here. Exiting.')
+        if args.ccmc:
+            use_ccmc = True
+            split_by_time = True
+            split_by_var = False
+        else:
+            use_ccmc = False
+            split_by_time = False
+            split_by_var = True
 
-        if process_from_scratch:
-            print(
-                'No netCDF files found in samidir: {}'.format(args.sami_dir))
+        if do_write_raw:
+
             print('Attempting to convert raw -> netCDF...')
 
             if args.dtime_sim_start is None:
@@ -133,6 +145,9 @@ def main(args):
             SAMI.process_all_to_cdf(
                 sami_data_path=args.sami_dir,
                 out_dir=output_dir,
+                use_ccmc=use_ccmc,
+                split_by_time=split_by_time,
+                split_by_var=split_by_var,
                 dtime_sim_start=args.dtime_sim_start,
                 progress_bar=args.progress,
                 OVERWRITE=args.replace,
@@ -140,7 +155,7 @@ def main(args):
                 delete_raw=args.delete_bins,
                 dtime_storm_start=args.dtime_event_start,)
 
-        if regrid:
+        if do_write_regrid:
             print('attempting to regrid!')
             calc_weight = True
             if os.path.exists(os.path.join(args.sami_dir, 'weight.nc')):
