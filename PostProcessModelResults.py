@@ -176,7 +176,7 @@ def main(args):
                 weights_exist = True
 
             if args.set_custom_grid:
-                RegridSami(sami_data_path=args.sami_dir,
+                RegridSami.main(sami_data_path=args.sami_dir,
                            out_path=output_dir,
                            save_weights=True,
                            use_saved_weights=weights_exist,
@@ -193,7 +193,7 @@ def main(args):
                            split_by_var=not args.ccmc,
                            numba=numba_installed,)
             else:
-                RegridSami(sami_data_path=args.sami_dir,
+                RegridSami.main(sami_data_path=args.sami_dir,
                            out_path=output_dir,
                            save_weights=True,
                            use_saved_weights=weights_exist,
