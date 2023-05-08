@@ -10,7 +10,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from utils import make_ccmc_name
+from utility_programs.utils import make_ccmc_name
 
 global sami_og_vars
 sami_og_vars = {
