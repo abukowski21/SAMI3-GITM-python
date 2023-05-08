@@ -196,6 +196,7 @@ try:
     from numba import jit
     from numba import prange
     print('Numba available! This will drastically speed up applying weights,')
+
     @jit(nopython=True)
     def numba_do_apply_weights(t0, src_idxs, weights, outv):
         """Speed up applying weight function.
@@ -213,11 +214,10 @@ try:
 
         return outv
 
-    
-    
+
 except ImportError:
     print('No Numba available')
-    
+
     def numba_do_apply_weights(t0, src_idxs, weights, outv):
         """Speed up applying weight function.
 
@@ -475,7 +475,7 @@ if __name__ == '__main__':
     parser.add_argument('--single_file', action='store_true', default=False,
                         help='Write all output datasets to single file?'
                         'Default: False')
-    parser.add_argument('--custom_grid', action='store_true',default=False,
+    parser.add_argument('--custom_grid', action='store_true', default=False,
                         help='Launches interactive script to set custom grid.'
                         'Default grid is 4 x 1 deg lonxlat, 50 alts.'
                         'minimum alt is 100, max is 2200, global lon x lat')
