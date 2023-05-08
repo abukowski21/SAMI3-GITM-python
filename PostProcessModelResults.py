@@ -162,8 +162,10 @@ def main(args):
                 # ignore flake8 linting on the following line.
                 import numba  # noqa: F401
                 numba_installed = True
+                print('numba installed! Will speed up regridding.')
             except ImportError:
                 numba_installed = False
+                print('Module numba not found.')
 
             weights_exist = False
             if os.path.exists(os.path.join(output_dir, 'weights')):
@@ -175,7 +177,7 @@ def main(args):
                 raise ValueError(
                     'dtime_sim_start must be specified to read SAMI files.')
 
-            if args.custom_grid:
+            if args.set_custom_grid:
                 RegridSami(sami_data_path=args.samidir,
                            out_path=output_dir,
                            save_weights=True,
@@ -255,31 +257,27 @@ if __name__ == '__main__':
     if args.sami_type not in opts:
         raise ValueError('sami_type must be one of {}'.format(opts))\
 
-    if args.custom_grid and args.sami_type == 'regrid' \
+    if args.set_custom_grid and args.sami_type == 'regrid' \
             or args.sami_type == 'all':
 
         global latstep, lonstep, altstep, minalt, maxalt
         global latfiner, lonfiner, altfiner
-        print('We are going to set a custom grid for your sami Regridding. ')
-        print('Press enter to accept the default values in parentheses')
-        latstep = input('latitude step size in degrees (1):', default=1)
-        lonstep = input('longitude step size in degrees: (4):', default=4)
-        altstep = input('altitude step size in km (50):', default=50)
-        minalt = input('minimum altitude in km (100):', default=100)
-        maxalt = input('maximum altitude in km (2200):', default=2200)
+        print('We are going to set a custom grid for your sami regridding. ')
+        latstep = input('latitude step size in degrees (1):')
+        lonstep = input('longitude step size in degrees: (4):')
+        altstep = input('altitude step size in km (50):')
+        minalt = input('minimum altitude in km (100):')
+        maxalt = input('maximum altitude in km (2200):')
         print('Now for the options to interpolate at a finer resolution'
               ' and then coarsen afterwards. If you dont know what this'
               ' means you can run with 1s and it will be faster. if you'
               ' see weird artifacts in your outputs you can try '
               ' adjusting this. Number given multiplies the step size')
-        latfiner = input('interpolate a finer resolution in latitude? (1):',
-                         default=1)
-        lonfiner = input('interpolate a finer resolution in longitude? (1):',
-                         default=1)
-        altfiner = input('interpolate a finer resolution in altitude? (1):',
-                         default=1)
+        latfiner = input('interpolate a finer resolution in latitude? (1):')
+        lonfiner = input('interpolate a finer resolution in longitude? (1):')
+        altfiner = input('interpolate a finer resolution in altitude? (1):')
 
-    elif args.custom_grid and args.sami_type == 'raw':
+    elif args.set_custom_grid and args.sami_type == 'raw':
         raise ValueError('You cannot set a custom grid for raw SAMI files,'
                          ' since nothing is being regridded.')
 
