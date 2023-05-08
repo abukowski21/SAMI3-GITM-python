@@ -52,10 +52,8 @@ def make_ccmc_name(
         ut = pd.Timestamp(ut)
     ut_str = ut.strftime('%Y-%m-%dT%H-%M-%S')
     # Make sure modelname & filt_type is all caps
-    modelname = modelname.upper()
 
     if data_type is not None:
-        data_type = data_type.upper()
         return '{}_{}_{}.nc'.format(modelname, data_type, ut_str)
 
     else:
