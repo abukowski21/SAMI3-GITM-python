@@ -166,8 +166,9 @@ if __name__ == '__main__':
                         help='GITM Directory. Defaults to ./gitm_data')
     parser.add_argument('-sami', '--sami_dir', type=str, default='./dami_dir',
                         help='SAMI directory. Defaults to ./sami_data')
-    parser.add_argument('--dont_regrid', action='store_false',
-                        help='Regrid SAMI data? (Default: True)')
+    parser.add_argument('--sami_type', type=str, default='all',
+                        help='Which SAMI data to process? (Default: all)'
+                        '(Options: "all", "raw", "regrid")')
     parser.add_argument('--low_mem', type=bool, default=True,
                         help='Process SAMI files in low memory mode?'
                         'Default: True')
@@ -186,7 +187,8 @@ if __name__ == '__main__':
                         'Caution: This is irreversible! (Default: False)')
     parser.add_argument('-g', '--ghost_cells', action='store',
                         default=False, type=bool,
-                        help='Drop Ghost Cells? (Default: False)')
+                        help='Drop Ghost Cells? (Default: False).'
+                        ' Not fully implemented yet.')
     parser.add_argument('-p', '--progress', action='store_true',
                         help='Show progress bar? (Default: False)')
     parser.add_argument('--dtime_sim_start', type=str, default=None,
@@ -197,4 +199,10 @@ if __name__ == '__main__':
                         'YYYYMMDDHHmmSS (Optional. added as attr to netCDFs)')
 
     args = parser.parse_args()
+
+    opts = ['all', 'raw', 'regrid']
+    # make sure args.sami_type is one of opts
+    if args.sami_type not in opts:
+        raise ValueError('sami_type must be one of {}'.format(opts))
+
     main(args)
