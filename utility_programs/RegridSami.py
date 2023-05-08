@@ -11,7 +11,7 @@ import numpy as np
 from scipy.spatial import KDTree
 import os
 from utility_programs.read_routines import SAMI
-from utility_programs.utils import str_to_ut
+from utility_programs.utils import str_to_ut, make_ccmc_name
 import argparse
 
 
@@ -290,6 +290,8 @@ def main(
         alt_finerinterps=1,
         split_by_var=True,
         single_file=False,
+        split_by_time=False,
+        use_ccmc=False,
         numba=False):
 
     if out_path is None:
@@ -421,6 +423,11 @@ def main(
             elif single_file:
                 ds.to_netcdf(os.path.join(
                     out_path, 'sami-regridded'), mode='a')
+            elif split_by_time:
+                for t in ds.time:
+                    fname = make_ccmc_name(SAMI, t, data_type='REGRID')
+                    ds.sel(time=t).to_netcdf(
+                        os.path.join(out_path, fname), mode='a')
 
     return
 
@@ -447,7 +454,8 @@ if __name__ == '__main__':
     parser.add_argument('--cols', type=str, default='all', nargs='*',
                         help='columns to read from sami data. Defaults to all'
                         'input as a list with spaces between.')
-    parser.add_argument('--split_by_var', action='store_false', default=True,
+    parser.add_argument('--split_by_var', action='store', default=True,
+                        type=bool,
                         help='Split output files by variable? Default: True')
     parser.add_argument('--single_file', action='store_true', default=False,
                         help='Write all output datasets to single file?'

@@ -10,7 +10,7 @@ import os
 
 import numpy as np
 import pandas as pd
-
+from utility_programs.utils import make_ccmc_name
 
 global sami_og_vars
 sami_og_vars = {
@@ -698,6 +698,7 @@ def process_all_to_cdf(sami_data_path,
                        start_dtime=None,
                        end_dtime=None,
                        out_dir=None,
+                       use_ccmc=True,
                        split_by_time=True,
                        split_by_var=False,
                        whole_run=False,
@@ -782,9 +783,16 @@ def process_all_to_cdf(sami_data_path,
             # So this gets complicated. First check the files.
             # Then go ahead and process...
 
+            file_list = []
+
             for t in times:
-                fname = 't'+t.strftime('%y%m%d_%H%M%S')
-                out_file = os.path.join(out_dir, fname + '.nc')
+                if use_ccmc:
+                    fname = make_ccmc_name('SAMI', t, data_type='RAW')
+                else:
+                    fname = 't'+t.strftime('%y%m%d_%H%M%S')+'.nc'
+
+                out_file = os.path.join(out_dir, fname)
+                file_list.append(out_file)
                 if os.path.exists(out_file):
                     if OVERWRITE:
                         os.remove(out_file)
@@ -803,9 +811,9 @@ def process_all_to_cdf(sami_data_path,
                     cols=sami_og_vars[ftype],
                     start_dtime=start_dtime,
                     end_dtime=end_dtime)
-                for time in times:
-                    ds.sel(time=time).to_netcdf(os.path.join(
-                        out_dir, 't'+time.strftime('%y%m%d_%H%M%S') + '.nc'),
+                for nfile in range(len(times)):
+                    ds.isel(time=nfile).to_netcdf(
+                        file_list[nfile],
                         mode='a')
                     pbar2.update()
                 pbar.update()
@@ -885,16 +893,21 @@ def process_all_to_cdf(sami_data_path,
                 pbar = tqdm(total=len(ds.time.values),
                             desc='Saving to netcdf')
             for t in ds.time.values:
-                fname = 't'+pd.Timestamp(t).strftime('%y%m%d_%H%M%S')
-                if os.path.exists(os.path.join(out_dir, f'{fname}.nc')):
+
+                if use_ccmc:
+                    fname = make_ccmc_name('SAMI', t, data_type='RAW')
+                else:
+                    fname = 't' + \
+                        pd.Timestamp(t).strftime('%y%m%d_%H%M%S') + '.nc'
+                if os.path.exists(os.path.join(out_dir, fname)):
                     if OVERWRITE and not append_files:
-                        os.remove(os.path.join(out_dir, f'{fname}.nc'))
+                        os.remove(os.path.join(out_dir, fname))
                     elif append_files:
                         write_mode = 'a'
                     else:
-                        raise FileExistsError(f'{fname}.nc already exists!')
+                        raise FileExistsError('%s already exists!' % fname)
 
-                ds.sel(time=t).to_netcdf(os.path.join(out_dir, f'{fname}.nc'),
+                ds.sel(time=t).to_netcdf(os.path.join(out_dir, fname),
                                          mode=write_mode)
 
                 if progress_bar:

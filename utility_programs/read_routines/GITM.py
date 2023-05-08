@@ -7,6 +7,7 @@ from aetherpy.io import read_routines
 from tqdm.auto import tqdm
 from struct import unpack
 import xarray as xr
+from utility_programs.utils import make_ccmc_name
 
 
 def read_bin_to_nparrays(gitm_dir,
@@ -228,9 +229,13 @@ def read_bin_to_xarray(filename,
             vcode = unpack(end_char + '%is' % (rec_len),
                            fin.read(rec_len))[0]
             var = vcode.decode('utf-8').replace(" ", "")
-            var = var.replace('!N', '').replace('!U', '').replace(
-                '!D', '').replace('[', '').replace('[', '').replace(
-                    ']', '').replace('/', '-')
+            var = var\
+                .replace('!N', '').replace('!U', '').replace('!D', '')\
+                .replace('[', '').replace('[', '').replace(']', '')\
+                .replace('/', '-').replace('(', '_').replace(')', '')\
+                .replace('+', '_plus').replace(',', '_').replace('__', '_')\
+                .replace('-', '_')
+
             varnames.append(var)
             dummy, rec_lec = unpack(end_char + '2l', fin.read(8))
 
@@ -304,7 +309,7 @@ def read_bin_to_xarray(filename,
                    'with_time': str(add_time)})
 
     if drop_ghost_cells:
-        # 2D files don't have ghost cells
+        # 2D files don't have alt ghost cells
         if nalts > 1:
             ds = ds.drop_isel(lat=[0, 1, -2, -1],
                               lon=[0, 1, -1, -2], alt=[0, 1, -1, -2])
@@ -432,6 +437,7 @@ def process_all_to_cdf(gitm_dir,
                        drop_before=None,
                        drop_after=None,
                        skip_existing=False,
+                       use_ccmc=True,
                        ):
     """Process all GITM .bin files in a directory to .cdf files.
 
@@ -454,7 +460,9 @@ def process_all_to_cdf(gitm_dir,
             When to start processing files. Will delete files before this time.
                 Defaults to None.
         skip_existing (bool, optional): Skip existing netCDF files?
-            Defaults to False.
+            Defaults to False. This will slow down the program significantly.
+        use_ccmc (bool, optional): Write files with CCMC naming convention?
+            Defaults to True. Recommended.
     """
 
     if not drop_ghost_cells:
@@ -511,16 +519,11 @@ def process_all_to_cdf(gitm_dir,
 
     for fileend in indiv_ends:
         files_here = glob.glob(gitm_dir + '/*' + fileend)
-        ds_now = []
-        outfile = os.path.join(
-            out_dir,
-            fileend[fileend.rfind('t'):].replace('.bin', '.nc'))
 
-        if skip_existing:
-            if os.path.exists(outfile):
-                if progress_bar:
-                    pbar.update()
-                continue
+        # make sure 3DALL files are first:
+        if len(files_here) > 1:
+            files_here = np.flip(np.sort(files_here))
+        ds_now = []
 
         for f in files_here:
             ds_now.append(read_bin_to_xarray(
@@ -531,11 +534,28 @@ def process_all_to_cdf(gitm_dir,
             to_remove.append(f)
 
         ds_now = xr.combine_by_coords(
-            ds_now, combine_attrs='drop_conflicts')
+            ds_now, combine_attrs='override')
 
         if dtime_storm_start is not None:
             ds_now = ds_now.assign_attrs(
                 dtime_event_start=dtime_storm_start,)
+
+        if use_ccmc:
+            ut = ds_now.time.values[0]
+            outfile = os.path.join(
+                out_dir,
+                make_ccmc_name('GITM', ut))
+
+        else:
+            outfile = os.path.join(
+                out_dir,
+                fileend[fileend.rfind('t'):].replace('.bin', '.nc'))
+
+        if skip_existing:
+            if os.path.exists(outfile):
+                if progress_bar:
+                    pbar.update()
+                continue
 
         ds_now.to_netcdf(outfile, mode='w')
 
@@ -543,7 +563,8 @@ def process_all_to_cdf(gitm_dir,
             pbar.update()
 
     if delete_bins:
-        print('FILES WILL BE DELETED. YOU HAVE BEEN WARNED.')
+        print('FILES WILL BE DELETED. YOU HAVE BEEN WARNED.',
+              ' 10 seconds to cancel.')
         import time
         time.sleep(10)
         for f in glob.glob(gitm_dir + '/*.bin'):
@@ -582,7 +603,7 @@ def find_variable(gitm_dir, varname=None,
         raise ValueError('Must specify either varhelp or varname')
 
     if nc:
-        files = np.sort(glob.glob(os.path.join(gitm_dir, '*.nc')))
+        files = np.sort(glob.glob(os.path.join(gitm_dir, 'GITM*.nc')))
         if len(files) == 0:
             nc = False
             print('no netcdf files found, trying binary files')
@@ -687,7 +708,7 @@ def auto_read(gitm_dir,
                 cols=cols)
         return data
 
-    files = np.sort(glob.glob(os.path.join(gitm_dir, '*.nc')))
+    files = np.sort(glob.glob(os.path.join(gitm_dir, 'GITM*.nc')))
     if len(files) == 0 and force_dict:
         if not force_dict:
             print("""No NetCDF files found, You should probably convert
