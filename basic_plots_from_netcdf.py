@@ -67,7 +67,7 @@ def autoplot(
 
     # We will glob the directory for all files with the model name,
     #   and parse for the specified times.
-
+    
     file_list = glob.glob(os.path.join(data_dir, model + '*.nc'))
     file_list = np.sort(file_list)
     # trim file_list to only include files within time_lims
@@ -104,6 +104,7 @@ def autoplot(
     del ds0  # save memory
 
     # open & read the files, drop variables we don't want
+    print('Reading in {} files...'.format(len(file_list)))
     ds = [xr.open_dataset(f, drop_variables=drops) for f in file_list]
     ds = xr.concat(ds, dim=concat_dim)
 
