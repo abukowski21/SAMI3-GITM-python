@@ -77,9 +77,9 @@ def autoplot(
     if time_lims[0] > 100000 or time_lims[1] > 100000:
         # it's probably a datetime string
         if time_lims[0] != 0:
-            dtime_lim_0 = str_to_ut(time_lims[0])
+            dtime_lim_0 = str_to_ut(str(time_lims[0]))
         if time_lims[1] != -1:
-            dtime_lim_1 = str_to_ut(time_lims[1])
+            dtime_lim_1 = str_to_ut(str(time_lims[1]))
 
         time_list = []
         for fname in file_list:
