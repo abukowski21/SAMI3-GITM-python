@@ -129,7 +129,7 @@ def autoplot(
     # check if output dir exists:
     a = ''
     for i in cut_dict.keys():
-        a += str(i) +'-'+ str(cut_dict[i]) + '_'
+        a += str(i) +'-'+ str(int(cut_dict[i])) + '_'
     a = a[:-1]
     out_dir = os.path.join(output_dir, model, a)
     out_dir = out_dir.replace('//', '/')
