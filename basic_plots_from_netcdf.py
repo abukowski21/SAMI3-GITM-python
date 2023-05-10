@@ -6,6 +6,7 @@ import glob
 import os
 import xarray as xr
 import cartopy.crs as ccrs
+from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -77,14 +78,14 @@ def autoplot(
     if time_lims[0] > 100000 or time_lims[1] > 100000:
         # it's probably a datetime string
         if time_lims[0] != 0:
-            dtime_lim_0 = str_to_ut(str(time_lims[0]))
+            dtime_lim_0 = str_to_ut(str(int(time_lims[0])))
         if time_lims[1] != -1:
-            dtime_lim_1 = str_to_ut(str(time_lims[1]))
+            dtime_lim_1 = str_to_ut(str(int(time_lims[1])))
 
         time_list = []
         for fname in file_list:
             t_str = fname.split('_')[-1].split('.')[0]
-            time_list.append(t_str.strptime(t_str, '%Y-%m-%dT%H-%M-%S'))
+            time_list.append(datetime.strptime(t_str, '%Y-%m-%dT%H-%M-%S'))
         time_list = np.array(time_list)
 
         if time_lims[0] != 0:
@@ -107,6 +108,7 @@ def autoplot(
     print('Reading in {} files...'.format(len(file_list)))
     ds = [xr.open_dataset(f, drop_variables=drops) for f in file_list]
     ds = xr.concat(ds, dim=concat_dim)
+    print('Done reading files.')
 
     # process the plotlims first to minimize memory usage & speed up
     if lim_dict is not None:
@@ -125,7 +127,7 @@ def autoplot(
         ds = run_processing_options(ds, process_options)
 
     # Now plot the data with the cuts specified.
-
+    
     for var in columns_to_plot:
         for nplot in range(ds[loop_var].shape[0]):
             out_fname = os.path.join(output_dir, model,
@@ -303,6 +305,14 @@ if __name__ == '__main__':
             raise ValueError('alt_cut must be either 1 or 2 values.'
                              ' To run multple plots, interface with'
                              ' another script.')
+            
+    if type(args.loop_var) is not str:
+        if len(args.loop_var) > 1:
+            raise ValueError('Can only loop over one variable at a time.')
+        else:
+            loop_var = args.loop_var[0]
+    else:
+        loop_var = args.loop_var
 
     """
     This loop will look for the column requested in the data files,
@@ -342,7 +352,7 @@ if __name__ == '__main__':
                          time_lims=args.time_lims,
                          cut_dict=plot_cuts,
                          lim_dict=plot_lims,
-                         loop_var=args.loop_var,
+                         loop_var=loop_var,
                          process_options=args.process_option,
                          plot_arg_dict=args.plot_args)
 
