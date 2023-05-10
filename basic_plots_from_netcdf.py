@@ -162,7 +162,6 @@ def autoplot(
                         **plot_arg_dict,)
                 plt.savefig(out_fname)
                 plt.close()
-    print(cut_dict)
 
     return
 
