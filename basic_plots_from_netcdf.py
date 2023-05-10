@@ -294,7 +294,7 @@ if __name__ == '__main__':
     plot_cuts = {}
     if args.lon_cut is not None:
         if len(args.lon_cut) == 1:
-            plot_cuts['lon'] = args.lon_cut
+            plot_cuts['lon'] = args.lon_cut[0]
         elif len(args.lon_cut) == 2:
             plot_lims['lon'] = args.lon_cut
         else:
@@ -304,7 +304,7 @@ if __name__ == '__main__':
 
     if args.lat_cut is not None:
         if len(args.lat_cut) == 1:
-            plot_cuts['lat'] = args.lat_cut
+            plot_cuts['lat'] = args.lat_cut[0]
         elif len(args.lat_cut) == 2:
             plot_lims['lat'] = args.lat_cut
         else:
@@ -314,7 +314,7 @@ if __name__ == '__main__':
 
     if args.alt_cut is not None:
         if len(args.alt_cut) == 1:
-            plot_cuts['alt'] = args.alt_cut
+            plot_cuts['alt'] = args.alt_cut[0]
         elif len(args.alt_cut) == 2:
             plot_lims['alt'] = args.alt_cut
         else:
