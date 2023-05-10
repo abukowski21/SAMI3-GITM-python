@@ -125,19 +125,32 @@ def autoplot(
     # look thru the process options:
     if process_options is not None:
         ds = run_processing_options(ds, process_options)
+        
+    # check if output dir exists:
+    a = ''
+    for i in cut_dict.keys():
+        a += str(i) +'-'+ str(cut_dict[i]) + '_'
+    a = a[:-1]
+    out_dir = os.path.join(output_dir, model, a)
+    out_dir = out_dir.replace('//', '/')
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+        print('created directory: ', out_dir)
+    
 
     # Now plot the data with the cuts specified.
     
     for var in columns_to_plot:
         for nplot in range(ds[loop_var].shape[0]):
-            out_fname = os.path.join(output_dir, model,
-                                     var + '_' + nplot)
+            out_fname = os.path.join(out_dir,
+                                     var + '_' + str(nplot))
             if show_map:
                 p = ds[var].isel({loop_var: nplot}).sel(
                     cut_dict, method='nearest').plot(
-                        plot_arg_dict,
                         transform=ccrs.PlateCarree(),
-                        x='lon', y='lat',)
+                        subplot_kws={"projection": ccrs.PlateCarree()},
+                        x='lon', y='lat',
+                        **plot_arg_dict,)
                 p.axes.coastlines()
                 p.axes.gridlines(alpha=0.6)
                 plt.savefig(out_fname)
@@ -146,9 +159,10 @@ def autoplot(
             else:
                 p = ds[var].isel({loop_var: nplot}).sel(
                     cut_dict, method='nearest').plot(
-                        plot_arg_dict)
+                        **plot_arg_dict,)
                 plt.savefig(out_fname)
                 plt.close()
+    print(cut_dict)
 
     return
 
@@ -269,9 +283,11 @@ if __name__ == '__main__':
     if args.col_help:
         get_var_names(args.data_dir, args.model)
 
-    # format plot_arguments.
+    # format plot_arguments. Cannot pass NoneType to plotting functions.
     if args.plot_args is not None:
         args.plot_args = dict(x.split('=') for x in args.plot_args)
+    else:
+        args.plot_args = {}
 
     # set up cut & plot lim dicts.
     plot_lims = {}
