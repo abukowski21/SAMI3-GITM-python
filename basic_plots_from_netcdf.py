@@ -253,7 +253,7 @@ if __name__ == '__main__':
                         default=None,
                         help='Apply any post-processing options to the data.\n'
                         'Currently, only "alt_int", "transpose", or "bandpass"'
-                        ' are supported. More can be added (easily) by '
+                        ' are supported. \nMore can be added (easily) by '
                         'modifying run_processing_options() in this script.\n')
 
     parser.add_argument('--plot_args', type=str, nargs='*', default=None,
@@ -337,13 +337,14 @@ if __name__ == '__main__':
                          columns_to_plot=col,
                          model=model,
                          output_dir=args.out_dir,
-                         keogram=args.keogram,
-                         map=args.map,
+                         show_map=args.show_map,
                          time_lims=args.time_lims,
                          cut_dict=plot_cuts,
                          lim_dict=plot_lims,
+                         loop_var=args.loop_var,
                          process_options=args.process_option,
                          plot_arg_dict=args.plot_args)
+
                 made_plots[col] += 1
 
     for col in made_plots.keys():
