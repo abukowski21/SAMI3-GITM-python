@@ -118,6 +118,7 @@ def main(args):
         if len(existing_sami_files) > 0:
             if args.replace:
                 print('Replacing existing netCDF files...')
+                print(' not implemented yet. Go clear directory manually ')
             else:
                 if 'RAW' in str(existing_sami_files) and do_write_raw:
                     raise ValueError(
@@ -228,7 +229,8 @@ if __name__ == '__main__':
                         default=True,
                         help='Use CCMC naming conventions? (Default: True)')
     parser.add_argument('-r', '--replace', action='store_true',
-                        help='Replace existing netCDF files? (Default: False)')
+                        help='Replace existing netCDF files? (Default: False)'
+                        ' (not implemented yet)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Print out more information? (Default: False)')
     parser.add_argument('-d', '--delete_bins', action='store_true',
