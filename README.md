@@ -6,10 +6,6 @@ Here is all the current work being done. See the main branch for info on what ne
 ## Please feel free to make any changes you would like!!
 
 
-Scripts are available for both SAMI3 and GITM data analysis. 
-SAMI3 data needs to be post-processed before it can be manipulated with these programs. 
-> 
-
 ---
 
 ## USAGE:
@@ -20,7 +16,7 @@ Git clone, get on this branch.
 
 `cd SAMI3-GITM-python/`
 
-`git checkout develop`
+`git checkout switch-to-xarray`
 
 To ensure compatibility, an Anaconda environment is available. Install it with:
 
@@ -33,9 +29,14 @@ Data can be read directly from binary format and plotted, though there are scrip
 these data into netCDF format. This will also interpolate SAMI3 model outputs to a "regular" grid
 in geographic coordinates.
 
-To Postprocess model outputs: `python PostProcessModelResults.py [args]`
+To postprocess model outputs: `python PostProcessModelResults.py [args]`
 
 To generate plots with these postprocessed outputs: `python basic_plots_from_netcdf.py [args]`
 
-> Run any python script with the `-h` flag to see available arguments
 
+## Notes:
+- Run any python script with the `-h` flag to see available arguments
+- All routines (including those in `utility_programs`) can be called in other scripts for further analysis (in a Jupyter Notebook, for example)
+- These scripts can handle both GITM and SAMI model outputs.
+- Modifications to existing functions should be fairly easy (adding more models, different types of plots, etc.)
+- Contact the author with any questions, suggestions, issues, etc.
