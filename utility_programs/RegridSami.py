@@ -34,25 +34,25 @@ def latlonalt_to_cart(lat, lon, radius):
     return np.array([x, y, z])
 
 
-def is_inside_cube(x, y, z, xs, ys, zs):
-    """Check if a point is inside a cube.
+# def is_inside_cube(x, y, z, xs, ys, zs):
+#     """Check if a point is inside a cube.
 
-    Args:
-        x (float): x coordinate of point
-        y (float): y coordinate of point
-        z (float): z coordinate of point
-        xs (list-like): cartesian x coordinates of cube vertices
-        ys (list-like): cartesian y coordinates of cube vertices
-        zs (list-like): cartesian z coordinates of cube vertices
+#     Args:
+#         x (float): x coordinate of point
+#         y (float): y coordinate of point
+#         z (float): z coordinate of point
+#         xs (list-like): cartesian x coordinates of cube vertices
+#         ys (list-like): cartesian y coordinates of cube vertices
+#         zs (list-like): cartesian z coordinates of cube vertices
 
-    Returns:
-        bool: True if point is inside cube, False otherwise
-    """
-    if (x > min(xs)) and (x < max(xs)) and (y > min(ys)) and (y < max(ys)) \
-            and (z > min(zs)) and (z < max(zs)):
-        return True
-    else:
-        return False
+#     Returns:
+#         bool: True if point is inside cube, False otherwise
+#     """
+#     if (x > min(xs)) and (x < max(xs)) and (y > min(ys)) and (y < max(ys)) \
+#             and (z > min(zs)) and (z < max(zs)):
+#         return True
+#     else:
+#         return False
 
 
 def generate_interior_points(in_cart, old_shape):
@@ -161,15 +161,12 @@ def make_weights(in_cart, out_cart, nearest, old_shape, coords):
         ys = in_cart[0, idxs]
         zs = in_cart[2, idxs]
 
-        val = is_inside_cube(out_cart[0, n], out_cart[1, n], out_cart[2, n],
-                             xs, ys, zs)
-        if val:
-            d = np.sqrt((xs-out_cart[0, n])**2 + (ys -
+        d = np.sqrt((xs-out_cart[0, n])**2 + (ys -
                         out_cart[1, n])**2 + (zs-out_cart[2, n])**2)
 
-            weights[n] = 1/(d)
-
-            src_idxs[n] = idxs
+        weights[n] = 1/(d)
+        src_idxs[n] = idxs
+        
     print('Done, found %i valid points' % np.sum(weights > 0))
 
     return weights, src_idxs
