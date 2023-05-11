@@ -360,7 +360,8 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
             Prints time and variable info. Defaults to False.
 
     Raises:
-        ValueError: if t_start_idx and t_end_idx are not both given
+        KeyError: If given cols is not valid
+        FileNotFoundError: If the filepath is invalid
 
     Returns:
         dict:
