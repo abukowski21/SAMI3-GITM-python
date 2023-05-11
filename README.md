@@ -37,6 +37,5 @@ To Postprocess model outputs: `python PostProcessModelResults.py [args]`
 
 To generate plots with these postprocessed outputs: `python basic_plots_from_netcdf.py [args]`
 
-Run any python script with the `-h` flag to see available arguments
-
+> Run any python script with the `-h` flag to see available arguments
 
