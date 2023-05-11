@@ -8,41 +8,35 @@ Here is all the current work being done. See the main branch for info on what ne
 
 Scripts are available for both SAMI3 and GITM data analysis. 
 SAMI3 data needs to be post-processed before it can be manipulated with these programs. 
-> (See utility_programs for information.)
-
-SAMI3 data can be processed further using InterpSAMI3toGrid.ipynb, allowing it to be plot 
-with grographic coordinate systems.
+> 
 
 ---
 
 ## USAGE:
 
-Clone, get on this branch. Best practice is to leave this in the home folder that is backed up. Then link your GITM and SAMI directories:
+Git clone, get on this branch. 
 
-From inside this directory, create links to GITM and SAMI data directories:
+`git clone git@github.com:abukowski21/SAMI3-GITM-python`
 
-`ln -sfn [path-to-gitm-data] gitm_data`
+`cd SAMI3-GITM-python/`
 
-`ln -sfn [path-to-sami-data] sami_dir`
+`git checkout develop`
 
-I like to put the plots into the same directory ad the model outputs. For now, since only GITM plots work:
+To ensure compatibility, an Anaconda environment is available. Install it with:
 
-`mkdir gitm_data/out_plots_gitm` (or whatever you want)
+`conda env create -f python-env.yml && conda activate SAMI3-GITM`
+> To create the environment with another name, edit the first line of `python-env.yml`
 
-`ln -sfn gitm_data/out_plots_gitm out_plots_gitm` (make sure that first directory is pointing to what you made before)
+> Anaconda installation information can be found at [this link](https://conda.io/projects/conda/en/latest/index.html)
 
-Then you can call some gitm plots. For help:
+Data can be read directly from binary format and plotted, though there are scripts to postprocess
+these data into netCDF format. This will also interpolate SAMI3 model outputs to a "regular" grid
+in geographic coordinates.
 
-`python gitm_basic_plots.py -h`
+To Postprocess model outputs: `python PostProcessModelResults.py [args]`
 
-This will show you all of the available arguments and settings and what not.
+To generate plots with these postprocessed outputs: `python basic_plots_from_netcdf.py [args]`
 
-To make some beautiful maps and keograps (assuming you set the directories like I have):
+Run any python script with the `-h` flag to see available arguments
 
-`python gitm_basic_plots.py -gitm_data_path gitm_data 201105211340 -k -m --cols Rho [e-] --plot_start_delta=3 --plot_end_delta=8 --save_or_show=show -lat_lim 65`
 
-This one may or may not work:
-
-`python gitm_complicated_plots.py 201105211340 -gitm_data_path gitm_data --out_path out_plots_gitm --plot_start_delta=3 --plot_end_delta=8 --data_to_plot=all -m -k  -OVERWRITE`
-
-These takes a little while though. To make it faster change the plot_start_delta and plot_end_delta to 1 to read in less data, but the plots won't be as beautiful. I use the 1's for testing.
