@@ -418,15 +418,10 @@ def main(
 
             if 1 not in [lat_finerinterps, lon_finerinterps, alt_finerinterps]:
                 print('coarsening dataset')
-                if lat_finerinterps > 1:
-                    ds = ds.coarsen(lat=lat_finerinterps,
-                                    boundary='trim').mean()
-                if lon_finerinterps > 1:
-                    ds = ds.coarsen(lon=lon_finerinterps,
-                                    boundary='trim').mean()
-                if alt_finerinterps > 1:
-                    ds = ds.coarsen(alt=alt_finerinterps,
-                                    boundary='trim').mean()
+                ds = ds.coarsen(lat=lat_finerinterps,
+                                lon=lon_finerinterps,
+                                alt=alt_finerinterps,
+                                boundary='trim').mean()
 
             if split_by_var:
                 for varname in ds.data_vars:
