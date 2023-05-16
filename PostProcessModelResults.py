@@ -191,7 +191,7 @@ def main(args):
                                 use_ccmc=args.ccmc,
                                 split_by_time=args.ccmc,
                                 split_by_var=not args.ccmc,
-                                numba=numba_installed,)
+                                numba=numba_installed and not args.low_mem,)
             else:
                 RegridSami.main(sami_data_path=args.sami_dir,
                                 out_path=output_dir,
@@ -201,7 +201,7 @@ def main(args):
                                 use_ccmc=args.ccmc,
                                 split_by_time=args.ccmc,
                                 split_by_var=not args.ccmc,
-                                numba=numba_installed,)
+                                numba=numba_installed and not args.low_mem,)
 
     return
 

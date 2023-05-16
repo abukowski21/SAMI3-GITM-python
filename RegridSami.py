@@ -297,12 +297,12 @@ def main(
         lon_step=4,
         alt_step=50,
         minmax_alt=[100, 2200],
-        lat_finerinterps=1,
-        lon_finerinterps=1,
-        alt_finerinterps=1,
-        split_by_var=True,
+        lat_finerinterps=2,
+        lon_finerinterps=2,
+        alt_finerinterps=2,
+        split_by_var=False,
         single_file=False,
-        split_by_time=False,
+        split_by_time=True,
         use_ccmc=False,
         numba=False):
 
@@ -418,15 +418,10 @@ def main(
 
             if 1 not in [lat_finerinterps, lon_finerinterps, alt_finerinterps]:
                 print('coarsening dataset')
-                if lat_finerinterps > 1:
-                    ds = ds.coarsen(lat=lat_finerinterps,
-                                    boundary='trim').mean()
-                if lon_finerinterps > 1:
-                    ds = ds.coarsen(lon=lon_finerinterps,
-                                    boundary='trim').mean()
-                if alt_finerinterps > 1:
-                    ds = ds.coarsen(alt=alt_finerinterps,
-                                    boundary='trim').mean()
+                ds = ds.coarsen(lat=lat_finerinterps,
+                                lon=lon_finerinterps,
+                                alt=alt_finerinterps,
+                                boundary='trim').mean()
 
             if split_by_var:
                 for varname in ds.data_vars:
