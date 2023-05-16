@@ -16,7 +16,7 @@ import glob
 import subprocess
 from utility_programs.read_routines import GITM, SAMI
 from utility_programs.utils import str_to_ut
-from utility_programs import RegridSami
+import RegridSami
 import argparse
 
 
