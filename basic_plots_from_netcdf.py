@@ -71,6 +71,9 @@ def autoplot(
     
     file_list = glob.glob(os.path.join(data_dir, model + '*.nc'))
     file_list = np.sort(file_list)
+    
+    if len(file_list) == 0:
+        raise ValueError('No files found in %s' % os.path.join(data_dir, model + '*.nc'))
     # trim file_list to only include files within time_lims
     if time_lims[1] == -1:
         time_lims[1] = len(file_list)
@@ -86,7 +89,7 @@ def autoplot(
         for fname in file_list:
             t_str = fname.split('_')[-1].split('.')[0]
             time_list.append(datetime.strptime(t_str, '%Y-%m-%dT%H-%M-%S'))
-        time_list = np.array(time_list)
+        time_list = np.sort(np.array(time_list))
 
         if time_lims[0] != 0:
             time_lims[0] = np.argmin(np.abs(time_list - dtime_lim_0))
