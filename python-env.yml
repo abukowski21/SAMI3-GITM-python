@@ -13,4 +13,5 @@ dependencies:
   - numba
   - dask-jobqueue
   - ipykernel
-
+  - xesmf
+prefix: /glade/work/abukowski/conda-envs/SAMI3-GITM
