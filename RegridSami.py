@@ -297,12 +297,12 @@ def main(
         lon_step=4,
         alt_step=50,
         minmax_alt=[100, 2200],
-        lat_finerinterps=1,
-        lon_finerinterps=1,
-        alt_finerinterps=1,
-        split_by_var=True,
+        lat_finerinterps=2,
+        lon_finerinterps=2,
+        alt_finerinterps=2,
+        split_by_var=False,
         single_file=False,
-        split_by_time=False,
+        split_by_time=True,
         use_ccmc=False,
         numba=False):
 
