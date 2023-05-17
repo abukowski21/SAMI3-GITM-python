@@ -943,6 +943,7 @@ def auto_read(sami_dir,
               split_by_var=False,
               whole_run=False,
               return_xarray=True,
+              filetype='SAMI_REGRID',
               force_nparrays=False,
               dtime_sim_start=None,
               parallel=True,
@@ -954,6 +955,8 @@ def auto_read(sami_dir,
               hrs_after_storm_start=None,
               dtime_storm_start=None,
               progress_bar=False,
+              use_dask=False,
+              engine='h5netcdf',
               ):
     """Automatically reads in SAMI data and returns it in a format of your
     choice.
@@ -1009,10 +1012,11 @@ def auto_read(sami_dir,
     """
 
     from glob import glob
+    from tqdm import tqdm
 
     ncfiles = glob(os.path.join(sami_dir, '*.nc'))
     if len(ncfiles) > 0:
-        if len(glob(os.path.join(sami_dir, 't*.nc'))) > 0:
+        if len(glob(os.path.join(sami_dir, 'SAMI*T*.nc'))) > 0:
             split_by_time = True
         if len(glob(os.path.join(sami_dir, 'sami_data.nc'))) > 0:
             whole_run = True
@@ -1042,7 +1046,7 @@ def auto_read(sami_dir,
                                        coords='minimal', compat='override')
 
             elif split_by_time:
-                files = glob(os.path.join(sami_dir, 't*.nc'))
+                files = np.sort(glob(os.path.join(sami_dir, filetype+'*.nc')))
                 ret_early = False
                 if start_idx is None:
                     start_idx = 0
@@ -1052,15 +1056,29 @@ def auto_read(sami_dir,
                     ret_early = True
 
                 files = files[start_idx:end_idx]
-                print(files)
 
                 if len(files) > 1:
-                    ds = xr.open_mfdataset(files,
-                                           parallel=parallel,
+                    if use_dask:
+                        ds = xr.open_mfdataset(files, v
+                                           parallel=parallel, data_vars=cols,
                                            combine_attrs='drop_conflicts',
-                                           data_vars='minimal',
+                                           data_vars='minimal', engine=engine,
                                            concat_dim="time", combine="nested",
                                            coords='minimal', compat='override')
+                    else:
+                        drops=[]
+                        ds0=xr.open_dataset(files[0])
+                        for v in ds0.data_vars:
+                            if v not in cols:
+                                drops.append(v)
+                        del ds0
+                        dss=[]
+                        for f in files:
+                            dss.append(xr.open_dataset(
+                                f, drop_variables=drops, engine=engine))
+                        print('read')
+                        ds=xr.concat(dss, dim='time')
+                        del dss
                 else:
                     ds = xr.open_dataset(files[0])
                 if ret_early:
@@ -1071,10 +1089,10 @@ def auto_read(sami_dir,
                       'Switching to nparray read')
 
             if ds is not None:
-                if cols != 'all':
-                    if type(cols) is str:
-                        cols = [cols]
-                    ds = ds[cols]
+                #if cols != 'all':
+                    #if type(cols) is str:
+                        #cols = [cols]
+                    #ds = ds[cols]
 
                 if start_dtime is not None or end_dtime is not None:
                     if start_dtime is not None:
@@ -1083,12 +1101,12 @@ def auto_read(sami_dir,
                     if end_dtime is not None:
                         end_idx = np.argmin(np.abs(ds.time.values - end_dtime))
 
-                if start_idx is not None or end_idx is not None:
-                    if start_idx is None:
-                        start_idx = 0
-                    if end_idx is None:
-                        end_idx = len(ds.time.values)
-                    ds = ds.isel(time=slice(start_idx, end_idx))
+                #if start_idx is not None or end_idx is not None:
+                    #if start_idx is None:
+                        #start_idx = 0
+                    #if end_idx is None:
+                        #end_idx = len(ds.time.values)
+                    #ds = ds.isel(time=slice(start_idx, end_idx))
                 return ds
 
         else:
