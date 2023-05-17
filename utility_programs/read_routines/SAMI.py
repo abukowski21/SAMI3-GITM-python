@@ -1059,7 +1059,7 @@ def auto_read(sami_dir,
 
                 if len(files) > 1:
                     if use_dask:
-                        ds = xr.open_mfdataset(files, v
+                        ds = xr.open_mfdataset(files,
                                            parallel=parallel, data_vars=cols,
                                            combine_attrs='drop_conflicts',
                                            data_vars='minimal', engine=engine,
