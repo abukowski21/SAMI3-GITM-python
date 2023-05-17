@@ -271,12 +271,12 @@ def do_apply_weights(weights,
     varname = list(data_dict['data'].keys())[0]
 
     # get data array, make output array.
-    t0 = data_dict['data'][varname]
-    outv = np.zeros([t0.shape[-1], len(weights)])
+    # t0 = data_dict['data'][varname]
+    outv = np.zeros([data_dict['data'][varname].shape[-1], len(weights)])
 
-    for t in tqdm(range(t0.shape[-1])):
+    for t in tqdm(range(data_dict['data'][varname].shape[-1])):
         outv[t] += np.sum(weights * np.take(
-            t0[:, :, :, t], src_idxs), axis=1) \
+            data_dict['data'][varname][:, :, :, t], src_idxs), axis=1) \
             / np.sum(weights, axis=1)
 
     ds[varname] = (('time', 'lat', 'lon', 'alt'), np.array(outv).reshape(
@@ -364,6 +364,8 @@ def main(
             weights.tofile(os.path.join(out_path, 'weights'))
             idxs.tofile(os.path.join(out_path, 'indexes'))
 
+        del centers, coords
+
     if apply_weights:
 
         sami_og_vars = SAMI.sami_og_vars
@@ -388,6 +390,7 @@ def main(
             varname = data_files[ftype]
             print('reading in %s' % ftype)
 
+            
             data, times = SAMI.read_to_nparray(
                 sami_data_path, dtime_sim_start, cols=varname, pbar=False)
 
@@ -399,10 +402,12 @@ def main(
                     'lon': (['lon'], lonout)},)
                 varname = list(data['data'].keys())[0]
 
-                t0 = data['data'][varname]
+                # t0 = 
+                
 
-                outv = np.zeros([t0.shape[-1], len(weights)])
-                outv = numba_do_apply_weights(t0, idxs, weights, outv)
+                outv = np.zeros([data['data'][varname].shape[-1], len(weights)])
+                outv = numba_do_apply_weights(data['data'][varname],
+                    idxs, weights, outv)
 
                 print('received weights from numba function, ',
                       'writing & continuing')
@@ -435,6 +440,8 @@ def main(
                     fname = make_ccmc_name('SAMI', t, data_type='REGRID')
                     ds.sel(time=t).to_netcdf(
                         os.path.join(out_path, fname), mode='a')
+
+            del data
 
     return
 
