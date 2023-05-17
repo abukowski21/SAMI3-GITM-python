@@ -1076,7 +1076,7 @@ def auto_read(sami_dir,
                         for f in files:
                             dss.append(xr.open_dataset(
                                 f, drop_variables=drops, engine=engine))
-                        print('read')
+                        
                         ds=xr.concat(dss, dim='time')
                         del dss
                 else:
