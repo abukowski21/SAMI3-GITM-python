@@ -1041,7 +1041,7 @@ def auto_read(sami_dir,
                 ds = xr.open_mfdataset(os.path.join(sami_dir, '*.nc'),
                                        parallel=parallel,
                                        combine_attrs='drop_conflicts',
-                                       data_vars='minimal',
+                                       data_vars='minimal,
                                        concat_dim="time", combine="nested",
                                        coords='minimal', compat='override')
 
@@ -1062,7 +1062,7 @@ def auto_read(sami_dir,
                         ds = xr.open_mfdataset(files,
                                            parallel=parallel, data_vars=cols,
                                            combine_attrs='drop_conflicts',
-                                           data_vars='minimal', engine=engine,
+                                           , engine=engine,
                                            concat_dim="time", combine="nested",
                                            coords='minimal', compat='override')
                     else:
