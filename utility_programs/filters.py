@@ -3,7 +3,7 @@ from scipy import signal
 import numpy as np
 
 
-def make_filter(lowcut=150, highcut=30):
+def make_filter(lowcut=80, highcut=40):
     """_summary_
 
     Args:
@@ -21,7 +21,7 @@ def make_filter(lowcut=150, highcut=30):
     nyquist = 0.5 * 5  # 5 minutes is the sampling frequency
     low = lowcut_f / nyquist
     high = highcut_f / nyquist
-    sos = signal.butter(2, [low, high], btype="bandstop", output="sos")
+    sos = signal.butter(3, [low, high], btype="bandstop", output="sos")
     return sos
 
 
