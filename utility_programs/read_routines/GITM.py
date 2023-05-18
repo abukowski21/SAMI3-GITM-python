@@ -670,7 +670,7 @@ def auto_read(gitm_dir,
               force_dict=False,
               parallel=True,
               engine='h5netcdf',
-              dask=False):
+              use_dask=False):
     """Automatically reads in a directory of GITM files.
 
     Args:
@@ -777,7 +777,7 @@ def auto_read(gitm_dir,
         if type(cols) == str:
             cols=[cols]
 
-        if dask:
+        if use_dask:
 
             print('using dask...')
             ds=xr.open_mfdataset(files, parallel=parallel,
