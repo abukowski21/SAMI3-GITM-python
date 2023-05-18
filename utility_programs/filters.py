@@ -3,7 +3,7 @@ from scipy import signal
 import numpy as np
 
 
-def make_filter(lowcut=100, highcut=30):
+def make_filter(lowcut=150, highcut=30):
     """_summary_
 
     Args:
@@ -14,13 +14,13 @@ def make_filter(lowcut=100, highcut=30):
         scipy butterworth filter: the filter with settings defined by the user.
     """
     # Define the cutoff frequencies
-    lowcut = 1 / (100 / 60)  # 100 minutes in units of sample^-1
-    highcut = 1 / (30 / 60)  # 30 minutes in units of sample^-1
+    lowcut_f = 1 / (lowcut / 60)  # 100 minutes in units of sample^-1
+    highcut_f = 1 / (highcut / 60)  # 30 minutes in units of sample^-1
 
     # Define the Butterworth filter
     nyquist = 0.5 * 5  # 5 minutes is the sampling frequency
-    low = lowcut / nyquist
-    high = highcut / nyquist
+    low = lowcut_f / nyquist
+    high = highcut_f / nyquist
     sos = signal.butter(2, [low, high], btype="bandstop", output="sos")
     return sos
 
