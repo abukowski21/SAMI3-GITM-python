@@ -3,12 +3,14 @@ from scipy import signal
 import numpy as np
 
 
-def make_filter(lowcut=80, highcut=40):
+def make_filter(lowcut=80, highcut=40, order=3):
     """_summary_
 
     Args:
         lowcut (int, optional): lowcut of the filter. Defaults to 100.
         highcut (int, optional): highcut of the filter. Defaults to 30.
+        order (int, optional): Order of the filter (how steep the filter
+            cuts at the cutoff frequencies). Defaults to 2.
 
     Returns:
         scipy butterworth filter: the filter with settings defined by the user.
@@ -21,11 +23,11 @@ def make_filter(lowcut=80, highcut=40):
     nyquist = 0.5 * 5  # 5 minutes is the sampling frequency
     low = lowcut_f / nyquist
     high = highcut_f / nyquist
-    sos = signal.butter(3, [low, high], btype="bandstop", output="sos")
+    sos = signal.butter(order, [low, high], btype="bandstop", output="sos")
     return sos
 
 
-def make_fits(gitm_bins):
+def make_fits(gitm_bins, lowcut=80, highcut=40, order=3):
     """
     calculate bandpass filter for all data previously read in.
 
@@ -39,7 +41,7 @@ def make_fits(gitm_bins):
     then just append the fits_full later.
 
     """
-    sos = make_filter()
+    sos = make_filter(lowcut, highcut, order)
 
     filtered_arr = signal.sosfiltfilt(sos, gitm_bins, axis=0)
     return filtered_arr
