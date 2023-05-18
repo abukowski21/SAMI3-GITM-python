@@ -421,7 +421,7 @@ def main(
                                       data, times, altout, latout, lonout,
                                       pbar=True)
 
-            if 1 not in [lat_finerinterps, lon_finerinterps, alt_finerinterps]:
+            if not all([i == 1 for i in [lat_finerinterps, lon_finerinterps, alt_finerinterps]]):
                 print('coarsening dataset')
                 ds = ds.coarsen(lat=lat_finerinterps,
                                 lon=lon_finerinterps,
