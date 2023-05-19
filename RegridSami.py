@@ -299,7 +299,7 @@ def main(
         minmax_alt=[100, 2200],
         lat_finerinterps=3,
         lon_finerinterps=3,
-        alt_finerinterps=1,
+        alt_finerinterps=2,
         split_by_var=False,
         single_file=False,
         split_by_time=True,
@@ -360,7 +360,6 @@ def main(
         idxs = idxs.astype(int)
 
         if save_weights:
-            # TODO: SAVE WEIGHTS
             weights.tofile(os.path.join(out_path, 'weights'))
             idxs.tofile(os.path.join(out_path, 'indexes'))
 
@@ -401,8 +400,6 @@ def main(
                     'lat': (['lat'], latout),
                     'lon': (['lon'], lonout)},)
                 varname = list(data['data'].keys())[0]
-
-                # t0 = 
                 
 
                 outv = np.zeros([data['data'][varname].shape[-1], len(weights)])

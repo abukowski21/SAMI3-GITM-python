@@ -172,13 +172,17 @@ def main(args):
                 print('Module numba not found.')
 
             weights_exist = False
-            if os.path.exists(os.path.join(output_dir, 'weights')):
-                weights_exist = True
+            if args.reuse_weights:
+                if os.path.exists(os.path.join(output_dir, 'weights')):
+                    weights_exist = True
+                    print('found weights to reuse')
+                else:
+                    print('No existing weight file found')
 
             if args.set_custom_grid:
                 RegridSami.main(sami_data_path=args.sami_dir,
                                 out_path=output_dir,
-                                save_weights=True,
+                                save_weights=weights_exist,
                                 use_saved_weights=weights_exist,
                                 dtime_sim_start=args.dtime_sim_start,
                                 lat_step=latstep,
@@ -195,7 +199,7 @@ def main(args):
             else:
                 RegridSami.main(sami_data_path=args.sami_dir,
                                 out_path=output_dir,
-                                save_weights=True,
+                                save_weights=weights_exist,
                                 use_saved_weights=weights_exist,
                                 dtime_sim_start=args.dtime_sim_start,
                                 use_ccmc=args.ccmc,
@@ -234,6 +238,12 @@ if __name__ == '__main__':
                         ' (not implemented yet)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Print out more information? (Default: False)')
+    parser.add_argument('--reuse_weights', action='store_true',
+                        default=False,
+                        help='Reuse weight & index file? (default False \n'
+                        ' If True, weights will be re-used if they exist.'
+                        ' If the file is not found, a new one will be written'
+                        ' to the --output_dir')
     parser.add_argument('-d', '--delete_bins', action='store_true',
                         help='Delete binary files after processing? '
                         'Caution: This is irreversible! (Default: False)')
