@@ -79,27 +79,27 @@ def generate_interior_points(in_cart, old_shape):
         for f in range(nf):
             for z in range(nz):
 
-                if lt == old_shape[0]-1:
+                if lt == old_shape[0] - 1:
                     l2 = 0
                 else:
-                    l2 = lt+1
+                    l2 = lt + 1
 
                 if z == 0:
                     z2 = -1
                 else:
-                    z2 = z-1
+                    z2 = z - 1
 
-                f2 = f+1
-                if f == old_shape[1]-1:
+                f2 = f + 1
+                if f == old_shape[1] - 1:
                     badbadbad.append([lt, f, z])
                     continue
 
-                cs = [[lt,  f,  z],
-                      [lt,  f,  z2],
-                      [l2, f,  z2],
-                      [l2, f,  z],
-                      [lt,  f2, z],
-                      [lt,  f2, z],
+                cs = [[lt, f, z],
+                      [lt, f, z2],
+                      [l2, f, z2],
+                      [l2, f, z],
+                      [lt, f2, z],
+                      [lt, f2, z],
                       [l2, f2, z2],
                       [l2, f2, z2]]
 
@@ -119,7 +119,7 @@ def generate_interior_points(in_cart, old_shape):
                         ys.append(in_cart[1, index])
                         zs.append(in_cart[2, index])
 
-                center = np.sum(xs)/8, np.sum(ys)/8, np.sum(zs)/8
+                center = np.sum(xs) / 8, np.sum(ys) / 8, np.sum(zs) / 8
 
                 centers.append(center)
                 coords.append(cs)
@@ -161,12 +161,12 @@ def make_weights(in_cart, out_cart, nearest, old_shape, coords):
         ys = in_cart[0, idxs]
         zs = in_cart[2, idxs]
 
-        d = np.sqrt((xs-out_cart[0, n])**2 + (ys -
-                        out_cart[1, n])**2 + (zs-out_cart[2, n])**2)
+        d = np.sqrt((xs - out_cart[0, n])**2 + (ys -
+                    out_cart[1, n])**2 + (zs - out_cart[2, n])**2)
 
-        weights[n] = 1/(d)
+        weights[n] = 1 / (d)
         src_idxs[n] = idxs
-        
+
     print('Done, found %i valid points' % np.sum(weights > 0))
 
     return weights, src_idxs
@@ -232,9 +232,6 @@ except ImportError:
         return outv
 
 
-
-
-
 def main(
         sami_data_path,
         out_path=None,
@@ -276,9 +273,9 @@ def main(
 
     in_cart = latlonalt_to_cart(grid['glat'], grid['glon'], grid['malt'])
 
-    latout = np.arange(-90, 90, lat_step/lat_finerinterps)
-    lonout = np.arange(0, 360, lon_step/lon_finerinterps)
-    altout = np.arange(200, 2200, alt_step/alt_finerinterps)
+    latout = np.arange(-90, 90, lat_step / lat_finerinterps)
+    lonout = np.arange(0, 360, lon_step / lon_finerinterps)
+    altout = np.arange(200, 2200, alt_step / alt_finerinterps)
 
     out_lats = []
     out_lons = []
@@ -291,13 +288,13 @@ def main(
                 out_lons.append(o)
                 out_alts.append(l1)
 
-    out_cart = latlonalt_to_cart(out_lats, out_lons, np.array(out_alts)+6371)
+    out_cart = latlonalt_to_cart(out_lats, out_lons, np.array(out_alts) + 6371)
 
     if use_saved_weights:
         weights = np.fromfile(os.path.join(out_path, 'weights'))
         idxs = np.fromfile(os.path.join(out_path, 'indexes'))
-        weights = weights.reshape([int(len(weights)/8), 8])
-        idxs = idxs.reshape([int(len(idxs)/8), 8])
+        weights = weights.reshape([int(len(weights) / 8), 8])
+        idxs = idxs.reshape([int(len(idxs) / 8), 8])
         idxs = idxs.astype(int)
         print('using weights from %s' % out_path)
 
@@ -339,31 +336,30 @@ def main(
             varname = data_files[ftype]
             print('reading in %s' % ftype)
 
-            
             data, times = SAMI.read_to_nparray(
                 sami_data_path, dtime_sim_start, cols=varname, pbar=False)
 
             ds = xr.Dataset(coords={
-                    'time': (['time'], times),
-                    'alt': (['alt'], altout),
-                    'lat': (['lat'], latout),
-                    'lon': (['lon'], lonout)},)
+                'time': (['time'], times),
+                'alt': (['alt'], altout),
+                'lat': (['lat'], latout),
+                'lon': (['lon'], lonout)},)
             varname = list(data['data'].keys())[0]
-            
 
             outv = np.zeros([data['data'][varname].shape[-1], len(weights)])
             outv = numba_do_apply_weights(data['data'][varname],
-                idxs, weights, outv)
+                                          idxs, weights, outv)
 
-            print('received weights from numba function, ',
-                  'writing & continuing')
+            print(
+                'received weights from numba function, writing & continuing',
+                flush=False)
 
             ds[varname] = (('time', 'lat', 'lon', 'alt'),
                            np.array(outv).reshape(
                 len(times), len(latout), len(lonout), len(altout)))
 
-
-            if not all([i == 1 for i in [lat_finerinterps, lon_finerinterps, alt_finerinterps]]):
+            if not all([i == 1 for i in [lat_finerinterps,
+                       lon_finerinterps, alt_finerinterps]]):
                 print('coarsening dataset')
                 ds = ds.coarsen(lat=lat_finerinterps,
                                 lon=lon_finerinterps,
