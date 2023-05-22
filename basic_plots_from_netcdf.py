@@ -44,7 +44,7 @@ def run_processing_options(ds,
         sos = make_filter()
         ds2 = xr.apply_ufunc(sosfiltfilt, sos, ds,
                              kwargs={"axis": 0},)
-        ds = 100*(ds - ds2)/ds
+        ds = 100 * (ds - ds2) / ds
 
     if 'transpose' in process_options:
         ds = ds.transpose()
@@ -68,12 +68,17 @@ def autoplot(
 
     # We will glob the directory for all files with the model name,
     #   and parse for the specified times.
-    
+
     file_list = glob.glob(os.path.join(data_dir, model + '*.nc'))
     file_list = np.sort(file_list)
-    
+
     if len(file_list) == 0:
-        raise ValueError('No files found in %s' % os.path.join(data_dir, model + '*.nc'))
+        raise ValueError(
+            'No files found in %s' %
+            os.path.join(
+                data_dir,
+                model +
+                '*.nc'))
     # trim file_list to only include files within time_lims
     if time_lims[1] == -1:
         time_lims[1] = len(file_list)
@@ -98,7 +103,7 @@ def autoplot(
     file_list = file_list[time_lims[0]:time_lims[1]]
 
     # Only grab data for the requested column(s)
-    if type(columns_to_plot) is str:
+    if isinstance(columns_to_plot, str):
         columns_to_plot = [columns_to_plot]
     ds0 = xr.open_dataset(file_list[0])
     drops = []
@@ -128,21 +133,20 @@ def autoplot(
     # look thru the process options:
     if process_options is not None:
         ds = run_processing_options(ds, process_options)
-        
+
     # check if output dir exists:
     a = ''
     for i in cut_dict.keys():
-        a += str(i) +'-'+ str(int(cut_dict[i])) + '_'
+        a += str(i) + '-' + str(int(cut_dict[i])) + '_'
     a = a[:-1]
     out_dir = os.path.join(output_dir, model, a)
     out_dir = out_dir.replace('//', '/')
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
         print('created directory: ', out_dir)
-    
 
     # Now plot the data with the cuts specified.
-    
+
     for var in columns_to_plot:
         for nplot in range(ds[loop_var].shape[0]):
             out_fname = os.path.join(out_dir,
@@ -323,8 +327,8 @@ if __name__ == '__main__':
             raise ValueError('alt_cut must be either 1 or 2 values.'
                              ' To run multple plots, interface with'
                              ' another script.')
-            
-    if type(args.loop_var) is not str:
+
+    if not isinstance(args.loop_var, str):
         if len(args.loop_var) > 1:
             raise ValueError('Can only loop over one variable at a time.')
         else:
@@ -341,12 +345,12 @@ if __name__ == '__main__':
         transparent to the user.
     """
 
-    if type(args.col) is not list:
+    if not isinstance(args.col, list):
         cols = [args.col]
     else:
         cols = args.col
 
-    if type(args.model) is not list:
+    if not isinstance(args.model, list):
         models = [args.model]
     else:
         models = args.model
