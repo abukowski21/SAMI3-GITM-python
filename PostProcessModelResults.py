@@ -65,7 +65,7 @@ def main(args):
             print('Attempting to postprocess...')
             gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/')]
 
-            cmd = './'+gitm_parent_dir+'/pGITM'
+            cmd = './' + gitm_parent_dir + '/pGITM'
             print('Running: {}'.format(cmd))
             if args.verbose:
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -227,7 +227,7 @@ if __name__ == '__main__':
     parser.add_argument('--low_mem', type=bool, default=True,
                         help='Process SAMI files in low memory mode?'
                         ' (NOTE: Memory usage is still 30GB+, without lowmem'
-                       ' the entire run is read in at once.) Default: True')
+                        ' the entire run is read in at once.) Default: True')
     parser.add_argument('-out', '--output_dir', type=str, default=None,
                         help='If you want to save the files to another'
                         ' directory, specify it here.')
