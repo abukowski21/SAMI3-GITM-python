@@ -14,7 +14,5 @@
         "--max-line-length","79",
         "--aggressive",
         "--aggressive",
-        "--aggressive",
-        "--line-length","79"
     ],
     "python.formatting.provider": "autopep8",}
