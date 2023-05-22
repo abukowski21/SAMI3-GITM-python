@@ -241,7 +241,7 @@ def main(
         cols='all',
         dtime_sim_start=None,
         lat_step=2,
-        lon_step=6,
+        lon_step=5,
         alt_step=50,
         minmax_alt=[100, 2200],
         lat_finerinterps=3,
