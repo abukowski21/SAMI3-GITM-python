@@ -317,7 +317,7 @@ def main(
         sami_og_vars = SAMI.sami_og_vars
         if cols == 'all':
             cols = sami_og_vars.values()
-        elif type(cols) is str:
+        elif isinstance(cols, str):
             cols = [cols]
 
         # First make sure all cols are valid
@@ -347,12 +347,11 @@ def main(
             varname = list(data['data'].keys())[0]
 
             outv = np.zeros([data['data'][varname].shape[-1], len(weights)])
-            outv = numba_do_apply_weights(data['data'][varname],
+            outv = numba_do_apply_weights(data['data'][varname].copy(),
                                           idxs, weights, outv)
 
             print(
-                'received weights from numba function, writing & continuing',
-                flush=False)
+                'received weights from numba function, writing & continuing')
 
             ds[varname] = (('time', 'lat', 'lon', 'alt'),
                            np.array(outv).reshape(
@@ -441,10 +440,6 @@ if __name__ == '__main__':
                         help='Minimum altitude in km')
     parser.add_argument('--maxalt', type=float, default=2200,
                         help='Maximum altitude in km')
-    parser.add_argument('--numba', action='store_true', default=False,
-                        help='Use numba to speed up the interpolation?'
-                        ' Will take all cpu cores & a lot of memory,'
-                        ' but runs much faster than native python.')
 
     args = parser.parse_args()
 
