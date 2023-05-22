@@ -448,6 +448,7 @@ def process_all_to_cdf(gitm_dir,
                        drop_before=None,
                        drop_after=None,
                        skip_existing=False,
+                       file_types='all',
                        use_ccmc=True,
                        ):
     """Process all GITM .bin files in a directory to .cdf files.
@@ -480,11 +481,22 @@ def process_all_to_cdf(gitm_dir,
         print('Not dropping Ghost cells.',
               'This will cause issues if you are processing both 3D and 2D',
               'files. Not robust enough to deal with that, unfortunately.')
+    else:
+        print('dropping ghost cells')
 
     if out_dir is None:
         out_dir = gitm_dir
 
-    files = np.sort(glob.glob(os.path.join(gitm_dir, '*.bin')))
+    if file_types == 'all':
+        files = np.sort(glob.glob(os.path.join(gitm_dir, '*.bin')))
+    else:
+        if isinstance(file_types, str):
+            file_types = [file_types]
+        files = []
+        for f in file_types:
+            files.extend(
+                glob.glob(os.path.join(gitm_dir, '%s*.bin' % f)))
+        files = np.sort(files)
 
     if drop_after is not None or drop_before is not None:
         times = np.array(gitm_times_from_filelist(files))
@@ -513,7 +525,7 @@ def process_all_to_cdf(gitm_dir,
         import warnings
         warnings.warn(
             '\nThere are %i existing netcdfs in this directory,\n'
-            ' but only %i should be made. This may be because you\n'
+            ' but %i should be made. This may be because you\n'
             ' have already processed some of these files.\n'
             ' It is possible that some files have been deleted,\n'
             ' or that the writing of a file was interrupted.\n'
@@ -529,8 +541,17 @@ def process_all_to_cdf(gitm_dir,
     to_remove = []
 
     for fileend in indiv_ends:
-        files_here = glob.glob(gitm_dir + '/*' + fileend)
 
+        if file_types == 'all':
+            files_here = glob.glob(gitm_dir + '/*' + fileend)
+        else:
+            files_here = []
+            for filetype in file_types:
+                files_here.extend(
+                    glob.glob(
+                        os.path.join(
+                            gitm_dir,
+                            filetype + '*' + fileend)))
         # make sure 3DALL files are first:
         if len(files_here) > 1:
             files_here = np.flip(np.sort(files_here))
