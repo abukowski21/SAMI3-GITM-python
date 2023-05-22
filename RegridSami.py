@@ -247,6 +247,7 @@ def main(
         lat_finerinterps=3,
         lon_finerinterps=3,
         alt_finerinterps=2,
+        out_coord_file=None,
         split_by_var=False,
         single_file=False,
         split_by_time=True,
@@ -273,22 +274,33 @@ def main(
 
     in_cart = latlonalt_to_cart(grid['glat'], grid['glon'], grid['malt'])
 
-    latout = np.arange(-90, 90, lat_step / lat_finerinterps)
-    lonout = np.arange(0, 360, lon_step / lon_finerinterps)
-    altout = np.arange(200, 2200, alt_step / alt_finerinterps)
+    if out_coord_file is None:
+        latout = np.arange(-90, 90, lat_step / lat_finerinterps)
+        lonout = np.arange(0, 360, lon_step / lon_finerinterps)
+        altout = np.arange(200, 2200, alt_step / alt_finerinterps)
 
-    out_lats = []
-    out_lons = []
-    out_alts = []
+        out_lats = []
+        out_lons = []
+        out_alts = []
 
-    for a in latout:
-        for o in lonout:
-            for l1 in altout:
-                out_lats.append(a)
-                out_lons.append(o)
-                out_alts.append(l1)
+        for a in latout:
+            for o in lonout:
+                for l1 in altout:
+                    out_lats.append(a)
+                    out_lons.append(o)
+                    out_alts.append(l1)
 
-    out_cart = latlonalt_to_cart(out_lats, out_lons, np.array(out_alts) + 6371)
+        out_cart = latlonalt_to_cart(
+            out_lats, out_lons, np.array(out_alts) + 6371)
+
+    else:
+        ds_out = xr.open_dataset(out_coord_file)
+        latout = ds_out['lat'].values
+        lonout = ds_out['lon'].values
+        altout = ds_out['alt'].values
+
+        out_cart = latlonalt_to_cart(
+            altout, lonout, np.array(altout) + 6371)
 
     if use_saved_weights:
         weights = np.fromfile(os.path.join(out_path, 'weights'))
@@ -369,7 +381,7 @@ def main(
                 for varname in ds.data_vars:
                     ds.to_netcdf(
                         os.path.join(out_path, '%s' % varname))
-            elif single_file:
+            elif single_file or out_coord_file is not None:
                 ds.to_netcdf(os.path.join(
                     out_path, 'sami-regridded'), mode='a')
             elif split_by_time:
