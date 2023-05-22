@@ -87,7 +87,8 @@ def main(args):
 
             else:
                 raise ValueError(
-                    'netCDF files already exist in {}'.format(output_dir),)
+                    'netCDF files already exist in {}'.format(output_dir),
+                    ' Run with --replace to overwrite.')
 
         GITM.process_all_to_cdf(
             gitm_dir=args.gitm_dir,
@@ -97,6 +98,7 @@ def main(args):
             drop_ghost_cells=args.ghost_cells,
             progress_bar=args.progress,
             use_ccmc=args.ccmc,
+            file_types=args.gitm_types,
         )
 
     if psami:
@@ -221,6 +223,9 @@ if __name__ == '__main__':
     parser.add_argument('--sami_type', type=str, default='all',
                         help='Which SAMI data to process? (Default: all)'
                         '(Options: "all", "raw", "regrid")')
+    parser.add_argument('--gitm_types', type=str, default='all',
+                        nargs='*', help='Which GITM data to process?'
+                        ' (EX: 3DALL, 3DNEU, etc.) (Default: all)')
     parser.add_argument('--set_custom_grid', type=bool, default=False,
                         help='Set a custom grid for SAMI regridding?'
                         ' Default: False')
@@ -248,8 +253,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--delete_bins', action='store_true',
                         help='Delete binary files after processing? '
                         'Caution: This is irreversible! (Default: False)')
-    parser.add_argument('-g', '--ghost_cells', action='store',
-                        default=True, type=bool,
+    parser.add_argument('-g', '--ghost_cells', action='store_false',
                         help='Drop Ghost Cells? (Default: True).'
                         ' Not fully implemented yet.')
     parser.add_argument('-p', '--progress', action='store_true',
@@ -262,6 +266,8 @@ if __name__ == '__main__':
                         'YYYYMMDDHHmmSS (Optional. added as attr to netCDFs)')
 
     args = parser.parse_args()
+
+    print(args.ghost_cells)
 
     opts = ['all', 'raw', 'regrid']
     # make sure args.sami_type is one of opts
