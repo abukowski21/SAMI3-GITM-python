@@ -160,7 +160,8 @@ def main(args):
                 OVERWRITE=args.replace,
                 low_mem=args.low_mem,
                 delete_raw=args.delete_bins,
-                dtime_storm_start=args.dtime_event_start,)
+                dtime_storm_start=args.dtime_event_start,
+                skip_time_check=args.skip_time_check)
 
         if do_write_regrid:
             print('attempting to regrid!')
@@ -197,7 +198,8 @@ def main(args):
                                 use_ccmc=args.ccmc,
                                 split_by_time=args.ccmc,
                                 split_by_var=not args.ccmc,
-                                numba=numba_installed and not args.low_mem,)
+                                numba=numba_installed and not args.low_mem,
+                                skip_time_check=args.skip_time_check)
             else:
                 RegridSami.main(sami_data_path=args.sami_dir,
                                 out_path=output_dir,
@@ -208,6 +210,7 @@ def main(args):
                                 split_by_time=args.ccmc,
                                 split_by_var=not args.ccmc,
                                 numba=numba_installed and not args.low_mem,
+                                skip_time_check=args.skip_time_check,
                                 )
 
     return
@@ -256,6 +259,10 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--ghost_cells', action='store_false',
                         help='Drop Ghost Cells? (Default: True).'
                         ' Not fully implemented yet.')
+    parse.add_argument('--skip_time_check', action='store_true',
+                        help='Skip verifying accuracy of times. Useful when'
+                        ' SAMI has been configured to skip some outputs '
+                        '(hrpr != 0)')
     parser.add_argument('-p', '--progress', action='store_true',
                         help='Show progress bar? (Default: False)')
     parser.add_argument('--dtime_sim_start', type=str, default=None,

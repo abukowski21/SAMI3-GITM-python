@@ -184,7 +184,7 @@ def get_postprocessed_grid(sami_data_path):
 def make_times(nt, sami_data_path, dtime_sim_start,
                dtime_storm_start=None,
                hrs_before_storm=None, hrs_after_storm=None,
-               need_help=False):
+               need_help=False, skip_time_check=False):
     """Make a list of datetime objects for each time step from
             the time.dat file.
 
@@ -250,10 +250,12 @@ def make_times(nt, sami_data_path, dtime_sim_start,
 
     truths = np.array([pd.Timestamp(times_list[t]).round(
         'T') == times[t] for t in range(len(times))])
-    if truths.sum() != len(truths):
+    if truths.sum() != len(truths) and not skip_time_check:
         raise ValueError(
             'The times are wrong! Somehow this needs to be fixed.'
             'probably outputting fake files again... \n')
+    elif skip_time_check:
+        times = times_list
 
     # maybe chop the time lists, depending on if the plot start/end are given.
     # adjusted to allow for -1 in plot start/end deltas (plot all times)
@@ -337,7 +339,8 @@ def get_sami_grid(sami_data_path, nlt, nf, nz):
 def read_to_nparray(sami_data_path, dtime_sim_start,
                     dtime_storm_start=None,
                     t_start_idx=None, t_end_idx=None, pbar=False,
-                    cols='all', need_help=False):
+                    cols='all', need_help=False,
+                    skip_time_check=False):
     """Automatically read in SAMI data.
 
     Args:
@@ -399,9 +402,10 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     if dtime_storm_start is not None:
         times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
             nt, sami_data_path, dtime_sim_start, dtime_storm_start,
-            t_start_idx, t_end_idx, need_help)
+            t_start_idx, t_end_idx, need_help, skip_time_chek=skip_time_check)
     else:
-        times = make_times(nt, sami_data_path, dtime_sim_start)
+        times = make_times(nt, sami_data_path, dtime_sim_start,
+            skip_time_check=skip_time_check)
         start_idx = 0
         end_idx = len(times)
 
@@ -498,7 +502,8 @@ def read_sami_dene_tec_MAG_GRID(sami_data_path, reshape=True):
 
     times = make_times(
         nt, sami_data_path,
-        dtime_sim_start=datetime.datetime(2011, 5, 20))
+        dtime_sim_start=datetime.datetime(2011, 5, 20),
+        skip_time_check=skip_time_check)
 
     return sami_data, np.array(times)
 
@@ -570,7 +575,7 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
                        dtime_storm_start=None,
                        start_dtime=None, end_dtime=None,
                        start_idx=None, end_idx=None,
-                       progress_bar=False):
+                       progress_bar=False, skip_time_check=False):
     """Read in (raw) SAMI data and return an xarray dataset.
         ! This only works on raw, pre-processed SAMI data !
             (not TEC or anything like that)
@@ -608,7 +613,8 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
     import xarray as xr
 
     nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
-    times = make_times(nt, sami_data_path, dtime_sim_start)
+    times = make_times(nt, sami_data_path, dtime_sim_start,
+        skip_time_check=skip_time_check)
     times = np.array(times)
     grid = get_sami_grid(sami_data_path, nlt, nf, nz)
 
@@ -708,7 +714,8 @@ def process_all_to_cdf(sami_data_path,
                        delete_raw=False,
                        append_files=False,
                        low_mem=False,
-                       cols='all'
+                       cols='all',
+                       skip_time_check=False
                        ):
     """Process SAMI binary files to netcdf format.
 
@@ -781,7 +788,8 @@ def process_all_to_cdf(sami_data_path,
 
             nz, nf, nlt, nt = get_grid_elems_from_parammod(
                 sami_data_path)
-            times = make_times(nt, sami_data_path, dtime_sim_start)
+            times = make_times(nt, sami_data_path, dtime_sim_start,
+                skip_time_check=skip_time_check)
             # So this gets complicated. First check the files.
             # Then go ahead and process...
 
@@ -1132,7 +1140,8 @@ def auto_read(sami_dir,
                                 dtime_storm_start=dtime_storm_start,
                                 start_dtime=start_dtime,
                                 end_dtime=end_dtime, start_idx=start_idx,
-                                end_idx=end_idx)
+                                end_idx=end_idx,
+                                skip_time_check=skip_time_check)
         return ds
 
     else:
@@ -1140,6 +1149,7 @@ def auto_read(sami_dir,
                                     dtime_storm_start=dtime_storm_start,
                                     t_end_idx=start_idx,
                                     t_start_idx=end_idx,
-                                    pbar=progress_bar, cols=cols,)
+                                    pbar=progress_bar, cols=cols,
+                                    skip_time_check=skip_time_check)
 
         return sami_data

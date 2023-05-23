@@ -252,7 +252,8 @@ def main(
         single_file=False,
         split_by_time=True,
         use_ccmc=False,
-        numba=False):
+        numba=False,
+        skip_time_check=False):
     """Interpolate SAMI3 outputs to a new grid.
 
     Args:
@@ -415,7 +416,8 @@ def main(
             print('reading in %s' % ftype)
 
             data, times = SAMI.read_to_nparray(
-                sami_data_path, dtime_sim_start, cols=varname, pbar=False)
+                sami_data_path, dtime_sim_start, cols=varname, pbar=False,
+                skip_time_check=skip_time_check)
 
             ds = xr.Dataset(coords={
                 'time': (['time'], times),
@@ -483,6 +485,10 @@ if __name__ == '__main__':
     parser.add_argument('--cols', type=str, default='all', nargs='*',
                         help='columns to read from sami data. Defaults to all'
                         'input as a list with spaces between.')
+    parse.add_argument('--skip_time_check', action='store_true',
+                        help='Skip verifying accuracy of times. Useful when'
+                        ' SAMI has been configured to skip some outputs '
+                        '(hrpr != 0)')
     parser.add_argument('--split_by_var', action='store', default=True,
                         type=bool,
                         help='Split output files by variable? Default: True')
@@ -583,4 +589,5 @@ if __name__ == '__main__':
          alt_finerinterps=altfiner,
          split_by_var=args.split_by_var,
          single_file=args.single_file,
-         numba=args.numba)
+         numba=args.numba
+         skip_time_check=args.skip_time_check)
