@@ -589,5 +589,5 @@ if __name__ == '__main__':
          alt_finerinterps=altfiner,
          split_by_var=args.split_by_var,
          single_file=args.single_file,
-         numba=args.numba
+         numba=args.numba,
          skip_time_check=args.skip_time_check)
