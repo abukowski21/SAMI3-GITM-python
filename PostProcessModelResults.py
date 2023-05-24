@@ -259,7 +259,7 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--ghost_cells', action='store_false',
                         help='Drop Ghost Cells? (Default: True).'
                         ' Not fully implemented yet.')
-    parse.add_argument('--skip_time_check', action='store_true',
+    parser.add_argument('--skip_time_check', action='store_true',
                         help='Skip verifying accuracy of times. Useful when'
                         ' SAMI has been configured to skip some outputs '
                         '(hrpr != 0)')
