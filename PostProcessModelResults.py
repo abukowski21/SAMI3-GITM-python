@@ -257,7 +257,7 @@ if __name__ == '__main__':
                         help='Delete binary files after processing? '
                         'Caution: This is irreversible! (Default: False)')
     parser.add_argument('-g', '--ghost_cells', action='store_false',
-                        help='Drop Ghost Cells? (Default: True).'
+                        help='Retain GITM Ghost Cells? (Default: True).'
                         ' Not fully implemented yet.')
     parser.add_argument('--skip_time_check', action='store_true',
                         help='Skip verifying accuracy of times. Useful when'
