@@ -3,12 +3,11 @@ import glob
 import os
 
 import numpy as np
-from aetherpy.io import read_routines
+
 from tqdm.auto import tqdm
 from struct import unpack
 import xarray as xr
 from utility_programs.utils import make_ccmc_name
-
 
 def read_bin_to_nparrays(gitm_dir,
                          gitm_file_pattern='3DALL*.bin',
@@ -51,6 +50,22 @@ def read_bin_to_nparrays(gitm_dir,
                     list of variables
 
     """
+    
+    try:
+        from aetherpy.io import read_routines
+    except ModuleNotFoundError:
+        
+        try:
+            import read_from_aether as read_routines
+            
+        except ModuleNotFoundError:
+            import sys
+            sys.path.insert(0, 'utility_programs/read_routines')
+            import read_from_aether as read_routines
+        
+    except:
+        print("Could not find Aetherpy. Could not import new "
+             "aetherpy read file. uhoh")
 
     flist = np.sort(glob.glob(os.path.join(gitm_dir, gitm_file_pattern)))
     if len(flist) == 0:
