@@ -276,8 +276,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print(args.ghost_cells)
-
     opts = ['all', 'raw', 'regrid']
     # make sure args.sami_type is one of opts
     if args.sami_type not in opts:
@@ -307,6 +305,6 @@ if __name__ == '__main__':
         raise ValueError('You cannot set a custom grid for raw SAMI files,'
                          ' since nothing is being regridded.')
 
-    print(args.output_dir)
+    print('Outputting to: \n', args.output_dir)
 
     main(args)
