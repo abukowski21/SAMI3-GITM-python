@@ -4,10 +4,12 @@ Process GITM & SAMI data to NetCDF format.
 - Can use just one model output, if preferred.
 - More functionality is available in the individual model modules.
 - This program will process every column into netCDF files by time.
+- SAMI is regridded according to the default values in RegridSami.main()
+  - This can be adjusted with a custom grid, or use the individual model's 
+	post-processing routines for more fine control.
 
-##TODO:
-    - Fix to postprocess SAMI correctly.
-    - Double check GITM is postprocessing correctly.
+## TODO:
+- Automatically process all model outputs from a given directory.
 
 """
 
@@ -274,8 +276,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print(args.ghost_cells)
-
     opts = ['all', 'raw', 'regrid']
     # make sure args.sami_type is one of opts
     if args.sami_type not in opts:
@@ -305,6 +305,6 @@ if __name__ == '__main__':
         raise ValueError('You cannot set a custom grid for raw SAMI files,'
                          ' since nothing is being regridded.')
 
-    print(args.output_dir)
+    print('Outputting to: \n', args.output_dir)
 
     main(args)

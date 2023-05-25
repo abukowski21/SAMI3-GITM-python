@@ -1,6 +1,12 @@
-# Postprocess SAMI data to be read into xarrays.
+"""
+Postprocess SAMI data to be read into xarrays.
 
-# Data will be interpolated to a standard grographic grid when possible.
+- Data will be interpolated to a standard grographic grid when possible.
+- SAMI model results can be regridded to geographic grid or written
+	with the same indexing as raw files.
+- Can specify to write one file for the whole run or to split_by_(var/time)
+
+"""
 
 
 import xarray as xr
