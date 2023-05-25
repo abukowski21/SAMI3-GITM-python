@@ -12,9 +12,15 @@ All work is being done on the `develop` branch. Here's how to get to it:
 `cd` into it
 
 `git checkout develop`
+> (or use `git checkout -b develop origin/develop` if using an older version of git)
+
+Then check the README file for updated feature list & further instructions.
+
+
+
 
 ----
 
-Feel free to fork this, make changes you like to the existing files & functions, or make your own stuff! Some ideas on changes that need to be made:
+Feel free to fork this, make changes you like to the existing files & functions, or make your own stuff! 
 
 
