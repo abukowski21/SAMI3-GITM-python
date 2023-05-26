@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 # Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
 # Full license can be found in License.md
-"""Routines to read Aether files."""
+"""Routines to read Aether files.
+
+Taken from github.com/AetherModel/Aetherpy
+
+
+"""
 
 import datetime as dt
 import numpy as np
