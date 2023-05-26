@@ -461,9 +461,12 @@ def main(
             elif split_by_time:
                 for t in ds.time.values:
                     fname = make_ccmc_name('SAMI', t, data_type='REGRID')
-                    ds.sel(time=t).to_netcdf(
-                        os.path.join(out_path, fname), mode='a')
-
+                    try:
+                        ds.sel(time=t).to_netcdf(
+                            os.path.join(out_path, fname), mode='a')
+                    except FileNotFoundError:
+                        ds.sel(time=t).to_netcdf(
+                            os.path.join(out_path, fname), )
             del data
 
     return
