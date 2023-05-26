@@ -822,9 +822,13 @@ def process_all_to_cdf(sami_data_path,
                     start_dtime=start_dtime,
                     end_dtime=end_dtime)
                 for nfile in range(len(times)):
-                    ds.isel(time=nfile).to_netcdf(
-                        file_list[nfile],
-                        mode='a')
+                    try:
+                        ds.isel(time=nfile).to_netcdf(
+                            file_list[nfile],
+                            mode='a')
+                    except FileNotFoundError:
+                        ds.isel(time=nfile).to_netcdf(
+                            file_list[nfile])
                     pbar2.update()
                 pbar.update()
                 did_one = True
