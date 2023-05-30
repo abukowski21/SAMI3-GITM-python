@@ -159,3 +159,43 @@ def draw_map(
             'save_or_show input is invalid. Accepted inputs are "save" or',
             '"show", you gave ',
             save_or_show,)
+
+
+def panel_plot(da,
+               x='time',
+               y='lat',
+               wrap_col='lon',
+               plot_vals=[0, 45, 90, 135, 180, 225, 270, 315],
+               do_map=False,
+               col_wrap=2,
+               suptitle=None,
+               vlims=2,
+               cmap='bwr',
+               out_fname=None,):
+
+    if do_map:
+        p = da.sel(wrap_col=plot_vals, method='nearest').plot(
+            x=x, y=y, col=wrap_col,
+            transform=ccrs.PlateCarree(),
+            subplot_kws={"projection": ccrs.PlateCarree(),
+                         },
+            col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
+            cmap=cmap, aa=True)
+        for ax in p.axs.flatten():
+            ax.coastlines(alpha=0.6)
+            ax.gridlines(color='black', alpha=0.5, linestyle='--')
+
+    else:
+        p = da.sel(wrap_col=plot_vals, method='nearest').plot(
+            x=x, y=y, col=wrap_col,
+            col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
+            cmap=cmap, aa=True)
+
+    p.fig.suptitle(suptitle)
+
+    if out_name is None:
+        plt.show()
+        plt.close('all')
+    else:
+        plt.savefig(out_fname)
+        plt.close('all')
