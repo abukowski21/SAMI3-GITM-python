@@ -321,8 +321,6 @@ if __name__ == '__main__':
 
     args = args.parse_args()
 
-    print(args)
-
     main(directories=args.dirs,
          outdir=args.out_dir,
          prefixes=args.prefixes,
