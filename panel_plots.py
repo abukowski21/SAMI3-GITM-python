@@ -1,21 +1,17 @@
-import xarray as xr
-import numpy as np
-
+import argparse
+import glob
+import os
 from datetime import timedelta
 
 import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
 
+import utility_programs.filters as filters
+from utility_programs.plotting_routines import panel_plot
 from utility_programs.read_routines.GITM import auto_read as auto_read_gitm
 from utility_programs.read_routines.GITM import gitm_times_from_filelist
 from utility_programs.read_routines.SAMI import auto_read as auto_read_sami
-import utility_programs.filters as filters
-
-from utility_programs.plotting_routines import panel_plot
-
-import glob
-import os
-
-import argparse
 
 
 def get_fit(array, lowcut=80, highcut=40):
