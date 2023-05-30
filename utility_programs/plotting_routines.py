@@ -175,7 +175,7 @@ def panel_plot(da,
                out_fname=None,):
 
     if do_map:
-        p = da.isel(wrap_col=plot_vals).plot(
+        p = da.isel({wrap_col: plot_vals}).plot(
             x=x, y=y, col=wrap_col,
             transform=ccrs.PlateCarree(),
             subplot_kws={"projection": ccrs.PlateCarree(),
@@ -187,14 +187,14 @@ def panel_plot(da,
             ax.gridlines(color='black', alpha=0.5, linestyle='--')
 
     else:
-        p = da.sel(wrap_col=plot_vals, method='nearest').plot(
+        p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
             x=x, y=y, col=wrap_col,
             col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
             cmap=cmap, aa=True)
 
     p.fig.suptitle(suptitle)
 
-    if out_name is None:
+    if out_fname is None:
         plt.show()
         plt.close('all')
     else:
