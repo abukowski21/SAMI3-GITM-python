@@ -174,7 +174,7 @@ def panel_plot(da,
                out_fname=None,):
 
     if do_map:
-        p = da.sel(wrap_col=plot_vals, method='nearest').plot(
+        p = da.isel(wrap_col=plot_vals).plot(
             x=x, y=y, col=wrap_col,
             transform=ccrs.PlateCarree(),
             subplot_kws={"projection": ccrs.PlateCarree(),
