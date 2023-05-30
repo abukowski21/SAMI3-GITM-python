@@ -1,9 +1,7 @@
 import xarray as xr
-import cartopy.crs as ccrs
 import numpy as np
-from scipy import signal
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import matplotlib.pyplot as plt
 
@@ -14,13 +12,9 @@ import utility_programs.filters as filters
 
 from utility_programs.plotting_routines import panel_plot
 
-import gc
-
-from tqdm.auto import tqdm
 import glob
 import os
 
-import importlib
 import argparse
 
 
@@ -42,8 +36,6 @@ def main(
         start_plotting,
         end_plotting,
         outdir=None,
-        comparisons=False,
-        single_model=False,
         progress=True,
         use_dask=False,):
 
@@ -75,23 +67,25 @@ def main(
             for prefix in prefixes:
 
                 if 'sami' in prefix.lower():
-                    data[str(dirs_read) + '_sami'] = auto_read_sami(
+                    data[str(dirs_read) + '-sami'] = auto_read_sami(
                         fpath + prefix, cols=samicols,
-                        start_idx=start_idx, end_idx=end_idx, use_dask=use_dask)
+                        start_idx=start_idx, end_idx=end_idx,
+                        use_dask=use_dask)
                 elif 'gitm' in prefix.lower():
-                    data[str(dirs_read) + '_gitm'] = auto_read_gitm(
+                    data[str(dirs_read) + '-gitm'] = auto_read_gitm(
                         fpath + prefix, cols=gitmcols,
-                        start_idx=start_idx, end_idx=end_idx, use_dask=use_dask)
+                        start_idx=start_idx, end_idx=end_idx,
+                        use_dask=use_dask)
                 else:
                     raise ValueError('Prefix %s is not valid' % prefix)
             dirs_read += 1
 
     else:
         for fpath in directories:
-            data[str(dirs_read) + '_sami'] = auto_read_sami(
+            data[str(dirs_read) + '-sami'] = auto_read_sami(
                 fpath, cols=samicols,
                 start_idx=start_idx, end_idx=end_idx, use_dask=use_dask)
-            data[str(dirs_read) + '_gitm'] = auto_read_gitm(
+            data[str(dirs_read) + '-gitm'] = auto_read_gitm(
                 fpath, cols=gitmcols,
                 start_idx=start_idx, end_idx=end_idx, use_dask=use_dask)
             dirs_read += 1
@@ -284,16 +278,8 @@ if __name__ == '__main__':
         " plots of a single pt throughout time. Default: 'all'"
         " Change cut values in source code.")
 
-    args.add_argument(
-        '-single_model', action='store_true',
-        help='Plot only one model (or plots from each model individually).'
-        'Default: False')
-    args.add_argument(
-        '-comparisons', action='store_true',
-        help='Plot comparisons between several model runs. Default: False')
-
     args.add_argument('--samicols', type=str, nargs='*',
-                      default=['edens',],
+                      default=['edens'],
                       help="Which columns to plot from SAMI data."
                       "Default: ['edens',] (only reads SAMI_REGRID)")
     args.add_argument('--gitmcols', type=str, nargs='*',
@@ -329,6 +315,4 @@ if __name__ == '__main__':
          gitmcols=args.gitmcols,
          start_plotting=args.start_plotting,
          end_plotting=args.end_plotting,
-         single_model=args.single_model,
-         comparisons=args.comparisons,
          use_dask=args.dask,)
