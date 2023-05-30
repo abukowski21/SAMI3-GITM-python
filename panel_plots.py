@@ -66,12 +66,12 @@ def main(
                     data[str(dirs_read) + '-sami'] = auto_read_sami(
                         fpath + prefix, cols=samicols,
                         start_idx=start_idx, end_idx=end_idx,
-                        use_dask=use_dask)
+                        use_dask=use_dask, progress_bar=progress)
                 elif 'gitm' in prefix.lower():
                     data[str(dirs_read) + '-gitm'] = auto_read_gitm(
                         fpath + prefix, cols=gitmcols,
                         start_idx=start_idx, end_idx=end_idx,
-                        use_dask=use_dask)
+                        use_dask=use_dask, progress_bar=progress)
                 else:
                     raise ValueError('Prefix %s is not valid' % prefix)
             dirs_read += 1
@@ -79,10 +79,10 @@ def main(
     else:
         for fpath in directories:
             data[str(dirs_read) + '-sami'] = auto_read_sami(
-                fpath, cols=samicols,
+                fpath, cols=samicols, progress_bar=progress,
                 start_idx=start_idx, end_idx=end_idx, use_dask=use_dask)
             data[str(dirs_read) + '-gitm'] = auto_read_gitm(
-                fpath, cols=gitmcols,
+                fpath, cols=gitmcols, progress_bar=progress,
                 start_idx=start_idx, end_idx=end_idx, use_dask=use_dask)
             dirs_read += 1
 
