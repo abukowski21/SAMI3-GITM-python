@@ -9,6 +9,7 @@ from struct import unpack
 import xarray as xr
 from utility_programs.utils import make_ccmc_name
 
+
 def read_bin_to_nparrays(gitm_dir,
                          gitm_file_pattern='3DALL*.bin',
                          cols=['all'],
@@ -50,22 +51,22 @@ def read_bin_to_nparrays(gitm_dir,
                     list of variables
 
     """
-    
+
     try:
         from aetherpy.io import read_routines
     except ModuleNotFoundError:
-        
+
         try:
             import read_from_aether as read_routines
-            
+
         except ModuleNotFoundError:
             import sys
             sys.path.insert(0, 'utility_programs/read_routines')
             import read_from_aether as read_routines
-        
-    except:
+
+    except BaseException:
         print("Could not find Aetherpy. Could not import new "
-             "aetherpy read file. uhoh")
+              "aetherpy read file. uhoh")
 
     flist = np.sort(glob.glob(os.path.join(gitm_dir, gitm_file_pattern)))
     if len(flist) == 0:
@@ -675,7 +676,7 @@ def find_variable(gitm_dir, varname=None,
         ftype = f.split('/')[-1][:5]
         if ftype not in ftypes_checked:
             ftypes_checked.append(ftype)
-            binary = read_routines.read_gitm_file(f)
+            binary = read_bin_to_nparrays(f)
             for col in binary['vars']:
                 if col == varname:
                     if varhelp:
