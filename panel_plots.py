@@ -54,12 +54,12 @@ def main(
     # make times, get start & end idx.
     if isinstance(directories, str):
         directories = [directories]
-    all_files = glob.glob(directories[0] + 'GITM*.nc')
+    all_files = glob.glob(os.path.join(directories[0], 'GITM*.nc'))
     if len(all_files) == 0:
         all_files = glob.glob(directories[0] + 'SAMI_REGRID*.nc')
     if len(all_files) == 0:
         raise ValueError('No netCDF files found in %s' % directories[0])
-    all_times = gitm_times_from_filelist(np.sort(all_files))
+    all_times = np.sort(gitm_times_from_filelist(all_files))
 
     t_start = all_times[0] + timedelta(hours=start_plotting)
     t_end = all_times[0] + timedelta(hours=end_plotting)
@@ -74,7 +74,7 @@ def main(
         for fpath in directories:
             for prefix in prefixes:
 
-                if 'sami' in prefixes.lower():
+                if 'sami' in prefix.lower():
                     data[str(dirs_read) + '_sami'] = auto_read_sami(
                         fpath + prefix, cols=samicols,
                         start_idx=start_idx, end_idx=end_idx, use_dask=use_dask)
@@ -101,7 +101,7 @@ def main(
     alts = [225, 400, 660, 850]
     lons = np.linspace(0, 360, 7)[:-1]
     lats = np.linspace(-45, 45, 6)
-    afewtimes2 = [10, 20, 30, 40, 50, 60, 70, 80]
+    afewtimes = [10, 20, 30, 40, 50, 60, 70, 80]
     lonlatalt = [
         [0, 50, 550],
         [180 + 50, 40, 150],
@@ -119,7 +119,7 @@ def main(
         [320, -45, 600]]
 
     # Lon keos:
-    if cuts == ['all'] or lon in cuts:
+    if cuts == ['all'] or 'lon' in cuts:
         for a in alts:
             out_name = os.path.join(outdir, 'lon-keos-alt_%i' % int(a))
             # check if out_name directory exists:
@@ -135,7 +135,7 @@ def main(
                                 alt=a, method='nearest')),
                             x='time', y='lat', wrap_col='lon',
                             col_wrap=2, plot_vals=lons, suptitle=model_key,
-                            out_name=out_name + '/%s-%s.png' %
+                            out_fname=out_name + '/%s-%s.png' %
                             (model_key, s_col,))
                 if 'gitm' in model_key and a < 700:
                     for g_col in gitmcols:
@@ -143,11 +143,11 @@ def main(
                             alt=a, method='nearest'),
                             x='time', y='lat', wrap_col='lon',
                             col_wrap=2, plot_vals=lons, suptitle=model_key,
-                            out_name=out_name + '/%s-%s.png' %
+                            out_fname=out_name + '/%s-%s.png' %
                             (model_key, g_col,))
 
     # Lat keos:
-    if cuts == ['all'] or lat in cuts:
+    if cuts == ['all'] or 'lat' in cuts:
         for a in alts:
             out_name = os.path.join(outdir, 'lat-keos-alt_%i' % int(a))
             # check if out_name directory exists:
@@ -163,7 +163,7 @@ def main(
                                 alt=a, method='nearest')),
                             x='time', y='lon', wrap_col='lat',
                             col_wrap=2, plot_vals=lats, suptitle=model_key,
-                            out_name=out_name + '/%s-%s.png' %
+                            out_fname=out_name + '/%s-%s.png' %
                             (model_key, s_col,))
                 if 'gitm' in model_key and a < 700:
                     for g_col in gitmcols:
@@ -171,11 +171,11 @@ def main(
                             alt=a, method='nearest'),
                             x='time', y='lon', wrap_col='lat',
                             col_wrap=2, plot_vals=lats, suptitle=model_key,
-                            out_name=out_name + '/%s-%s.png' %
+                            out_fname=out_name + '/%s-%s.png' %
                             (model_key, g_col,))
 
     # Maps:
-    if cuts == ['all'] or alt in cuts:
+    if cuts == ['all'] or 'alt' in cuts:
         for a in alts:
             out_name = os.path.join(outdir, 'maps-alt_%i' % int(a))
             # check if out_name directory exists:
@@ -193,7 +193,7 @@ def main(
                             do_map=True,
                             plot_vals=afewtimes,
                             suptitle=model_key,
-                            out_name=out_name + '/%s-%s.png' %
+                            out_fname=out_name + '/%s-%s.png' %
                             (model_key, s_col,))
                 if 'gitm' in model_key and a < 700:
                     for g_col in gitmcols:
@@ -203,17 +203,17 @@ def main(
                             do_map=True,
                             plot_vals=afewtimes,
                             suptitle=model_key,
-                            out_name=out_name + '/%s-%s.png' %
+                            out_fname=out_name + '/%s-%s.png' %
                             (model_key, g_col,))
 
     # Single Point plots:
 
     nrows = len(directories)
 
-    for plotvar in (gitmcol + samicol):
-        if plotvar in samicol:
+    for plotvar in (gitmcols + samicols):
+        if plotvar in samicols:
             model = 'sami'
-        elif plotvar in gitmcol:
+        elif plotvar in gitmcols:
             model = 'gitm'
         else:
             raise ValueError(plotvar, 'not found in model outputs')
@@ -226,16 +226,16 @@ def main(
                                     (model, plotvar, ilon, ilat, ialt))
 
             for row in range(nrows):
-                get_diffs(data[row + '-' + model][plotvar].sel(
+                get_diffs(data[str(row) + '-' + model][plotvar].sel(
                     lon=ilon, alt=ialt, lat=ilat, method='nearest')).plot(
-                    ax=axs[row, 0], label=line)
+                    ax=axs[row, 0], label=str(row) + ' (diff)')
 
-                get_fit(data[row + '-' + model][plotvar].sel(
+                get_fit(data[str(row) + '-' + model][plotvar].sel(
                     lon=ilon, alt=ialt, lat=ilat, method='nearest')).plot(
-                    ax=axs[row, 1], label=line + ' (fit)')
-                data[row + '-' + model][plotvar].sel(
+                    ax=axs[row, 1], label=str(row) + ' (fit)')
+                data[str(row) + '-' + model][plotvar].sel(
                     lon=ilon, alt=ialt, lat=ilat, method='nearest').plot(
-                    ax=axs[row, 1], label=line + ' (raw)')
+                    ax=axs[row, 1], label=str(row) + ' (raw)')
 
             for ax in axs.flatten():
                 ax.legend()
@@ -324,7 +324,7 @@ if __name__ == '__main__':
     print(args)
 
     main(directories=args.dirs,
-         out_dir=args.out_dir,
+         outdir=args.out_dir,
          prefixes=args.prefixes,
          cuts=args.cuts,
          samicols=args.samicols,
