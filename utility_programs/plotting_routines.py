@@ -2,6 +2,7 @@ import os
 from matplotlib import pyplot as plt
 import geopandas
 import time
+from cartopy import crs as ccrs
 
 world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
 
