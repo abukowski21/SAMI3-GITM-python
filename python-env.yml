@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - r
 dependencies:
+  - python==3.10.11
   - scipy
   - xarray
   - tqdm
@@ -12,7 +13,6 @@ dependencies:
   - dask
   - h5netcdf
   - numba
-  - dask-jobqueue
   - ipykernel
   - xesmf
 prefix: /glade/work/abukowski/conda-envs/SAMI3-GITM
