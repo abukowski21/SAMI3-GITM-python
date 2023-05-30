@@ -279,7 +279,7 @@ if __name__ == '__main__':
                       help="Which columns to plot from SAMI data."
                       "Default: ['edens',] (only reads SAMI_REGRID)")
     args.add_argument('--gitmcols', type=str, nargs='*',
-                      default=['rho'],
+                      default=['Rho'],
                       help="Which columns to plot from GITM."
                       " Default: ['rho']  NOTE: cannot handle altitude"
                       " integrated quantities correctly.")
