@@ -199,44 +199,44 @@ def main(
     # Single Point plots:
 
     nrows = len(directories)
-
-    for plotvar in (gitmcols + samicols):
-        if plotvar in samicols:
-            model = 'sami'
-        elif plotvar in gitmcols:
-            model = 'gitm'
-        else:
-            raise ValueError(plotvar, 'not found in model outputs')
-
-        for pt in lonlatalt:
-            ilon, ilat, ialt = pt
-            fig, axs = plt.subplots(nrows=nrows, ncols=2,
-                                    figsize=(11, 1 + nrows * 4),)
-            out_name = os.path.join(outdir, 'single-point-%s-%s-%i-%i-%i' %
-                                    (model, plotvar, ilon, ilat, ialt))
-
-            for row in range(nrows):
-                get_diffs(data[str(row) + '-' + model][plotvar].sel(
-                    lon=ilon, alt=ialt, lat=ilat, method='nearest')).plot(
-                    ax=axs[row, 0], label=str(row) + ' (diff)')
-
-                get_fit(data[str(row) + '-' + model][plotvar].sel(
-                    lon=ilon, alt=ialt, lat=ilat, method='nearest')).plot(
-                    ax=axs[row, 1], label=str(row) + ' (fit)')
-                data[str(row) + '-' + model][plotvar].sel(
-                    lon=ilon, alt=ialt, lat=ilat, method='nearest').plot(
-                    ax=axs[row, 1], label=str(row) + ' (raw)')
-
-            for ax in axs.flatten():
-                ax.legend()
-            fig.tight_layout()
-
-            if out_name is None:
-                plt.show()
-                plt.close('all')
+    if cuts == ['all'] or 'lonlatalt' in cuts:
+        for plotvar in (gitmcols + samicols):
+            if plotvar in samicols:
+                model = 'sami'
+            elif plotvar in gitmcols:
+                model = 'gitm'
             else:
-                plt.savefig(out_name)
-                plt.close('all')
+                raise ValueError(plotvar, 'not found in model outputs')
+
+            for pt in lonlatalt:
+                ilon, ilat, ialt = pt
+                fig, axs = plt.subplots(nrows=nrows, ncols=2,
+                                        figsize=(11, 1 + nrows * 4),)
+                out_name = os.path.join(outdir, 'single-point-%s-%s-%i-%i-%i' %
+                                        (model, plotvar, ilon, ilat, ialt))
+
+                for row in range(nrows):
+                    get_diffs(data[str(row) + '-' + model][plotvar].sel(
+                        lon=ilon, alt=ialt, lat=ilat, method='nearest')).plot(
+                        ax=axs[row, 0], label=str(row) + ' (diff)')
+
+                    get_fit(data[str(row) + '-' + model][plotvar].sel(
+                        lon=ilon, alt=ialt, lat=ilat, method='nearest')).plot(
+                        ax=axs[row, 1], label=str(row) + ' (fit)')
+                    data[str(row) + '-' + model][plotvar].sel(
+                        lon=ilon, alt=ialt, lat=ilat, method='nearest').plot(
+                        ax=axs[row, 1], label=str(row) + ' (raw)')
+
+                for ax in axs.flatten():
+                    ax.legend()
+                fig.tight_layout()
+
+                if out_name is None:
+                    plt.show()
+                    plt.close('all')
+                else:
+                    plt.savefig(out_name)
+                    plt.close('all')
 
     # exit?
 
@@ -267,7 +267,7 @@ if __name__ == '__main__':
     args.add_argument(
         '--cuts',
         type=str,
-        default='all', nargs='*',
+        default=['all'], nargs='*',
         help="Which cuts to use."
         " Options are 'all', 'alt', 'lon', 'lat', 'lonlatalt'"
         " lon/lat cut will make keos, alt makes maps, lonlatalt makes"
