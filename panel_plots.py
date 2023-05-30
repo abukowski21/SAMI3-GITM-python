@@ -200,6 +200,9 @@ def main(
 
     nrows = len(directories)
     if cuts == ['all'] or 'lonlatalt' in cuts:
+        if not os.path.isdir(os.path.join(outdir, 'single-point')):
+            os.makedirs(os.path.join(outdir, 'single-point'))
+
         for plotvar in (gitmcols + samicols):
             if plotvar in samicols:
                 model = 'sami'
@@ -212,8 +215,9 @@ def main(
                 ilon, ilat, ialt = pt
                 fig, axs = plt.subplots(nrows=nrows, ncols=2,
                                         figsize=(11, 1 + nrows * 4),)
-                out_name = os.path.join(outdir, 'single-point-%s-%s-%i-%i-%i' %
-                                        (model, plotvar, ilon, ilat, ialt))
+                out_name = os.path.join(
+                    outdir, 'single-point', '%s-%s-%i-%i-%i' %
+                    (model, plotvar, ilon, ilat, ialt))
 
                 for row in range(nrows):
                     get_diffs(data[str(row) + '-' + model][plotvar].sel(
