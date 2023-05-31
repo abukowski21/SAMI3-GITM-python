@@ -6,8 +6,10 @@ from datetime import timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
+import pandas as pd
 
 import utility_programs.filters as filters
+from utility_programs.utils import str_to_ut
 from utility_programs.plotting_routines import panel_plot
 from utility_programs.read_routines.GITM import auto_read as auto_read_gitm
 from utility_programs.read_routines.GITM import gitm_times_from_filelist
@@ -15,48 +17,104 @@ from utility_programs.read_routines.SAMI import auto_read as auto_read_sami
 
 
 def get_fit(array, lowcut=80, highcut=40):
+    """Wrapper for filters.make_fits to accept xarrays
+
+    Parameters
+    ----------
+    array : xarray dataset/dataarray
+        Array to perform the filter on
+    lowcut : int , optional, default 80
+        Lowcut of the bandpass filter (in minutes)
+    highcut : int, optional, default 40
+        Highcut of the bandpass (in minutes)
+
+    Returns
+    -------
+    xarray.dataset/dataarray
+        Xarray object with filter applied.
+
+        """
 
     return xr.apply_ufunc(filters.make_fits, array.load(), lowcut, highcut)
 
 
-def get_diffs(array):
-    return 100 * (array - get_fit(array)) / array
+def get_diffs(array, lowcut=80, highcut=40):
+    """Returns the % difference of the input array over background 
+    calculated with a bandpass filter.
+
+    Parameters
+    ----------
+    array : xarray dataset/dataarray
+        array to calculate on.
+    lowcut : int , optional, default 80
+        Lowcut of the bandpass filter (in minutes)
+    highcut : int, optional, default 40
+        Highcut of the bandpass (in minutes)
+
+    Returns
+    -------
+    xarray dataset/dataarray
+        Dataset/array after performing the bandpass fit.
+        """
+
+    return 100 * (array - get_fit(array, lowcut, highcut)) / array
 
 
 def main(
         directories,
-        prefixes,
         cuts,
-        samicols,
-        gitmcols,
         start_plotting,
         end_plotting,
+        samicols=['edens'],
+        gitmcols=['Rho'],
+        prefixes=None,
         outdir=None,
         progress=True,
-        use_dask=False,):
+        use_dask=False,
+        map_start_times=None,
+        cache_data=False, # Used for debugging and to speed up reads to later.
+        ):
 
     # read in data
     data = {}
     dirs_read = 0
 
-    # make times, get start & end idx.
-    if isinstance(directories, str):
-        directories = [directories]
-    all_files = glob.glob(os.path.join(directories[0], 'GITM*.nc'))
-    if len(all_files) == 0:
-        all_files = glob.glob(directories[0] + 'SAMI_REGRID*.nc')
-    if len(all_files) == 0:
-        raise ValueError('No netCDF files found in %s' % directories[0])
-    all_times = np.sort(gitm_times_from_filelist(all_files))
+    #check if cache is requested (and exists)
+    data_read_from_cache = False
+    if cache_data and len(directories) == 1:
+        if not directories[0].endswith('/'):
+            directory = directories[0] + '/'
+        for file in os.listdir(directory):
+            if use_dask:
+                data[file] = xr.open_mfdataset(directory+file)
+            else:
+                data[file] = xr.open_dataset(directory+file)
+        data_read_from_cache = True
+    # print(directories)
+        
+    if cache_data and not data_read_from_cache:
+        save_data_to = directories[-1]
+        directories = directories[:-1]
 
-    t_start = all_times[0] + timedelta(hours=start_plotting)
-    t_end = all_times[0] + timedelta(hours=end_plotting)
-    start_idx = np.argmin(np.abs(all_times - t_start))
-    end_idx = np.argmin(np.abs(all_times - t_end))
+    if not data_read_from_cache:
+        # make times, get start & end idx.
+        if isinstance(directories, str):
+            directories = [directories]
+        all_files = glob.glob(os.path.join(directories[0], 'GITM*.nc'))
+        if len(all_files) == 0:
+            all_files = glob.glob(directories[0] + 'SAMI_REGRID*.nc')
+        if len(all_files) == 0:
+            raise ValueError('No netCDF files found in %s' % directories[0])
+        all_times = np.sort(gitm_times_from_filelist(all_files))
+
+        t_start = all_times[0] + timedelta(hours=start_plotting)
+        t_end = all_times[0] + timedelta(hours=end_plotting)
+        start_idx = np.argmin(np.abs(all_times - t_start))
+        end_idx = np.argmin(np.abs(all_times - t_end))
+
 
     # check if GITM or SAMI, then read all the data in to a dict
-
-    if prefixes is not None:
+    if prefixes is not None and not data_read_from_cache:
         if not isinstance(prefixes, list):
             prefixes = [prefixes]
         for fpath in directories:
@@ -76,7 +134,7 @@ def main(
                     raise ValueError('Prefix %s is not valid' % prefix)
             dirs_read += 1
 
-    else:
+    elif not data_read_from_cache:
         for fpath in directories:
             data[str(dirs_read) + '-sami'] = auto_read_sami(
                 fpath, cols=samicols, progress_bar=progress,
@@ -85,6 +143,12 @@ def main(
                 fpath, cols=gitmcols, progress_bar=progress,
                 start_idx=start_idx, end_idx=end_idx, use_dask=use_dask)
             dirs_read += 1
+
+
+    if cache_data and not data_read_from_cache:
+        for file in data.keys():
+            data[file].to_netcdf(os.path.join(save_data_to, file),
+                encoding={'time': {"dtype": "int16"}})
 
     # loop thru all plots
     # Set up locations to plot:
@@ -166,6 +230,28 @@ def main(
 
     # Maps:
     if cuts == ['all'] or 'alt' in cuts:
+
+        if map_start_times is None:
+            map_times = [afewtimes for i in range(len(data.keys()))]
+        else:
+            map_times = []
+            if not data_read_from_cache:
+                all_files_started_read = start_idx
+                selected_times = all_times[start_idx:end_idx]
+            else:
+                start_idx = 0
+                # Get times from first value of data.keys()
+                selected_times = [pd.Timestamp(xr.decode_cf(
+                    data[list(data.keys())[0]]).time.values[i]) for i in range(
+                    len(data[list(data.keys())[0]].time))]
+                selected_times = np.array(selected_times)
+
+            
+            for plot_group in range(len(map_start_times)):
+                time_here = str_to_ut(map_start_times[plot_group])
+                idx_start = np.argmin(np.abs(time_here - selected_times))
+                map_times.append(idx_start + np.array(afewtimes))
+
         for a in alts:
             out_name = os.path.join(outdir, 'maps-alt_%i' % int(a))
             # check if out_name directory exists:
@@ -181,7 +267,7 @@ def main(
                                 alt=a, method='nearest')),
                             x='lon', y='lat', wrap_col='time',
                             do_map=True,
-                            plot_vals=afewtimes,
+                            plot_vals=map_times[int(model_key[0])],
                             suptitle=model_key,
                             out_fname=out_name + '/%s-%s.png' %
                             (model_key, s_col,))
@@ -191,14 +277,15 @@ def main(
                             alt=a, method='nearest'),
                             x='lon', y='lat', wrap_col='time',
                             do_map=True,
-                            plot_vals=afewtimes,
+                            plot_vals=map_times[int(model_key[0])],
                             suptitle=model_key,
                             out_fname=out_name + '/%s-%s.png' %
                             (model_key, g_col,))
 
     # Single Point plots:
-
-    nrows = len(directories)
+    ## Number of individual int's in data.keys()
+    nrows = np.unique([int(s) for s in str(data.keys()) if s.isdigit()])
+    # nrows = len(directories)
     if cuts == ['all'] or 'lonlatalt' in cuts:
         if not os.path.isdir(os.path.join(outdir, 'single-point')):
             os.makedirs(os.path.join(outdir, 'single-point'))
@@ -278,6 +365,15 @@ if __name__ == '__main__':
         " plots of a single pt throughout time. Default: 'all'"
         " Change cut values in source code.")
 
+    args.add_argument(
+        '--map_start_times',
+        type=str,
+        nargs='*',
+        help='When making maps out of data in several directories, you can'
+        ' specify a datetime (in YYYMMDDHHMMSS format [will be padded with 0s'
+        ' so 20110521 is valid]) to be included,'
+        ' otherwise, plots will be made according to parameters set in here.')
+
     args.add_argument('--samicols', type=str, nargs='*',
                       default=['edens'],
                       help="Which columns to plot from SAMI data."
@@ -305,6 +401,12 @@ if __name__ == '__main__':
         '--dask', action='store_true',
         help='Use dask to read in data. Default: False')
 
+    args.add_argument(
+        '--cache_data',action='store_true',
+        help='Cache data to make reads faster. Set directories to a single'
+        ' string to read from cached data. If multiple dirs are given,'
+        ' data will be written to the LAST listed directory!')
+
     args = args.parse_args()
 
     main(directories=args.dirs,
@@ -315,4 +417,6 @@ if __name__ == '__main__':
          gitmcols=args.gitmcols,
          start_plotting=args.start_plotting,
          end_plotting=args.end_plotting,
-         use_dask=args.dask,)
+         use_dask=args.dask,
+         map_start_times=args.map_start_times,
+         cache_data=args.cache_data)
