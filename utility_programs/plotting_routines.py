@@ -3,6 +3,12 @@ from matplotlib import pyplot as plt
 import geopandas
 import time
 from cartopy import crs as ccrs
+try:
+    import utils
+except ModuleNotFoundError:
+    from utility_programs import utils
+import numpy as np
+import pandas as pd
 
 world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
 
@@ -168,11 +174,14 @@ def panel_plot(da,
                wrap_col='lon',
                plot_vals=[0, 45, 90, 135, 180, 225, 270, 315],
                do_map=False,
-               col_wrap=2,
+               col_wrap=4,
                suptitle=None,
                vlims=2,
                cmap='bwr',
-               out_fname=None,):
+               out_fname=None,
+               isel_plotvals=False,
+               tight_layout=False,
+               ):
 
     if do_map:
         p = da.isel({wrap_col: plot_vals}).plot(
@@ -186,13 +195,22 @@ def panel_plot(da,
             ax.coastlines(alpha=0.6)
             ax.gridlines(color='black', alpha=0.5, linestyle='--')
 
-    else:
+    elif not isel_plotvals:
         p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
             x=x, y=y, col=wrap_col,
             col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
             cmap=cmap, aa=True)
 
+    else:
+        p = da.isel({wrap_col: plot_vals}).plot(
+            x=x, y=y, col=wrap_col,
+            col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
+            cmap=cmap, aa=True)
+
     p.fig.suptitle(suptitle)
+
+    if tight_layout:
+        p.fig.tight_layout()
 
     if out_fname is None:
         plt.show()
@@ -200,3 +218,62 @@ def panel_plot(da,
     else:
         plt.savefig(out_fname)
         plt.close('all')
+
+
+def panel_with_lt(da,
+                  x='time',
+                  y='lat',
+                  wrap_col='lon',
+                  lons=[0, 45, 90, 135, 180, 225, 270, 315],
+                  do_map=False,
+                  col_wrap=4,
+                  suptitle=None,
+                  figsize=None,
+                  vlims=None,
+                  cmap='bwr',
+                  out_fname=None,
+                  isel_plotvals=False,
+                  tight_layout=False,):
+    
+    lons = np.array(lons).reshape(int(len(lons)/col_wrap), col_wrap)
+    
+    fig, axs = plt.subplots(nrows=lons.shape[0], ncols=lons.shape[1], sharey=True)
+    if figsize is None:
+        fig.set_size_inches([3*col_wrap + 1, axs.shape[0]*3])
+    else:
+        fig.set_size_inches(figsize)
+        
+    for i in np.ndindex(lons.shape):
+        j = da.sel({wrap_col: lons[i]}, method='nearest').copy()
+        if vlims is None:
+            im = j.plot(x=x, y=y, ax = axs[i], cmap=cmap)
+        else:
+            im = j.plot(x=x, y=y, ax=axs[i], vmin=-vlims, vmax=vlims, cmap=cmap)
+            
+        
+        axs[i].set_xlabel('Local Time (Hours)')
+        tick_locs = axs[i].get_xticks()
+        axs[i].set_xticks(tick_locs)
+        lts = utils.ut_to_lt([pd.Timestamp(t) for t in da.time.values[
+                ::int(len(da.time.values)/len(tick_locs))]], lons[i])
+        axs[i].set_xticklabels(lts.astype('int'))
+        axs[i].set_title('Glon=%i°' %int(lons[i]))
+
+        if i[1] != 0:
+                axs[i].set_ylabel('')
+        if i[0] != lons.shape[0]-1:
+                axs[i].set_xlabel('')
+                
+    fig.suptitle(suptitle)
+    #'Alt=%i km, Date=%s\nRun=%s' %(int(400), str(j.time.dt.date.values[0]), 'Full storm'))
+    if tight_layout:
+        fig.tight_layout()
+        
+    if out_fname is None:
+        plt.show()
+        plt.close('all')
+    else:
+        plt.savefig(out_fname)
+        plt.close('all')
+        
+    
