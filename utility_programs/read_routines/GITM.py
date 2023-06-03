@@ -817,7 +817,6 @@ def auto_read(gitm_dir,
 
         if use_dask:
 
-            print('using dask...')
             ds = xr.open_mfdataset(files, parallel=parallel,
                                    combine_attrs='drop_conflicts',
                                    data_vars=cols,
