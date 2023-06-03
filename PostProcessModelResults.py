@@ -24,6 +24,9 @@ import argparse
 
 def main(args):
 
+    print(args.single_file if args.single_file else False)
+    return
+
     psami = False
     pgitm = False
 
@@ -101,7 +104,8 @@ def main(args):
             progress_bar=args.progress,
             use_ccmc=args.ccmc,
             file_types=args.gitm_types,
-        )
+            single_file=True if args.single_file else False,
+            run_name=args.single_file if args.single_file else None)
 
     if psami:
         if need_output_dir:
@@ -140,7 +144,10 @@ def main(args):
         else:
             use_ccmc = False
             split_by_time = False
-            split_by_var = True
+            if not args.single_file:
+                split_by_var = True
+            else:
+                split_by_var = False
 
         if do_write_raw:
 
@@ -163,7 +170,9 @@ def main(args):
                 low_mem=args.low_mem,
                 delete_raw=args.delete_bins,
                 dtime_storm_start=args.dtime_event_start,
-                skip_time_check=args.skip_time_check)
+                skip_time_check=args.skip_time_check,
+                whole_run=True if args.single_file else False,
+                run_name=args.single_file if args.single_file else None)
 
         if do_write_regrid:
             print('attempting to regrid!')
@@ -199,9 +208,13 @@ def main(args):
                                 alt_finerinterps=altfiner,
                                 use_ccmc=args.ccmc,
                                 split_by_time=args.ccmc,
-                                split_by_var=not args.ccmc,
+                                split_by_var=not (
+                                    args.ccmc and args.single_file),
                                 numba=numba_installed and not args.low_mem,
-                                skip_time_check=args.skip_time_check)
+                                skip_time_check=args.skip_time_check,
+                                whole_run=True if args.single_file else False,
+                                run_name=args.single_file if args.single_file else None)
+
             else:
                 RegridSami.main(sami_data_path=args.sami_dir,
                                 out_path=output_dir,
@@ -210,10 +223,12 @@ def main(args):
                                 dtime_sim_start=args.dtime_sim_start,
                                 use_ccmc=args.ccmc,
                                 split_by_time=args.ccmc,
-                                split_by_var=not args.ccmc,
+                                split_by_var=not (
+                                    args.ccmc and args.single_file),
                                 numba=numba_installed and not args.low_mem,
                                 skip_time_check=args.skip_time_check,
-                                )
+                                whole_run=True if args.single_file else False,
+                                run_name=args.single_file if args.single_file else None)
 
     return
 
@@ -231,6 +246,10 @@ if __name__ == '__main__':
     parser.add_argument('--gitm_types', type=str, default='all',
                         nargs='*', help='Which GITM data to process?'
                         ' (EX: 3DALL, 3DNEU, etc.) (Default: all)')
+    parser.add_argument('--single_file', type=str, default=False,
+                        help='Set this to the run name to output the entire'
+                        ' model run data to a single netCDF file (for each'
+                        ' model). Note: model name will be added automatically.')
     parser.add_argument('--set_custom_grid', type=bool, default=False,
                         help='Set a custom grid for SAMI regridding?'
                         ' Default: False')

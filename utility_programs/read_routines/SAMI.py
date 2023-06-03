@@ -710,6 +710,7 @@ def process_all_to_cdf(sami_data_path,
                        split_by_time=True,
                        split_by_var=False,
                        whole_run=False,
+                       run_name=None,
                        OVERWRITE=False,
                        delete_raw=False,
                        append_files=False,
@@ -755,7 +756,10 @@ def process_all_to_cdf(sami_data_path,
 
     if out_dir is None:
         out_dir = sami_data_path
-
+        
+    if whole_run and run_name is None:
+        raise ValueError('You must set the run name if outputting'
+                         ' to a single file')
     if progress_bar:
         from tqdm.auto import tqdm
 
@@ -784,8 +788,6 @@ def process_all_to_cdf(sami_data_path,
         did_one = False
 
         if split_by_time:
-            # import xarray as xr
-
             nz, nf, nlt, nt = get_grid_elems_from_parammod(
                 sami_data_path)
             times = make_times(nt, sami_data_path, dtime_sim_start,
@@ -862,8 +864,13 @@ def process_all_to_cdf(sami_data_path,
                         did_one = True
                         did_var = True
                     if whole_run:
-                        ds.to_netcdf(os.path.join(out_dir, 'sami_data.nc'),
-                                     mode='a')
+                        try:
+                            ds.to_netcdf(os.path.join(out_dir,
+                                                      run_name+'_SAMI.nc'),
+                                         mode='a')
+                        except FileNotFoundError:
+                            ds.to_netcdf(os.path.join(out_dir,
+                                                      run_name+'_SAMI.nc'))
                         did_one = True
                         did_var = True
 
@@ -946,7 +953,6 @@ def process_all_to_cdf(sami_data_path,
                     pbar.update()
 
         else:
-            print('Saving to single file...')
             ds.to_netcdf(os.path.join(out_dir, 'sami_data.nc'))
 
 
