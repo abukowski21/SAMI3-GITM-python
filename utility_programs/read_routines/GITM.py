@@ -466,6 +466,8 @@ def process_all_to_cdf(gitm_dir,
                        skip_existing=False,
                        file_types='all',
                        use_ccmc=True,
+                       single_file=False,
+                       run_name=None,
                        ):
     """Process all GITM .bin files in a directory to .cdf files.
 
@@ -502,6 +504,10 @@ def process_all_to_cdf(gitm_dir,
 
     if out_dir is None:
         out_dir = gitm_dir
+    
+    if single_file and run_name is None:
+        raise ValueError('You must set the run name if outputting'
+                         ' to a single file')
 
     if file_types == 'all':
         files = np.sort(glob.glob(os.path.join(gitm_dir, '*.bin')))
@@ -555,6 +561,7 @@ def process_all_to_cdf(gitm_dir,
             pbar = tqdm(total=len(indiv_ends), desc='Processing GITM')
 
     to_remove = []
+    first_pass = True
 
     for fileend in indiv_ends:
 
@@ -588,12 +595,14 @@ def process_all_to_cdf(gitm_dir,
             ds_now = ds_now.assign_attrs(
                 dtime_event_start=dtime_storm_start,)
 
-        if use_ccmc:
+        if use_ccmc and not single_file:
             ut = ds_now.time.values[0]
             outfile = os.path.join(
                 out_dir,
                 make_ccmc_name('GITM', ut))
 
+        elif single_file:
+            outfile=os.path.join(out_dir, run_name)
         else:
             outfile = os.path.join(
                 out_dir,
@@ -604,8 +613,15 @@ def process_all_to_cdf(gitm_dir,
                 if progress_bar:
                     pbar.update()
                 continue
-
-        ds_now.to_netcdf(outfile, mode='w')
+        
+        if single_file:
+            if first_pass:
+                ds_now.to_netcdf(outfile, mode='w')
+                first_pass = False
+            else:
+                ds_now.to_netcdf(outfile, mode='a')
+        else:
+            ds_now.to_netcdf(outfile, mode='w')
 
         if progress_bar:
             pbar.update()
