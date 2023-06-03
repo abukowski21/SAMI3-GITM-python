@@ -602,7 +602,7 @@ def process_all_to_cdf(gitm_dir,
                 make_ccmc_name('GITM', ut))
 
         elif single_file:
-            outfile=os.path.join(out_dir, run_name)
+            outfile=os.path.join(out_dir, run_name+'_GITM.nc')
         else:
             outfile = os.path.join(
                 out_dir,
