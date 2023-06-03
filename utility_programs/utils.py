@@ -2,6 +2,7 @@
 import numpy as np
 from datetime import datetime
 import pandas as pd
+import xarray as xr
 
 
 def str_to_ut(in_str):
@@ -128,3 +129,85 @@ def autoread(file_list,
 
     ds = xr.concat(ds, dim=concat_dim)
     return ds
+
+
+def ut_to_lt(time_array, glon):
+    """Compute local time from date and longitude.
+
+    Parameters
+    ----------
+    time_array : array-like
+        Array-like of datetime objects in universal time
+    glon : array-like or float
+        Float or array-like of floats containing geographic longitude in
+        degrees. If single value or array of a different shape, all longitudes
+        are applied to all times. If the shape is the same as `time_array`,
+        the values are paired in the SLT calculation.
+
+    Returns
+    -------
+    lt : array of floats
+        List of local times in hours
+
+    Raises
+    ------
+    TypeError
+        For badly formatted input
+
+    """
+
+    time_array = np.asarray(time_array)
+    glon = np.asarray(glon)
+
+    # Get UT seconds of day
+    utsec = [(ut.hour * 3600.0 + ut.minute * 60.0 + ut.second
+              + ut.microsecond * 1.0e-6) / 3600.0 for ut in time_array]
+
+    # Determine if the calculation is paired or broadcasted
+    if glon.shape == time_array.shape:
+        lt = np.array([utime + glon[i] / 15.0 for i,
+                      utime in enumerate(utsec)])
+    else:
+        lt = np.array([utime + glon / 15.0 for utime in utsec])
+
+    # Adjust to ensure that 0.0 <= lt < 24.0
+    while np.any(lt < 0.0):
+        lt[lt < 0.0] += 24.0
+
+    while np.any(lt >= 24.0):
+        lt[lt >= 24.0] -= 24.0
+
+    return lt
+
+
+def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
+                      localtimes):  # int (for number of localtimes)
+    # or list-like for converting those localtimes
+
+    if type(localtimes) == int:
+        # Make linspace of localtimes, 0-24, then chop at the ends.
+        localtimes = np.linspace(0, 24, localtimes+1,
+                                 endpoint=False)[1:]
+    else:
+        localtimes = np.asarray(localtimes)
+    if 'lt' in ds.coords:
+        ds = ds.rename('lt', 'localtime')
+
+    elif 'localtime' not in ds.coords:
+        ds['localtime'] = (('time', 'lon'),
+                           ut_to_lt([pd.Timestamp(i) for i in ds.time.values],
+                                          ds.lon))
+     
+    lt_dss = []
+
+    for t in localtimes:
+        ltds = []
+
+        lons_to_iter = np.argmin(np.abs(ds.localtime.values - t), axis=1)
+
+        for do_lon in lons_to_iter:
+            b = ds.isel(lon=do_lon).swap_dims(time='localtime')
+            ltds.append(b.interp(localtime=t))
+
+        lt_dss.append(xr.concat(ltds, dim=ds.time))
+    return xr.concat(lt_dss, dim='localtime')
