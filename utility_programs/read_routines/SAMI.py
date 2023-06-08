@@ -405,7 +405,7 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
             t_start_idx, t_end_idx, need_help, skip_time_chek=skip_time_check)
     else:
         times = make_times(nt, sami_data_path, dtime_sim_start,
-            skip_time_check=skip_time_check)
+                           skip_time_check=skip_time_check)
         start_idx = 0
         end_idx = len(times)
 
@@ -614,7 +614,7 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
 
     nz, nf, nlt, nt = get_grid_elems_from_parammod(sami_data_path)
     times = make_times(nt, sami_data_path, dtime_sim_start,
-        skip_time_check=skip_time_check)
+                       skip_time_check=skip_time_check)
     times = np.array(times)
     grid = get_sami_grid(sami_data_path, nlt, nf, nz)
 
@@ -756,7 +756,7 @@ def process_all_to_cdf(sami_data_path,
 
     if out_dir is None:
         out_dir = sami_data_path
-        
+
     if whole_run and run_name is None:
         raise ValueError('You must set the run name if outputting'
                          ' to a single file')
@@ -791,7 +791,7 @@ def process_all_to_cdf(sami_data_path,
             nz, nf, nlt, nt = get_grid_elems_from_parammod(
                 sami_data_path)
             times = make_times(nt, sami_data_path, dtime_sim_start,
-                skip_time_check=skip_time_check)
+                               skip_time_check=skip_time_check)
             # So this gets complicated. First check the files.
             # Then go ahead and process...
 
@@ -866,11 +866,11 @@ def process_all_to_cdf(sami_data_path,
                     if whole_run:
                         try:
                             ds.to_netcdf(os.path.join(out_dir,
-                                                      run_name+'_SAMI.nc'),
+                                                      run_name+'_SAMI_RAW.nc'),
                                          mode='a')
                         except FileNotFoundError:
                             ds.to_netcdf(os.path.join(out_dir,
-                                                      run_name+'_SAMI.nc'))
+                                                      run_name+'_SAMI_RAW.nc'))
                         did_one = True
                         did_var = True
 
@@ -953,7 +953,8 @@ def process_all_to_cdf(sami_data_path,
                     pbar.update()
 
         else:
-            ds.to_netcdf(os.path.join(out_dir, 'sami_data.nc'))
+            ds.to_netcdf(os.path.join(out_dir,
+                                      run_name+'_SAMI_RAW.nc'))
 
 
 def auto_read(sami_dir,
