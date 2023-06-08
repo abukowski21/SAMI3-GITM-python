@@ -24,9 +24,6 @@ import argparse
 
 def main(args):
 
-    print(args.single_file if args.single_file else False)
-    return
-
     psami = False
     pgitm = False
 
@@ -137,7 +134,7 @@ def main(args):
                         'REGRID files already exist in output_dir. You may'
                         ' want to set --replace, or delete them.')
 
-        if args.ccmc:
+        if args.ccmc and not args.single_file:
             use_ccmc = True
             split_by_time = True
             split_by_var = False
@@ -213,7 +210,8 @@ def main(args):
                                 numba=numba_installed and not args.low_mem,
                                 skip_time_check=args.skip_time_check,
                                 whole_run=True if args.single_file else False,
-                                run_name=args.single_file if args.single_file else None)
+                                run_name=args.single_file if args.single_file
+                                else None)
 
             else:
                 RegridSami.main(sami_data_path=args.sami_dir,
