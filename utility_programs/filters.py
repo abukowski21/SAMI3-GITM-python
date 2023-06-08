@@ -1,6 +1,7 @@
 
 from scipy import signal
 import numpy as np
+import xarray as xr
 
 
 def make_filter(lowcut=80, highcut=40, order=3):
@@ -31,7 +32,7 @@ def make_fits(gitm_bins, lowcut=80, highcut=40, order=3):
     """
     calculate bandpass filter for all data previously read in.
 
-    inputs: nparray of gitmdata
+    inputs: nparray (or xarray.DataArray) of gitmdata
 
     returns:
     fits: np array indexed at fits[time][col][ilon][ilat][ialt]
@@ -42,8 +43,24 @@ def make_fits(gitm_bins, lowcut=80, highcut=40, order=3):
 
     """
     sos = make_filter(lowcut, highcut, order)
+    
 
-    filtered_arr = signal.sosfiltfilt(sos, gitm_bins, axis=0)
+    
+    if type(gitm_bins) == xr.Dataset or type(gitm_bins) == xr.DataArray:
+        # Define the cutoff frequencies
+        lowcut_f = 1 / (lowcut / 60)  # 100 minutes in units of sample^-1
+        highcut_f = 1 / (highcut / 60)  # 30 minutes in units of sample^-1
+
+        # Define the Butterworth filter
+        nyquist = 0.5 * 5  # 5 minutes is the sampling frequency
+        low = lowcut_f / nyquist
+        high = highcut_f / nyquist
+        filtered_arr = gitm_bins.map_blocks(order,
+                                            [low, high],
+                                            {'btype':"bandstop",
+                                             'output':"sos"})
+    else:
+        filtered_arr = signal.sosfiltfilt(sos, gitm_bins, axis=0)
     return filtered_arr
 
 
