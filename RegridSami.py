@@ -156,22 +156,22 @@ def make_weights(in_cart, out_cart, nearest, old_shape, coords):
         src_idxs (numpy.ndarray): Indices of the old grid that contribute to
             each point in the new grid.
     """
-    weights = np.zeros([len(out_cart[0]), 8])
-    src_idxs = np.zeros([len(out_cart[0]), 8])
+    weights=np.zeros([len(out_cart[0]), 8])
+    src_idxs=np.zeros([len(out_cart[0]), 8])
     print('Calculating weights...')
     for n, pt in enumerate(tqdm(nearest)):
 
-        idxs = [np.ravel_multi_index(c, old_shape) for c in coords[pt]]
+        idxs=[np.ravel_multi_index(c, old_shape) for c in coords[pt]]
 
-        xs = in_cart[0, idxs]
-        ys = in_cart[0, idxs]
-        zs = in_cart[2, idxs]
+        xs=in_cart[0, idxs]
+        ys=in_cart[0, idxs]
+        zs=in_cart[2, idxs]
 
-        d = np.sqrt((xs - out_cart[0, n])**2 + (ys -
+        d=np.sqrt((xs - out_cart[0, n])**2 + (ys -
                     out_cart[1, n])**2 + (zs - out_cart[2, n])**2)
 
-        weights[n] = 1 / (d)
-        src_idxs[n] = idxs
+        weights[n]=1 / (d)
+        src_idxs[n]=idxs
 
     print('Done, found %i valid points' % np.sum(weights > 0))
 
@@ -190,8 +190,8 @@ def find_pairs(centers, out_cart):
         numpy.ndarray: indices of the nearest point in the old grid to each
             point in the new grid (out_cart).
     """
-    tree = KDTree(centers)
-    _, nearest = tree.query(out_cart.T)
+    tree=KDTree(centers)
+    _, nearest=tree.query(out_cart.T)
     return nearest
 
 
@@ -200,7 +200,7 @@ try:
     from numba import prange
     print('Numba available! This will drastically speed up applying weights,')
 
-    @jit(nopython=True)
+    @ jit(nopython=True)
     def numba_do_apply_weights(t0, src_idxs, weights, outv):
         """Speed up applying weight function.
 
@@ -257,6 +257,8 @@ def main(
         split_by_var=False,
         single_file=False,
         split_by_time=True,
+        whole_run=False,
+        run_name=None,
         use_ccmc=False,
         numba=False,
         skip_time_check=False):
@@ -321,33 +323,33 @@ def main(
     """
 
     if out_path is None:
-        out_path = sami_data_path
+        out_path=sami_data_path
 
     if not os.path.exists(out_path):
         print('making outpath %s' % out_path)
         os.makedirs(out_path)
 
     # Read in the data
-    nz, nf, nlt, nt = SAMI.get_grid_elems_from_parammod(sami_data_path)
-    old_shape = [nlt, nf, nz]
+    nz, nf, nlt, nt=SAMI.get_grid_elems_from_parammod(sami_data_path)
+    old_shape=[nlt, nf, nz]
 
-    grid2 = SAMI.get_sami_grid(sami_data_path, nlt, nf, nz)
+    grid2=SAMI.get_sami_grid(sami_data_path, nlt, nf, nz)
 
-    grid = {}
+    grid={}
     for k in grid2.keys():
-        grid[k] = grid2[k].flatten()
-        grid2[k] = grid2[k]
+        grid[k]=grid2[k].flatten()
+        grid2[k]=grid2[k]
 
-    in_cart = latlonalt_to_cart(grid['glat'], grid['glon'], grid['malt'])
+    in_cart=latlonalt_to_cart(grid['glat'], grid['glon'], grid['malt'])
 
     if out_coord_file is None:
-        latout = np.arange(-90, 90, lat_step / lat_finerinterps)
-        lonout = np.arange(0, 360, lon_step / lon_finerinterps)
-        altout = np.arange(200, 2200, alt_step / alt_finerinterps)
+        latout=np.arange(-90, 90, lat_step / lat_finerinterps)
+        lonout=np.arange(0, 360, lon_step / lon_finerinterps)
+        altout=np.arange(200, 2200, alt_step / alt_finerinterps)
 
-        out_lats = []
-        out_lons = []
-        out_alts = []
+        out_lats=[]
+        out_lons=[]
+        out_alts=[]
 
         for a in latout:
             for o in lonout:
@@ -356,40 +358,40 @@ def main(
                     out_lons.append(o)
                     out_alts.append(l1)
 
-        out_cart = latlonalt_to_cart(
+        out_cart=latlonalt_to_cart(
             out_lats, out_lons, np.array(out_alts) + 6371)
 
     else:
-        ds_out = xr.open_dataset(out_coord_file)
+        ds_out=xr.open_dataset(out_coord_file)
         print('Read coordinate file.')
         try:
-            latout = ds_out['lat'].values
-            lonout = ds_out['lon'].values
-            altout = ds_out['alt'].values
+            latout=ds_out['lat'].values
+            lonout=ds_out['lon'].values
+            altout=ds_out['alt'].values
         except ValueError:
             raise ValueError('Coordinate file must have lat, lon, alt vars.')
 
-        out_cart = latlonalt_to_cart(
+        out_cart=latlonalt_to_cart(
             altout, lonout, np.array(altout) + 6371)
-        lon_finerinterps = 1
-        lat_finerinterps = 1
-        alt_finerinterps = 1
+        lon_finerinterps=1
+        lat_finerinterps=1
+        alt_finerinterps=1
 
     if use_saved_weights:
-        weights = np.fromfile(os.path.join(out_path, 'weights'))
-        idxs = np.fromfile(os.path.join(out_path, 'indexes'))
-        weights = weights.reshape([int(len(weights) / 8), 8])
-        idxs = idxs.reshape([int(len(idxs) / 8), 8])
-        idxs = idxs.astype(int)
+        weights=np.fromfile(os.path.join(out_path, 'weights'))
+        idxs=np.fromfile(os.path.join(out_path, 'indexes'))
+        weights=weights.reshape([int(len(weights) / 8), 8])
+        idxs=idxs.reshape([int(len(idxs) / 8), 8])
+        idxs=idxs.astype(int)
         print('using weights from %s' % out_path)
 
     else:
-        centers, coords = generate_interior_points(in_cart, old_shape)
-        nearest = find_pairs(centers, out_cart)
+        centers, coords=generate_interior_points(in_cart, old_shape)
+        nearest=find_pairs(centers, out_cart)
 
-        weights, idxs = make_weights(in_cart, out_cart,
+        weights, idxs=make_weights(in_cart, out_cart,
                                      nearest, old_shape, coords)
-        idxs = idxs.astype(int)
+        idxs=idxs.astype(int)
 
         if save_weights:
             weights.tofile(os.path.join(out_path, 'weights'))
@@ -399,17 +401,17 @@ def main(
 
     if apply_weights:
 
-        sami_og_vars = SAMI.sami_og_vars
+        sami_og_vars=SAMI.sami_og_vars
         if cols == 'all':
-            cols = sami_og_vars.values()
+            cols=sami_og_vars.values()
         elif isinstance(cols, str):
-            cols = [cols]
+            cols=[cols]
 
         # First make sure all cols are valid
-        data_files = {}
+        data_files={}
         for ftype in sami_og_vars:
             if sami_og_vars[ftype] in cols:
-                data_files[ftype] = sami_og_vars[ftype]
+                data_files[ftype]=sami_og_vars[ftype]
         if len(data_files.keys()) == 0:
             print('the available data files are: \n', sami_og_vars.keys(),
                   'you gave: ', cols)
@@ -418,35 +420,35 @@ def main(
         # then read thru & apply weights.
         for ftype in data_files:
 
-            varname = data_files[ftype]
+            varname=data_files[ftype]
             print('reading in %s' % ftype)
 
-            data, times = SAMI.read_to_nparray(
+            data, times=SAMI.read_to_nparray(
                 sami_data_path, dtime_sim_start, cols=varname, pbar=False,
                 skip_time_check=skip_time_check)
 
-            ds = xr.Dataset(coords={
+            ds=xr.Dataset(coords={
                 'time': (['time'], times),
                 'alt': (['alt'], altout),
                 'lat': (['lat'], latout),
                 'lon': (['lon'], lonout)},)
-            varname = list(data['data'].keys())[0]
+            varname=list(data['data'].keys())[0]
 
-            outv = np.zeros([data['data'][varname].shape[-1], len(weights)])
-            outv = numba_do_apply_weights(data['data'][varname].copy(),
+            outv=np.zeros([data['data'][varname].shape[-1], len(weights)])
+            outv=numba_do_apply_weights(data['data'][varname].copy(),
                                           idxs, weights, outv)
 
             print(
                 'received weights from numba function, writing & continuing')
 
-            ds[varname] = (('time', 'lat', 'lon', 'alt'),
+            ds[varname]=(('time', 'lat', 'lon', 'alt'),
                            np.array(outv).reshape(
                 len(times), len(latout), len(lonout), len(altout)))
 
             if not all([i == 1 for i in [lat_finerinterps,
                        lon_finerinterps, alt_finerinterps]]):
                 print('coarsening dataset')
-                ds = ds.coarsen(lat=lat_finerinterps,
+                ds=ds.coarsen(lat=lat_finerinterps,
                                 lon=lon_finerinterps,
                                 alt=alt_finerinterps,
                                 boundary='trim').mean()
@@ -456,17 +458,23 @@ def main(
                     ds.to_netcdf(
                         os.path.join(out_path, '%s' % varname))
             elif single_file or out_coord_file is not None:
-                ds.to_netcdf(os.path.join(
-                    out_path, 'sami-regridded'), mode='a')
+                try:
+                    ds.to_netcdf(os.path.join(
+                        out_path, run_name+'_SAMI_REGRID.nc'), mode='a')
+                except FileNotFoundError:
+                    ds.to_netcdf(os.path.join(
+                        out_path, run_name+'_SAMI_REGRID.nc'))
+
             elif split_by_time:
                 for t in ds.time.values:
-                    fname = make_ccmc_name('SAMI', t, data_type='REGRID')
+                    fname=make_ccmc_name('SAMI', t, data_type='REGRID')
                     try:
                         ds.sel(time=t).to_netcdf(
                             os.path.join(out_path, fname), mode='a')
                     except FileNotFoundError:
                         ds.sel(time=t).to_netcdf(
                             os.path.join(out_path, fname), )
+
             del data
 
     return
@@ -474,7 +482,7 @@ def main(
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
+    parser=argparse.ArgumentParser()
 
     parser.add_argument('sami_data_path', type=str, help='path to sami data')
 
@@ -534,43 +542,43 @@ if __name__ == '__main__':
     parser.add_argument('--maxalt', type=float, default=2200,
                         help='Maximum altitude in km')
 
-    args = parser.parse_args()
+    args=parser.parse_args()
 
     if args.custom_grid:
         print('We are going to set a custom grid for you. ')
         print('Press enter to accept the default values in parentheses')
-        latstep = input('latitude step size in degrees (1):', default=1)
-        lonstep = input('longitude step size in degrees: (4):', default=4)
-        altstep = input('altitude step size in km (50):', default=50)
-        minalt = input('minimum altitude in km (100):', default=100)
-        maxalt = input('maximum altitude in km (2200):', default=2200)
+        latstep=input('latitude step size in degrees (1):', default=1)
+        lonstep=input('longitude step size in degrees: (4):', default=4)
+        altstep=input('altitude step size in km (50):', default=50)
+        minalt=input('minimum altitude in km (100):', default=100)
+        maxalt=input('maximum altitude in km (2200):', default=2200)
         print('Now for the options to interpolate at a finer resolution'
               ' and then coarsen afterwards. If you dont know what this'
               ' means you can run with 1s and it will be faster. if you'
               ' see weird artifacts in your outputs you can try '
               ' adjusting this. Number given multiplies the step size')
-        latfiner = input('interpolate a finer resolution in latitude? (1):',
+        latfiner=input('interpolate a finer resolution in latitude? (1):',
                          default=1)
-        lonfiner = input('interpolate a finer resolution in longitude? (1):',
+        lonfiner=input('interpolate a finer resolution in longitude? (1):',
                          default=1)
-        altfiner = input('interpolate a finer resolution in altitude? (1):',
+        altfiner=input('interpolate a finer resolution in altitude? (1):',
                          default=1)
     else:
-        latstep = args.lat_step
-        lonstep = args.lon_step
-        altstep = args.alt_step
-        latfiner = args.lat_finerinterps
-        lonfiner = args.lon_finerinterps
-        altfiner = args.alt_finerinterps
-        minalt = args.minalt
-        maxalt = args.maxalt
+        latstep=args.lat_step
+        lonstep=args.lon_step
+        altstep=args.alt_step
+        latfiner=args.lat_finerinterps
+        lonfiner=args.lon_finerinterps
+        altfiner=args.alt_finerinterps
+        minalt=args.minalt
+        maxalt=args.maxalt
 
     if args.dtime_sim_start is None:
         if args.apply_weights:
             raise ValueError('You must specify a simulation start time'
                              'when using apply_weights to read data')
     else:
-        dtime_sim_start = str_to_ut(args.dtime_sim_start)
+        dtime_sim_start=str_to_ut(args.dtime_sim_start)
 
     if args.reuse_weights:
         # check if out_weight file exists
