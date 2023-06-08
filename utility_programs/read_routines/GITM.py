@@ -3,6 +3,7 @@ import glob
 import os
 
 import numpy as np
+import pandas as pd
 
 from tqdm.auto import tqdm
 from struct import unpack
@@ -175,7 +176,6 @@ def read_bin_to_nparrays(gitm_dir,
 
 
 def read_bin_to_xarray(filename,
-                       add_time=True,
                        drop_ghost_cells=True,
                        cols='all'):
     """Reads GITM binary file into xarray
@@ -184,9 +184,6 @@ def read_bin_to_xarray(filename,
 
     Args:
         filename (str, path): Path to the file to read.
-        add_time (bool, optional): Add time to attrs. Defaults to True.
-            Needs to be True for built-in multi-file reads.
-            You can set to False if you are only reading one file.
         drop_ghost_cells (bool, optional):
             Drop GITM ghost cells. See GITM manual for details
             on ghost cells. Defaults to True.
@@ -207,8 +204,6 @@ def read_bin_to_xarray(filename,
     if not os.path.isfile(filename):
         raise IOError('input file does not exist')
 
-    if '2D' in filename:
-        drop_ghost_cells = False
     if 'HME' in filename:
         raise ValueError('HME files not supported yet')
 
@@ -314,15 +309,13 @@ def read_bin_to_xarray(filename,
             'time': [time_here], 'lon': lons, 'lat': lats},
             data_vars=data_vars,
             attrs={'version': version,
-                   'dropped-ghost-cells': str(drop_ghost_cells),
-                   'with_time': str(add_time)})
+                   'dropped-ghost-cells': str(drop_ghost_cells)})
     else:
         ds = xr.Dataset(coords={
             'time': [time_here], 'lon': lons, 'lat': lats, 'alt': alts},
             data_vars=data_vars,
             attrs={'version': version,
-                   'dropped-ghost-cells': str(drop_ghost_cells),
-                   'with_time': str(add_time)})
+                   'dropped-ghost-cells': str(drop_ghost_cells)})
 
     if drop_ghost_cells:
         # 2D files don't have alt ghost cells
@@ -332,8 +325,6 @@ def read_bin_to_xarray(filename,
         else:
             ds = ds.drop_isel(lat=[0, 1, -2, -1], lon=[0, 1, -1, -2])
 
-    if not add_time:
-        ds = ds.drop_vars('time')
 
     if cols != 'all':
         ds = ds.get(cols)
@@ -504,7 +495,7 @@ def process_all_to_cdf(gitm_dir,
 
     if out_dir is None:
         out_dir = gitm_dir
-    
+
     if single_file and run_name is None:
         raise ValueError('You must set the run name if outputting'
                          ' to a single file')
@@ -543,7 +534,7 @@ def process_all_to_cdf(gitm_dir,
     if len(indiv_ends) == num_existing_cdfs and not replace_cdfs:
         print('looks like all files have already been processed.',
               'you can run again if you need to reprocess all netcdfs')
-    elif num_existing_cdfs != 0 and not skip_existing:
+    elif num_existing_cdfs != 0 and not skip_existing and not single_file:
         import warnings
         warnings.warn(
             '\nThere are %i existing netcdfs in this directory,\n'
@@ -556,19 +547,25 @@ def process_all_to_cdf(gitm_dir,
 
     if progress_bar:
         if skip_existing:
-            pbar = tqdm(total=len(indiv_ends) - num_existing_cdfs)
+            pbar=tqdm(total=len(indiv_ends) - num_existing_cdfs)
         else:
-            pbar = tqdm(total=len(indiv_ends), desc='Processing GITM')
+            pbar=tqdm(total=len(indiv_ends), desc='Processing GITM')
 
-    to_remove = []
-    first_pass = True
+    to_remove=[]
+    first_pass=True
+    
+    # things we need to keep track of for single_file
+    # existing vars cannot be replaced in a netcdf file so
+    #   we have to write temp files, combine them, then delete them.
+    files_written=[]
+    os.makedirs(os.path.join(out_dir, run_name+'_tmp'))
 
     for fileend in indiv_ends:
 
         if file_types == 'all':
-            files_here = glob.glob(gitm_dir + '/*' + fileend)
+            files_here=glob.glob(gitm_dir + '/*' + fileend)
         else:
-            files_here = []
+            files_here=[]
             for filetype in file_types:
                 files_here.extend(
                     glob.glob(
@@ -577,34 +574,35 @@ def process_all_to_cdf(gitm_dir,
                             filetype + '*' + fileend)))
         # make sure 3DALL files are first:
         if len(files_here) > 1:
-            files_here = np.flip(np.sort(files_here))
-        ds_now = []
+            files_here=np.flip(np.sort(files_here))
+        ds_now=[]
 
         for f in files_here:
             ds_now.append(read_bin_to_xarray(
                 filename=f,
                 drop_ghost_cells=drop_ghost_cells,
-                add_time=True,
                 cols='all'))
             to_remove.append(f)
 
-        ds_now = xr.combine_by_coords(
-            ds_now, combine_attrs='override')
+        ds_now=xr.concat(ds_now, dim='time')
 
         if dtime_storm_start is not None:
-            ds_now = ds_now.assign_attrs(
+            ds_now=ds_now.assign_attrs(
                 dtime_event_start=dtime_storm_start,)
 
         if use_ccmc and not single_file:
-            ut = ds_now.time.values[0]
-            outfile = os.path.join(
+            ut=ds_now.time.values[0]
+            outfile=os.path.join(
                 out_dir,
                 make_ccmc_name('GITM', ut))
 
         elif single_file:
-            outfile=os.path.join(out_dir, run_name+'_GITM.nc')
+            outfile=os.path.join(out_dir, run_name+'_tmp',
+                                 fileend[fileend.rfind('t'):
+                                        ].replace('.bin', '.nc'))
+            
         else:
-            outfile = os.path.join(
+            outfile=os.path.join(
                 out_dir,
                 fileend[fileend.rfind('t'):].replace('.bin', '.nc'))
 
@@ -613,18 +611,32 @@ def process_all_to_cdf(gitm_dir,
                 if progress_bar:
                     pbar.update()
                 continue
-        
+
         if single_file:
-            if first_pass:
-                ds_now.to_netcdf(outfile, mode='w')
-                first_pass = False
-            else:
-                ds_now.to_netcdf(outfile, mode='a')
+            ds_now.to_netcdf(outfile, engine='h5netcdf')
+            files_written.append(outfile)
         else:
             ds_now.to_netcdf(outfile, mode='w')
 
         if progress_bar:
             pbar.update()
+    pbar.close()
+            
+    if single_file:
+        # read in all written files(with dask).
+        # then write to a new netCDF file.
+        # and then clean up.
+        print('reading in temp files...')
+        ds = xr.open_mfdataset(files_written, engine='h5netcdf',
+                              concat_dim='time', combine='nested')
+        print('writing...')
+        ds.to_netcdf(os.path.join(out_dir, run_name +'_GITM.nc'))
+        print('cleaning up')
+        for f in files_written:
+            os.remove(f)
+        os.removedirs(os.path.join(out_dir, run_name+'_tmp'))
+            
+        
 
     if delete_bins:
         print('FILES WILL BE DELETED. YOU HAVE BEEN WARNED.',
@@ -667,13 +679,13 @@ def find_variable(gitm_dir, varname=None,
         raise ValueError('Must specify either varhelp or varname')
 
     if nc:
-        files = np.sort(glob.glob(os.path.join(gitm_dir, 'GITM*.nc')))
+        files=np.sort(glob.glob(os.path.join(gitm_dir, 'GITM*.nc')))
         if len(files) == 0:
-            nc = False
+            nc=False
             print('no netcdf files found, trying binary files')
     if nc:
-        ftypes_checked = []
-        ds = xr.open_dataset(files[0])
+        ftypes_checked=[]
+        ds=xr.open_dataset(files[0])
         if varname in list(ds.data_vars.keys()):
             print('Found %s in %s' % (varname, files[0]))
 
@@ -684,15 +696,15 @@ def find_variable(gitm_dir, varname=None,
 
         ds.close()
 
-    files = np.sort(glob.glob(os.path.join(gitm_dir, '*.bin')))
+    files=np.sort(glob.glob(os.path.join(gitm_dir, '*.bin')))
     if len(files) == 0:
         print('no binary files found, exiting')
-    ftypes_checked = []
+    ftypes_checked=[]
     for f in files:
-        ftype = f.split('/')[-1][:5]
+        ftype=f.split('/')[-1][:5]
         if ftype not in ftypes_checked:
             ftypes_checked.append(ftype)
-            binary = read_bin_to_nparrays(f)
+            binary=read_bin_to_nparrays(f)
             for col in binary['vars']:
                 if col == varname:
                     if varhelp:
@@ -700,7 +712,7 @@ def find_variable(gitm_dir, varname=None,
                     else:
                         return ftype
                 else:
-                    col = col.replace('!N', '').replace('!U', '')\
+                    col=col.replace('!N', '').replace('!U', '')\
                         .replace('!D', '').replace('[', '')\
                         .replace('[', '').replace(']', '')\
                         .replace('/', '-')
@@ -761,20 +773,18 @@ def auto_read(gitm_dir,
 
     if single_file:
         try:
-            data = read_bin_to_xarray(
+            data=read_bin_to_xarray(
                 filename=gitm_dir,
                 drop_ghost_cells=drop_ghost_cells,
-                add_time=True,
                 cols=cols)
         except ValueError:
-            data = read_bin_to_nparrays(
+            data=read_bin_to_nparrays(
                 filename=gitm_dir,
                 drop_ghost_cells=drop_ghost_cells,
-                add_time=True,
                 cols=cols)
         return data
 
-    files = np.sort(glob.glob(os.path.join(gitm_dir, 'GITM*.nc')))
+    files=np.sort(glob.glob(os.path.join(gitm_dir, 'GITM*.nc')))
     if len(files) == 0 and force_dict:
         if not force_dict:
             print("""No NetCDF files found, You should probably convert
@@ -782,16 +792,16 @@ def auto_read(gitm_dir,
                   Continuing with your read...""")
 
         if cols != 'all' and file_type is None:
-            file_type = find_variable(gitm_dir, varname=cols[0], nc=False)
+            file_type=find_variable(gitm_dir, varname=cols[0], nc=False)
         elif file_type is not None:
-            files = np.sort(
+            files=np.sort(
                 glob.glob(os.path.join(gitm_dir, file_type + '*.bin')))
         else:
-            files = np.sort(
+            files=np.sort(
                 glob.glob(os.path.join(gitm_dir, '3DALL' + '*.bin')))
             print('Defaulting to 3DALL files.')
         if return_xarray:
-            ds = read_multiple_bins_to_xarray(
+            ds=read_multiple_bins_to_xarray(
                 file_list=files,
                 start_dtime=start_dtime,
                 start_idx=start_idx,
@@ -802,7 +812,7 @@ def auto_read(gitm_dir,
                 pbar=progress_bar)
             return ds
         else:
-            datadict = read_bin_to_nparrays(
+            datadict=read_bin_to_nparrays(
                 gitm_dir=gitm_dir,
                 start_dtime=start_dtime,
                 start_idx=start_idx,
@@ -816,24 +826,24 @@ def auto_read(gitm_dir,
             raise ValueError('Cannot specify file_type if using NetCDF files.')
 
         if start_idx is not None and end_idx is not None:
-            files = files[start_idx:end_idx]
+            files=files[start_idx:end_idx]
         elif start_idx is not None:
-            files = files[start_idx:]
+            files=files[start_idx:]
         elif end_idx is not None:
-            files = files[:end_idx]
+            files=files[:end_idx]
 
         if start_dtime is not None and end_dtime is not None:
-            files = files[(np.array(gitm_times_from_filelist(files))
+            files=files[(np.array(gitm_times_from_filelist(files))
                            >= start_dtime) &
                           (np.array(gitm_times_from_filelist(files))
                            <= end_dtime)]
 
         if isinstance(cols, str):
-            cols = [cols]
+            cols=[cols]
 
         if use_dask:
 
-            ds = xr.open_mfdataset(files, parallel=parallel,
+            ds=xr.open_mfdataset(files, parallel=parallel,
                                    combine_attrs='drop_conflicts',
                                    data_vars=cols,
                                    # concat_dim="time", combine="nested",
@@ -841,17 +851,17 @@ def auto_read(gitm_dir,
                                    engine=engine)
 
         else:
-            drops = []
-            ds0 = xr.open_dataset(files[0])
+            drops=[]
+            ds0=xr.open_dataset(files[0])
             for v in ds0.data_vars:
                 if v not in cols:
                     drops.append(v)
             del ds0
-            dss = []
+            dss=[]
             for f in files:
                 dss.append(xr.open_dataset(
                     f, drop_variables=drops, engine=engine))
-            ds = xr.concat(dss, dim='time')
+            ds=xr.concat(dss, dim='time')
             del dss
 
         return ds
