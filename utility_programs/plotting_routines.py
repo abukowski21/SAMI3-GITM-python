@@ -688,17 +688,8 @@ def map_and_dials_quiver(dial_da,
 
         axs.append(fig.add_subplot(
             subgrids[-1][1, :], projection=ccrs.PlateCarree()))
-        # map_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
-        #               cmap=map_cmap, cbar_kwargs={'label': "", },
-        #               vmin=vmin_map, vmax=vmax_map)
 
-        if color_col == 'AMP':
-            ((map_data[x_colname]**2 + map_data[y_colname]**2)**(1/2)).plot(
-                ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
-                cmap=map_cmap, cbar_kwargs={'label': "", },
-                vmin=vmin_map, vmax=vmax_map)
-
-        elif color_col is not None:
+        if color_col is not None:
             map_data[color_col].plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
                                      cmap=map_cmap, cbar_kwargs={
                                          'label': "", },
