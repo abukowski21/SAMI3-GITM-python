@@ -439,8 +439,8 @@ def map_and_dials(dial_da,
                   vmax_dial=None,
                   vmin_map=None,
                   vmax_map=None,
-                 several_datasets=False,
-                 times_datasets=None):
+                  several_datasets=False,
+                  times_datasets=None):
 
     # setup data:
     if max_per_row is None:
@@ -477,13 +477,13 @@ def map_and_dials(dial_da,
     for i in range(total):
         # make figure
         subgrids.append(gs0[i].subgridspec(2, 2))
-        
+
         if several_datasets:
-            dial_data=dial_da[list(dial_da.data_vars)[i]]
+            dial_data = dial_da[list(dial_da.data_vars)[i]]
             map_data = map_da[list(map_da.data_vars)[i]]
             # for local time:
             time_here = pd.Timestamp(dial_data.time.values)
-        
+
         else:
             # get data (first dial then map):
             if isel_dials is None:
@@ -492,7 +492,8 @@ def map_and_dials(dial_da,
                 dial_data = dial_da.sel(new, method='nearest')
             else:
                 new = {}
-                new[list(isel_dials.keys())[0]] = list(isel_dials.values())[0][i]
+                new[list(isel_dials.keys())[0]] = list(
+                    isel_dials.values())[0][i]
                 dial_data = dial_da.sel(new)
 
             if isel_map is None:
@@ -538,6 +539,175 @@ def map_and_dials(dial_da,
         map_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
                       cmap=map_cmap, cbar_kwargs={'label': "", },
                       vmin=vmin_map, vmax=vmax_map)
+        if not several_datasets:
+            axs[-1].set_title(str(time_here))
+        else:
+            axs[-1].set_title(list(map_da.data_vars)[i])
+        axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
+
+        # if subtitle is None:
+        #     axs[-1].set_title(str(time_here))
+        # else:
+        #     axs[-1].set_title(subtitle[i])
+
+        times_plotted.append(time_here)
+
+    times_plotted = np.array([times_plotted for i in range(total)]).flatten()
+    for t, ax in enumerate(axs):
+        ax.coastlines(zorder=3, color='black', alpha=1)
+        ax.gridlines(color='black', linestyle='--', alpha=0.6)
+
+    plt.suptitle(suptitle)
+
+    fig.tight_layout()
+
+    if save is not None:
+        plt.savefig(save)
+        plt.close()
+    else:
+        return fig
+
+
+def map_and_dials_quiver(dial_da,
+                         total,
+                         map_ds=None,
+                         x_colname='Vi_east',
+                         y_colname='Vi_north',
+                         color_col='AMP',
+                         max_per_row=3,
+                         isel_dials=None,
+                         sel_dials=None,
+                         isel_map=None,
+                         sel_map=None,
+                         suptitle=None,
+                         time_start=None,
+                         time_delta='1 hour',
+                         save=None,
+                         mask_dials=0.001,
+                         dial_cmap='rainbow',
+                         dial_JH_defaults=True,
+                         map_cmap='rainbow',
+                         vmin_dial=None,
+                         vmax_dial=None,
+                         vmin_map=None,
+                         vmax_map=None,
+                         several_datasets=False,
+                         times_datasets=None):
+
+    # setup data:
+    if max_per_row is None:
+        max_per_row = 3
+
+    if isel_map is None and sel_map is None:
+        times = [pd.Timestamp(time_start) +
+                 pd.Timedelta(time_delta)*i for i in range(total)]
+        sel_map = {'time': times}
+
+    if isel_dials is None and sel_dials is None:
+        times = [pd.Timestamp(time_start) +
+                 pd.Timedelta(time_delta)*i for i in range(total)]
+        sel_dials = {'time': times}
+
+    # If no colorbar limits are defined, make them for the user.
+
+    # setup figure
+    nrows = int(np.ceil(total/max_per_row))
+    ncols = max_per_row
+
+    fig = plt.figure(figsize=(5*ncols, 5*nrows))
+
+    gs0 = gridspec.GridSpec(nrows, ncols,
+                            figure=fig)
+
+    axs = []
+
+    subgrids = []
+
+    # keep track of times
+    times_plotted = []
+
+    for i in range(total):
+        # make figure
+        subgrids.append(gs0[i].subgridspec(2, 2))
+
+        if several_datasets:
+            dial_data = dial_da[list(dial_da.data_vars)[i]]
+            map_data = map_ds[list(map_data.keys())[i]]
+            # for local time:
+            time_here = pd.Timestamp(dial_data.time.values)
+
+        else:
+            # get data (first dial then map):
+            if isel_dials is None:
+                new = {}
+                new[list(sel_dials.keys())[0]] = list(sel_dials.values())[0][i]
+                dial_data = dial_da.sel(new, method='nearest')
+            else:
+                new = {}
+                new[list(isel_dials.keys())[0]] = list(
+                    isel_dials.values())[0][i]
+                dial_data = dial_da.sel(new)
+
+            if isel_map is None:
+                new = {}
+                new[list(sel_map.keys())[0]] = list(sel_map.values())[0][i]
+                map_data = map_ds.sel(new, method='nearest')
+            else:
+                new = {}
+                new[list(isel_map.keys())[0]] = list(isel_map.values())[0][i]
+                map_data = map_ds.sel(new)
+
+        # for local time:
+        if times_datasets is None:
+            time_here = pd.Timestamp(dial_data.time.values)
+        else:
+            time_here = pd.Timestamp(times_datasets[i])
+        # Find central longitude (midnight Local time)
+        lons = np.arange(0, 360)
+        lts = ut_to_lt([time_here], lons)
+        central_lon = lons[np.argmin(np.abs(24-lts))]
+
+        if mask_dials != False:
+            dial_data = dial_data.where(np.abs(dial_data) > mask_dials)
+
+        axs.append(fig.add_subplot(
+            subgrids[-1][0, 0], projection=ccrs.Orthographic(central_lon, 90)))
+        dial_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
+                       cmap=dial_cmap, cbar_kwargs={'label': "", },
+                       vmin=vmin_dial, vmax=vmax_dial)
+        axs[-1].set_title('')
+        axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
+
+        axs.append(fig.add_subplot(
+            subgrids[-1][0, 1], projection=ccrs.Orthographic(central_lon-180, -90)))
+        dial_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
+                       cmap=dial_cmap, cbar_kwargs={'label': "", },
+                       vmin=vmin_dial, vmax=vmax_dial)
+        axs[-1].set_title('')
+        axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
+
+        axs.append(fig.add_subplot(
+            subgrids[-1][1, :], projection=ccrs.PlateCarree()))
+        # map_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
+        #               cmap=map_cmap, cbar_kwargs={'label': "", },
+        #               vmin=vmin_map, vmax=vmax_map)
+
+        if color_col == 'AMP':
+            ((map_data[x_colname]**2 + map_data[y_colname]**2)**(1/2)).plot(
+                ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
+                cmap=map_cmap, cbar_kwargs={'label': "", },
+                vmin=vmin_map, vmax=vmax_map)
+
+        elif color_col is not None:
+            map_data[color_col].plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
+                                     cmap=map_cmap, cbar_kwargs={
+                                         'label': "", },
+                                     vmin=vmin_map, vmax=vmax_map)
+
+        map_data.coarsen(lat=3, lon=2,).mean().where(np.abs(map_data.lat) < 84).plot.quiver(
+            x='lon', y='lat', u=x_colname, v=y_colname, ax=axs[-1], transform=ccrs.PlateCarree(),
+            add_guide=False)
+
         if not several_datasets:
             axs[-1].set_title(str(time_here))
         else:
