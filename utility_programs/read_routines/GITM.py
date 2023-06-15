@@ -316,14 +316,17 @@ def read_bin_to_xarray(filename,
             data_vars=data_vars,
             attrs={'version': version,
                    'dropped-ghost-cells': str(drop_ghost_cells)})
-
-    if drop_ghost_cells:
-        # 2D files don't have alt ghost cells
-        if nalts > 1:
+        if drop_ghost_cells:
             ds = ds.drop_isel(lat=[0, 1, -2, -1],
                               lon=[0, 1, -1, -2], alt=[0, 1, -1, -2])
-        else:
-            ds = ds.drop_isel(lat=[0, 1, -2, -1], lon=[0, 1, -1, -2])
+
+    #if drop_ghost_cells:
+        # 2D files don't have alt ghost cells
+        #if nalts > 3:
+            #ds = ds.drop_isel(lat=[0, 1, -2, -1],
+             #                 lon=[0, 1, -1, -2], alt=[0, 1, -1, -2])
+        #else:
+            #ds = ds.drop_isel(lat=[0, 1, -2, -1], lon=[0, 1, -1, -2])
 
 
     if cols != 'all':
@@ -441,7 +444,7 @@ def read_multiple_bins_to_xarray(file_list,
         if pbar:
             progress.update()
 
-    ds = xr.concat(ds, 'time')
+    ds = xr.merge(ds)
     return ds
 
 
@@ -554,12 +557,13 @@ def process_all_to_cdf(gitm_dir,
     to_remove=[]
     first_pass=True
     
-    # things we need to keep track of for single_file
-    # existing vars cannot be replaced in a netcdf file so
-    #   we have to write temp files, combine them, then delete them.
-    files_written=[]
-    if not os.path.exists(os.path.join(out_dir, run_name+'_tmp')):
-        os.makedirs(os.path.join(out_dir, run_name+'_tmp'))
+    if single_file:
+        # things we need to keep track of for single_file
+        # existing vars cannot be replaced in a netcdf file so
+        #   we have to write temp files, combine them, then delete them.
+        files_written=[]
+        if not os.path.exists(os.path.join(out_dir, run_name+'_tmp')):
+            os.makedirs(os.path.join(out_dir, run_name+'_tmp'))
 
     for fileend in indiv_ends:
 
@@ -585,7 +589,7 @@ def process_all_to_cdf(gitm_dir,
                 cols='all'))
             to_remove.append(f)
 
-        ds_now=xr.concat(ds_now, dim='time')
+        ds_now=xr.merge(ds_now)
 
         if dtime_storm_start is not None:
             ds_now=ds_now.assign_attrs(
