@@ -1,14 +1,14 @@
 import os
 from matplotlib import pyplot as plt
+import matplotlib.gridspec as gridspec
 import geopandas
 import time
 from cartopy import crs as ccrs
-try:
-    import utils
-except ModuleNotFoundError:
-    from utility_programs import utils
+from cartopy.feature.nightshade import Nightshade
+from utility_programs import utils
 import numpy as np
 import pandas as pd
+from utility_programs.utils import ut_to_lt
 
 world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
 
@@ -184,13 +184,22 @@ def panel_plot(da,
                ):
 
     if do_map:
-        p = da.isel({wrap_col: plot_vals}).plot(
-            x=x, y=y, col=wrap_col,
-            transform=ccrs.PlateCarree(),
-            subplot_kws={"projection": ccrs.PlateCarree(),
-                         },
-            col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
-            cmap=cmap, aa=True)
+        if isel_plotvals:
+            p = da.isel({wrap_col: plot_vals}).plot(
+                x=x, y=y, col=wrap_col,
+                transform=ccrs.PlateCarree(),
+                subplot_kws={"projection": ccrs.PlateCarree(),
+                             },
+                col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
+                cmap=cmap, aa=True)
+        else:
+            p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
+                x=x, y=y, col=wrap_col,
+                transform=ccrs.PlateCarree(),
+                subplot_kws={"projection": ccrs.PlateCarree(),
+                             },
+                col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
+                cmap=cmap, aa=True)
         for ax in p.axs.flatten():
             ax.coastlines(alpha=0.6)
             ax.gridlines(color='black', alpha=0.5, linestyle='--')
@@ -234,46 +243,325 @@ def panel_with_lt(da,
                   out_fname=None,
                   isel_plotvals=False,
                   tight_layout=False,):
-    
+
     lons = np.array(lons).reshape(int(len(lons)/col_wrap), col_wrap)
-    
-    fig, axs = plt.subplots(nrows=lons.shape[0], ncols=lons.shape[1], sharey=True)
+
+    fig, axs = plt.subplots(
+        nrows=lons.shape[0], ncols=lons.shape[1], sharey=True)
     if figsize is None:
         fig.set_size_inches([3*col_wrap + 1, axs.shape[0]*3])
     else:
         fig.set_size_inches(figsize)
-        
+
     for i in np.ndindex(lons.shape):
         j = da.sel({wrap_col: lons[i]}, method='nearest').copy()
         if vlims is None:
-            im = j.plot(x=x, y=y, ax = axs[i], cmap=cmap)
+            im = j.plot(x=x, y=y, ax=axs[i], cmap=cmap)
         else:
-            im = j.plot(x=x, y=y, ax=axs[i], vmin=-vlims, vmax=vlims, cmap=cmap)
-            
-        
+            im = j.plot(x=x, y=y, ax=axs[i], vmin=-
+                        vlims, vmax=vlims, cmap=cmap)
+
         axs[i].set_xlabel('Local Time (Hours)')
         tick_locs = axs[i].get_xticks()
         axs[i].set_xticks(tick_locs)
         lts = utils.ut_to_lt([pd.Timestamp(t) for t in da.time.values[
-                ::int(len(da.time.values)/len(tick_locs))]], lons[i])
+            ::int(len(da.time.values)/len(tick_locs))]], lons[i])
         axs[i].set_xticklabels(lts.astype('int'))
-        axs[i].set_title('Glon=%i°' %int(lons[i]))
+        axs[i].set_title('Glon=%i°' % int(lons[i]))
 
         if i[1] != 0:
-                axs[i].set_ylabel('')
+            axs[i].set_ylabel('')
         if i[0] != lons.shape[0]-1:
-                axs[i].set_xlabel('')
-                
+            axs[i].set_xlabel('')
+
     fig.suptitle(suptitle)
-    #'Alt=%i km, Date=%s\nRun=%s' %(int(400), str(j.time.dt.date.values[0]), 'Full storm'))
+    # 'Alt=%i km, Date=%s\nRun=%s' %(int(400), str(j.time.dt.date.values[0]), 'Full storm'))
     if tight_layout:
         fig.tight_layout()
-        
+
     if out_fname is None:
         plt.show()
         plt.close('all')
     else:
         plt.savefig(out_fname)
         plt.close('all')
+
+
+def panel_of_dials(da, hemi_titles, times,
+                   time_titles=None,
+                   title=None,
+                   mask_dials=False,
+                   **plotargs):
+
+    if time_titles is not None:
+        time_titles = np.array(time_titles)
+    hemi_titles = np.array(hemi_titles)
+    times = np.array(times)
+
+    if hemi_titles.shape != times.shape:
+        raise ValueError('Title specs must match!')
+
+    fig = plt.figure(figsize=[4*hemi_titles.shape[1], 4*hemi_titles.shape[0]])
+
+    axs = []
+
+    for i, ax in enumerate(np.ndindex(hemi_titles.shape[0], hemi_titles.shape[1])):
+
+        time_here = pd.Timestamp(str(times[ax])).to_pydatetime()
+
+        # Find central longitude (midnight Local time)
+        lons = np.arange(0, 360)
+        lts = ut_to_lt([time_here], lons)
+        central_lon = lons[np.argmin(np.abs(24-lts))]
+
+        if hemi_titles[ax] == 'North':
+            axs.append(fig.add_subplot(
+                hemi_titles.shape[0], hemi_titles.shape[1], i+1, projection=ccrs.Orthographic(central_lon, 90)))
+
+        elif hemi_titles[ax] == 'South':
+            axs.append(fig.add_subplot(
+                hemi_titles.shape[0], hemi_titles.shape[1], i+1, projection=ccrs.Orthographic(central_lon-180, -90)))
+
+        if mask_dials == False:
+            da.sel(time=times[ax], method='nearest').plot(x='lon', y='lat', ax=axs[-1],
+                                                          transform=ccrs.PlateCarree(),
+                                                          cbar_kwargs={
+                                                          'label': ""},
+                                                          **plotargs)
+        else:
+            da.where(np.abs(da) >= mask_dials).sel(time=times[ax], method='nearest').plot(x='lon', y='lat', ax=axs[-1],
+                                                                                          transform=ccrs.PlateCarree(),
+                                                                                          cbar_kwargs={
+                'label': ""},
+                **plotargs)
+
+        if time_titles is None:
+            axs[-1].set_title('%s (%s UT)' %
+                              (hemi_titles[ax], str(time_here.time())[:5]))
+        else:
+            axs[-1].set_title('%s, %s Storm (%s UT)' % (hemi_titles[ax],
+                              time_titles[ax], str(time_here.time())[:5]))
+
+        axs[-1].coastlines(zorder=3, color='black', alpha=1)
+        axs[-1].gridlines(color='black', linestyle='--', alpha=0.6)
+        axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
+
+    if title is not None:
+        size = plt.Text.get_size(fig.suptitle('asd'))
+        fig.suptitle(title, fontsize=size+4)
+
+    fig.tight_layout()
+
+    return fig
+
+
+def loop_panels(da,
+                ncols,
+                start_time,
+                time_delta='1 hour',
+                sel_criteria=None,
+                suptitle=None,
+                title=None,
+                col_names=None,
+                save=None,
+                ret=False,
+                mask_dials=False,
+                **plotargs):
+
+    hemititles = [['North', 'South'] for i in range(ncols)]
+    hemititles = np.array(hemititles).T
+    times = []
+    for i in range(ncols):
+        times.append(pd.Timestamp(start_time) + pd.Timedelta(time_delta)*i)
+
+    times = np.array([times, times])
+    timetitles = None
+    if col_names is not None:
+        timetitles = np.array([col_names, col_names])
+
+    if sel_criteria is None:
+        fig = panel_of_dials(da,
+                             hemi_titles=hemititles,
+                             times=times,
+                             time_titles=timetitles,
+                             title=title,
+                             mask_dials=mask_dials,
+                             **plotargs)
+        if save is not None:
+            plt.savefig(save)
+        elif ret:
+            return fig
+        else:
+            plt.show()
+    else:
+        if type(sel_criteria) == dict:
+            panel_of_dials(da.sel(sel_criteria, method='nearest'), hemi_titles=hemititles,
+                           times=times, mask_dials=mask_dials,
+                           time_titles=timetitles,
+                           title=title + ' at %s = %i' % (list(sel_criteria.keys())[0],
+                                                          list(sel_criteria.values())[0])
+                           ** plotargs)
+            if save is not None:
+                plt.savefig(save)
+            else:
+                plt.show()
+        else:
+            for entry in sel_criteria:
+                panel_of_dials(da.sel(entry, method='nearest'), hemi_titles=hemititles,
+                               times=times, mask_dials=mask_dials,
+                               time_titles=timetitles,
+                               title=title + ' at %s = %i' % (list(entry.keys())[0],
+                                                              int(list(entry.values())[0])),
+                               ** plotargs)
+                if save is not None:
+                    plt.savefig(save)
+                else:
+                    plt.show()
+
+
+def map_and_dials(dial_da,
+                  total,
+                  map_da=None,
+                  max_per_row=3,
+                  isel_dials=None,
+                  sel_dials=None,
+                  isel_map=None,
+                  sel_map=None,
+                  suptitle=None,
+                  time_start=None,
+                  time_delta='1 hour',
+                  save=None,
+                  mask_dials=0.001,
+                  dial_cmap='rainbow',
+                  dial_JH_defaults=True,
+                  map_cmap='rainbow',
+                  vmin_dial=None,
+                  vmax_dial=None,
+                  vmin_map=None,
+                  vmax_map=None,
+                 several_datasets=False,
+                 times_datasets=None):
+
+    # setup data:
+    if max_per_row is None:
+        max_per_row = 3
+
+    if isel_map is None and sel_map is None:
+        times = [pd.Timestamp(time_start) +
+                 pd.Timedelta(time_delta)*i for i in range(total)]
+        sel_map = {'time': times}
+
+    if isel_dials is None and sel_dials is None:
+        times = [pd.Timestamp(time_start) +
+                 pd.Timedelta(time_delta)*i for i in range(total)]
+        sel_dials = {'time': times}
+
+    # If no colorbar limits are defined, make them for the user.
+
+    # setup figure
+    nrows = int(np.ceil(total/max_per_row))
+    ncols = max_per_row
+
+    fig = plt.figure(figsize=(5*ncols, 5*nrows))
+
+    gs0 = gridspec.GridSpec(nrows, ncols,
+                            figure=fig)
+
+    axs = []
+
+    subgrids = []
+
+    # keep track of times
+    times_plotted = []
+
+    for i in range(total):
+        # make figure
+        subgrids.append(gs0[i].subgridspec(2, 2))
         
-    
+        if several_datasets:
+            dial_data=dial_da[list(dial_da.data_vars)[i]]
+            map_data = map_da[list(map_da.data_vars)[i]]
+            # for local time:
+            time_here = pd.Timestamp(dial_data.time.values)
+        
+        else:
+            # get data (first dial then map):
+            if isel_dials is None:
+                new = {}
+                new[list(sel_dials.keys())[0]] = list(sel_dials.values())[0][i]
+                dial_data = dial_da.sel(new, method='nearest')
+            else:
+                new = {}
+                new[list(isel_dials.keys())[0]] = list(isel_dials.values())[0][i]
+                dial_data = dial_da.sel(new)
+
+            if isel_map is None:
+                new = {}
+                new[list(sel_map.keys())[0]] = list(sel_map.values())[0][i]
+                map_data = map_da.sel(new, method='nearest')
+            else:
+                new = {}
+                new[list(isel_map.keys())[0]] = list(isel_map.values())[0][i]
+                map_data = map_da.sel(new)
+
+        # for local time:
+        if times_datasets is None:
+            time_here = pd.Timestamp(dial_data.time.values)
+        else:
+            time_here = pd.Timestamp(times_datasets[i])
+        # Find central longitude (midnight Local time)
+        lons = np.arange(0, 360)
+        lts = ut_to_lt([time_here], lons)
+        central_lon = lons[np.argmin(np.abs(24-lts))]
+
+        if mask_dials != False:
+            dial_data = dial_data.where(np.abs(dial_data) > mask_dials)
+
+        axs.append(fig.add_subplot(
+            subgrids[-1][0, 0], projection=ccrs.Orthographic(central_lon, 90)))
+        dial_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
+                       cmap=dial_cmap, cbar_kwargs={'label': "", },
+                       vmin=vmin_dial, vmax=vmax_dial)
+        axs[-1].set_title('')
+        axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
+
+        axs.append(fig.add_subplot(
+            subgrids[-1][0, 1], projection=ccrs.Orthographic(central_lon-180, -90)))
+        dial_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
+                       cmap=dial_cmap, cbar_kwargs={'label': "", },
+                       vmin=vmin_dial, vmax=vmax_dial)
+        axs[-1].set_title('')
+        axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
+
+        axs.append(fig.add_subplot(
+            subgrids[-1][1, :], projection=ccrs.PlateCarree()))
+        map_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
+                      cmap=map_cmap, cbar_kwargs={'label': "", },
+                      vmin=vmin_map, vmax=vmax_map)
+        if not several_datasets:
+            axs[-1].set_title(str(time_here))
+        else:
+            axs[-1].set_title(list(map_da.data_vars)[i])
+        axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
+
+        # if subtitle is None:
+        #     axs[-1].set_title(str(time_here))
+        # else:
+        #     axs[-1].set_title(subtitle[i])
+
+        times_plotted.append(time_here)
+
+    times_plotted = np.array([times_plotted for i in range(total)]).flatten()
+    for t, ax in enumerate(axs):
+        ax.coastlines(zorder=3, color='black', alpha=1)
+        ax.gridlines(color='black', linestyle='--', alpha=0.6)
+
+    plt.suptitle(suptitle)
+
+    fig.tight_layout()
+
+    if save is not None:
+        plt.savefig(save)
+        plt.close()
+    else:
+        return fig
