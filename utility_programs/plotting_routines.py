@@ -193,22 +193,37 @@ def panel_plot(da,
                 col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
                 cmap=cmap, aa=True)
         else:
-            p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
-                x=x, y=y, col=wrap_col,
-                transform=ccrs.PlateCarree(),
-                subplot_kws={"projection": ccrs.PlateCarree(),
-                             },
-                col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
-                cmap=cmap, aa=True)
+            if vlims is not None:
+                p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
+                    x=x, y=y, col=wrap_col,
+                    transform=ccrs.PlateCarree(),
+                    subplot_kws={"projection": ccrs.PlateCarree(),
+                                 },
+                    col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
+                    cmap=cmap, aa=True)
+            else:
+                                p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
+                    x=x, y=y, col=wrap_col,
+                    transform=ccrs.PlateCarree(),
+                    subplot_kws={"projection": ccrs.PlateCarree(),
+                                 },
+                    col_wrap=col_wrap, 
+                    cmap=cmap, aa=True)
         for ax in p.axs.flatten():
             ax.coastlines(alpha=0.6)
             ax.gridlines(color='black', alpha=0.5, linestyle='--')
 
     elif not isel_plotvals:
-        p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
-            x=x, y=y, col=wrap_col,
-            col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
-            cmap=cmap, aa=True)
+        if vlims is not None:
+            p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
+                x=x, y=y, col=wrap_col,
+                col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
+                cmap=cmap, aa=True)
+        else:
+            p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
+                x=x, y=y, col=wrap_col,
+                col_wrap=col_wrap, 
+                cmap=cmap, aa=True)
 
     else:
         p = da.isel({wrap_col: plot_vals}).plot(
@@ -264,9 +279,14 @@ def panel_with_lt(da,
         axs[i].set_xlabel('Local Time (Hours)')
         tick_locs = axs[i].get_xticks()
         axs[i].set_xticks(tick_locs)
-        lts = utils.ut_to_lt([pd.Timestamp(t) for t in da.time.values[
-            ::int(len(da.time.values)/len(tick_locs))]], lons[i])
-        axs[i].set_xticklabels(lts.astype('int'))
+        try:
+            lts = utils.ut_to_lt([pd.Timestamp(t) for t in da.time.values[
+                ::int(np.floor(len(da.time.values)/len(tick_locs)))]], lons[i])
+            axs[i].set_xticklabels(lts.astype('int'))
+        except ValueError:
+            lts = utils.ut_to_lt([pd.Timestamp(t) for t in da.time.values[
+                ::int(np.ceil(len(da.time.values)/len(tick_locs)))]], lons[i])
+            axs[i].set_xticklabels(lts.astype('int'))
         axs[i].set_title('Glon=%i°' % int(lons[i]))
 
         if i[1] != 0:
@@ -551,7 +571,7 @@ def map_and_dials(dial_da,
                                               cmap=map_cmap,
                                               cbar_kwargs={'label': ""},
                                               vmin=vmin_map, vmax=vmax_map)
-            map_data.coarsen(lat=3, lon=2,).mean().where(np.abs(map_data.lat) < 84)\
+            map_data.coarsen(lat=3, lon=2).mean().where(np.abs(map_data.lat) < 84)\
                 .plot.quiver(x='lon', y='lat', u=quiver_map_cols[0], v=quiver_map_cols[1],
                              ax=axs[-1], transform=ccrs.PlateCarree(),
                              add_guide=False)
