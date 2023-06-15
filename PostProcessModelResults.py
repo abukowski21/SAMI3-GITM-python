@@ -65,9 +65,9 @@ def main(args):
         if len(header_files) > 0:
             print('GITM headers found in {}'.format(args.gitm_dir))
             print('Attempting to postprocess...')
-            gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/')]
+            gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/data')]
 
-            cmd = './' + gitm_parent_dir + '/pGITM'
+            cmd = os.path.join('.', gitm_parent_dir , 'pGITM')
             print('Running: {}'.format(cmd))
             if args.verbose:
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
