@@ -558,7 +558,8 @@ def process_all_to_cdf(gitm_dir,
     # existing vars cannot be replaced in a netcdf file so
     #   we have to write temp files, combine them, then delete them.
     files_written=[]
-    os.makedirs(os.path.join(out_dir, run_name+'_tmp'))
+    if not os.path.exists(os.path.join(out_dir, run_name+'_tmp')):
+        os.makedirs(os.path.join(out_dir, run_name+'_tmp'))
 
     for fileend in indiv_ends:
 
@@ -629,8 +630,10 @@ def process_all_to_cdf(gitm_dir,
         print('reading in temp files...')
         ds = xr.open_mfdataset(files_written, engine='h5netcdf',
                               concat_dim='time', combine='nested')
+        
         print('writing...')
-        ds.to_netcdf(os.path.join(out_dir, run_name +'_GITM.nc'))
+        ds.to_netcdf(os.path.join(out_dir, run_name +'_GITM.nc'),
+                    encoding={'time':{'dtype':float}})
         print('cleaning up')
         for f in files_written:
             os.remove(f)
