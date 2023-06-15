@@ -47,18 +47,9 @@ def make_fits(gitm_bins, lowcut=80, highcut=40, order=3):
 
     
     if type(gitm_bins) == xr.Dataset or type(gitm_bins) == xr.DataArray:
-        # Define the cutoff frequencies
-        lowcut_f = 1 / (lowcut / 60)  # 100 minutes in units of sample^-1
-        highcut_f = 1 / (highcut / 60)  # 30 minutes in units of sample^-1
-
-        # Define the Butterworth filter
-        nyquist = 0.5 * 5  # 5 minutes is the sampling frequency
-        low = lowcut_f / nyquist
-        high = highcut_f / nyquist
-        filtered_arr = gitm_bins.map_blocks(order,
-                                            [low, high],
-                                            {'btype':"bandstop",
-                                             'output':"sos"})
+        filtered_arr = xr.apply_ufunc(signal.sosfiltfilt, 
+                                      sos, gitm_bins,
+                                     dask='allowed')
     else:
         filtered_arr = signal.sosfiltfilt(sos, gitm_bins, axis=0)
     return filtered_arr
@@ -75,3 +66,13 @@ def remove_outliers(array):
         outlier_threshold * std)  # find outliers
     arr2[outliers] = median  # set outliers to median
     return arr2
+
+
+def filter_xarray_DA_diff(da, dim='time', order=2, percent=False,
+                         label='upper'):
+    
+    if percent:
+        return 100*(da.diff(dim, order, label)/da)
+    else:
+        return da.diff(dim, order, label)
+
