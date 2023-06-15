@@ -69,7 +69,7 @@ def remove_outliers(array):
 
 
 def filter_xarray_DA_diff(da, dim='time', order=2, percent=False,
-                         label='upper'):
+                         label='lower'):
     
     if percent:
         return 100*(da.diff(dim, order, label)/da)
