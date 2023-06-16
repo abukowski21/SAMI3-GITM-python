@@ -343,7 +343,7 @@ def panel_of_dials(da, hemi_titles, times,
                 hemi_titles.shape[0], hemi_titles.shape[1], i+1, projection=ccrs.Orthographic(central_lon-180, -90)))
 
         if mask_dials == False:
-            da.sel(time=times[ax], method='nearest').plot(x='lon', y='lat', ax=axs[-1],
+            da.sel(time=times[ax], method='nearest').load().plot(x='lon', y='lat', ax=axs[-1],
                                                           transform=ccrs.PlateCarree(),
                                                           cbar_kwargs={
                                                           'label': ""},
