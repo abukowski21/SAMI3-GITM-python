@@ -384,7 +384,6 @@ def loop_panels(da,
                 title=None,
                 col_names=None,
                 save=None,
-                ret=False,
                 mask_dials=False,
                 **plotargs):
 
@@ -407,36 +406,40 @@ def loop_panels(da,
                              title=title,
                              mask_dials=mask_dials,
                              **plotargs)
+        if suptitle is not None:
+            fig.suptitle(suptitle)
         if save is not None:
             plt.savefig(save)
-        elif ret:
-            return fig
         else:
-            plt.show()
+            return fig
     else:
         if type(sel_criteria) == dict:
-            panel_of_dials(da.sel(sel_criteria, method='nearest'), hemi_titles=hemititles,
+            fig = panel_of_dials(da.sel(sel_criteria, method='nearest'), hemi_titles=hemititles,
                            times=times, mask_dials=mask_dials,
                            time_titles=timetitles,
                            title=title + ' at %s = %i' % (list(sel_criteria.keys())[0],
                                                           list(sel_criteria.values())[0])
                            ** plotargs)
+            if suptitle is not None:
+                fig.suptitle(suptitle)
             if save is not None:
                 plt.savefig(save)
             else:
-                plt.show()
+                return fig
         else:
             for entry in sel_criteria:
-                panel_of_dials(da.sel(entry, method='nearest'), hemi_titles=hemititles,
+                fig = panel_of_dials(da.sel(entry, method='nearest'), hemi_titles=hemititles,
                                times=times, mask_dials=mask_dials,
                                time_titles=timetitles,
                                title=title + ' at %s = %i' % (list(entry.keys())[0],
                                                               int(list(entry.values())[0])),
                                ** plotargs)
+                if suptitle is not None:
+                    fig.suptitle(suptitle)
                 if save is not None:
                     plt.savefig(save)
                 else:
-                    plt.show()
+                    return fig 
 
 
 def map_and_dials(dial_da,
