@@ -202,12 +202,12 @@ def panel_plot(da,
                     col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
                     cmap=cmap, aa=True)
             else:
-                                p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
+                p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
                     x=x, y=y, col=wrap_col,
                     transform=ccrs.PlateCarree(),
                     subplot_kws={"projection": ccrs.PlateCarree(),
                                  },
-                    col_wrap=col_wrap, 
+                    col_wrap=col_wrap,
                     cmap=cmap, aa=True)
         for ax in p.axs.flatten():
             ax.coastlines(alpha=0.6)
@@ -222,7 +222,7 @@ def panel_plot(da,
         else:
             p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
                 x=x, y=y, col=wrap_col,
-                col_wrap=col_wrap, 
+                col_wrap=col_wrap,
                 cmap=cmap, aa=True)
 
     else:
@@ -311,6 +311,7 @@ def panel_of_dials(da, hemi_titles, times,
                    time_titles=None,
                    title=None,
                    mask_dials=False,
+                   lon_labels=False,
                    **plotargs):
 
     if time_titles is not None:
@@ -344,10 +345,10 @@ def panel_of_dials(da, hemi_titles, times,
 
         if mask_dials == False:
             da.sel(time=times[ax], method='nearest').load().plot(x='lon', y='lat', ax=axs[-1],
-                                                          transform=ccrs.PlateCarree(),
-                                                          cbar_kwargs={
-                                                          'label': ""},
-                                                          **plotargs)
+                                                                 transform=ccrs.PlateCarree(),
+                                                                 cbar_kwargs={
+                'label': ""},
+                **plotargs)
         else:
             da.where(np.abs(da) >= mask_dials).sel(time=times[ax], method='nearest').plot(x='lon', y='lat', ax=axs[-1],
                                                                                           transform=ccrs.PlateCarree(),
@@ -363,11 +364,16 @@ def panel_of_dials(da, hemi_titles, times,
                               time_titles[ax], str(time_here.time())[:5]))
 
         axs[-1].coastlines(zorder=3, color='black', alpha=1)
-        axs[-1].gridlines(color='black', linestyle='--', alpha=0.6)
+        if lon_labels:
+            axs[-1].gridlines(color='black', linestyle='--',
+                              alpha=0.6, draw_labels=True)
+        else:
+            axs[-1].gridlines(color='black', linestyle='--', alpha=0.6)
+
         axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
 
     if title is not None:
-        size = plt.Text.get_size(fig.suptitle('asd'))
+        size = plt.Text.get_size(fig.suptitle('foo'))
         fig.suptitle(title, fontsize=size+4)
 
     fig.tight_layout()
@@ -384,6 +390,7 @@ def loop_panels(da,
                 title=None,
                 col_names=None,
                 save=None,
+                lon_labels=False,
                 mask_dials=False,
                 **plotargs):
 
@@ -404,6 +411,7 @@ def loop_panels(da,
                              times=times,
                              time_titles=timetitles,
                              title=title,
+                             lon_labels=lon_labels,
                              mask_dials=mask_dials,
                              **plotargs)
         if suptitle is not None:
@@ -415,11 +423,12 @@ def loop_panels(da,
     else:
         if type(sel_criteria) == dict:
             fig = panel_of_dials(da.sel(sel_criteria, method='nearest'), hemi_titles=hemititles,
-                           times=times, mask_dials=mask_dials,
-                           time_titles=timetitles,
-                           title=title + ' at %s = %i' % (list(sel_criteria.keys())[0],
-                                                          list(sel_criteria.values())[0])
-                           ** plotargs)
+                                 times=times, mask_dials=mask_dials,
+                                 time_titles=timetitles,
+                                 lon_labels=lon_labels,
+                                 title=title + ' at %s = %i' % (list(sel_criteria.keys())[0],
+                                                                list(sel_criteria.values())[0])
+                                 ** plotargs)
             if suptitle is not None:
                 fig.suptitle(suptitle)
             if save is not None:
@@ -429,17 +438,18 @@ def loop_panels(da,
         else:
             for entry in sel_criteria:
                 fig = panel_of_dials(da.sel(entry, method='nearest'), hemi_titles=hemititles,
-                               times=times, mask_dials=mask_dials,
-                               time_titles=timetitles,
-                               title=title + ' at %s = %i' % (list(entry.keys())[0],
-                                                              int(list(entry.values())[0])),
-                               ** plotargs)
+                                     times=times, mask_dials=mask_dials,
+                                     lon_labels=lon_labels,
+                                     time_titles=timetitles,
+                                     title=title + ' at %s = %i' % (list(entry.keys())[0],
+                                                                    int(list(entry.values())[0])),
+                                     ** plotargs)
                 if suptitle is not None:
                     fig.suptitle(suptitle)
                 if save is not None:
                     plt.savefig(save)
                 else:
-                    return fig 
+                    return fig
 
 
 def map_and_dials(dial_da,
