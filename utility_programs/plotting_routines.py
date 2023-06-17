@@ -451,6 +451,63 @@ def loop_panels(da,
                 else:
                     return fig
 
+                
+def custom_panels_keos(da,
+                       numplots=8,
+                       sel_col='localtime',
+                       max_per_row=4,
+                       suptitle=None,
+                       vmin=None,
+                       vmax=None,
+                       sharex=True,
+                       sharey=True,
+                       x='time',
+                       cmap='rainbow',
+                       single_colorbar=True,
+                       colorbar_label=''):
+
+    if sel_col == 'localtime' and sel_col not in da.coords:
+        # print('adding')
+        da = add_lt_to_dataset(da, localtimes=90)
+    # print(da.coords)
+    # return da
+
+    nrows = int(np.ceil(numplots/max_per_row))
+    ncols = max_per_row
+
+    f, axs = plt.subplots(nrows,
+                          ncols,
+                          figsize=(5*nrows, 1.3*ncols if suptitle is not None else 1*ncols),
+                          sharey=sharey,
+                          sharex=sharex)
+
+    sel_list = np.linspace(da[sel_col].min().values,
+                           da[sel_col].max().values,
+                           numplots+1)[:-1]
+    
+    if single_colorbar:
+        if vmin is None:
+            vmin = da.min().compute()
+        if vmax is None:
+            vmax = da.max().compute()
+            
+    for a, ax in enumerate(axs.flatten()):
+        ims = da.sel({sel_col: sel_list[a]}, method='nearest').plot(
+            x=x, ax=ax, cmap=cmap,vmin=vmin, vmax=vmax, add_colorbar=not single_colorbar)
+        
+    if single_colorbar:
+        # divider = make_axes_locatable(axs)
+        cax = f.add_axes((1.03,.05,.05,.9))#, in_layout=True)
+        
+        # divider.append_axes('right', size='5%', pad=0.05)
+        f.colorbar(ims, cax=cax, orientation='vertical', label=colorbar_label)
+
+    if suptitle is not None:
+        f.suptitle(suptitle)
+    f.tight_layout()
+
+    return f
+                
 
 def map_and_dials(dial_da,
                   total,
