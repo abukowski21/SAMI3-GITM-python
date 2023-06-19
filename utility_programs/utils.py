@@ -217,6 +217,8 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
 
 
 def hours_from_storm_onset_into_ds(ds, onset_ut):
+    if ds.day[0] != ds.day[-1]:
+        raise ValueError(' Does not yet support multiple days!')
     ds['HoursFromStormOnset'] = ((ds.time.dt.hour - (onset_ut.hour)) +
                                  (ds.time.dt.minute - (onset_ut.minute)) / 60)
 
