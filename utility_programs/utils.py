@@ -187,7 +187,7 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
     if localtimes is None:
         localtimes = len(ds.lon)
 
-    elif type(localtimes) == int:
+    if type(localtimes) == int:
         # Make linspace of localtimes, 0-24, then chop at the ends.
         localtimes = np.linspace(0, 24, localtimes+1,
                                  endpoint=False)[:-1]
