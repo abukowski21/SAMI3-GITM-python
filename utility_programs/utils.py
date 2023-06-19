@@ -183,7 +183,7 @@ def ut_to_lt(time_array, glon):
 def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
                       localtimes=None):  # int (for number of localtimes)
     # or list-like for converting those localtimes
-    
+
     if localtimes is None:
         localtimes = len(ds.lon)
 
@@ -199,8 +199,8 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
     elif 'localtime' not in ds.coords:
         ds['localtime'] = (('time', 'lon'),
                            ut_to_lt([pd.Timestamp(i) for i in ds.time.values],
-                                          ds.lon))
-     
+                                    ds.lon))
+
     lt_dss = []
 
     for t in localtimes:
@@ -214,3 +214,10 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
 
         lt_dss.append(xr.concat(ltds, dim=ds.time))
     return xr.concat(lt_dss, dim='localtime')
+
+
+def hours_from_storm_onset_into_ds(ds, onset_ut):
+    ds['HoursFromStormOnset'] = ((ds.time.dt.hour - (onset_ut.hour)) +
+                                 (ds.time.dt.minute - (onset_ut.minute)) / 60)
+
+    return ds
