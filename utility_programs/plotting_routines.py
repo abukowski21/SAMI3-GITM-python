@@ -463,7 +463,7 @@ def custom_panels_keos(da,
                        sharey=True,
                        x='time',
                        cmap='rainbow',
-                       single_colorbar=True,
+                       no_colorbar=True,
                        colorbar_label=''):
 
     if sel_col == 'localtime' and sel_col not in da.coords:
@@ -485,7 +485,7 @@ def custom_panels_keos(da,
                            da[sel_col].max().values,
                            numplots+1)[:-1]
     
-    if single_colorbar:
+    if no_colorbar:
         if vmin is None:
             vmin = da.min().compute()
         if vmax is None:
@@ -493,14 +493,7 @@ def custom_panels_keos(da,
             
     for a, ax in enumerate(axs.flatten()):
         ims = da.sel({sel_col: sel_list[a]}, method='nearest').plot(
-            x=x, ax=ax, cmap=cmap,vmin=vmin, vmax=vmax, add_colorbar=not single_colorbar)
-        
-    if single_colorbar:
-        # divider = make_axes_locatable(axs)
-        cax = f.add_axes((1.03,.05,.05,.9))#, in_layout=True)
-        
-        # divider.append_axes('right', size='5%', pad=0.05)
-        f.colorbar(ims, cax=cax, orientation='vertical', label=colorbar_label)
+            x=x, ax=ax, cmap=cmap,vmin=vmin, vmax=vmax, add_colorbar=not no_colorbar)
 
     if suptitle is not None:
         f.suptitle(suptitle)
