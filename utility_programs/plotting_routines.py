@@ -451,7 +451,7 @@ def loop_panels(da,
                 else:
                     return fig
 
-                
+
 def custom_panels_keos(da,
                        numplots=8,
                        sel_col='localtime',
@@ -477,24 +477,25 @@ def custom_panels_keos(da,
 
     f, axs = plt.subplots(nrows,
                           ncols,
-                          figsize=(5*nrows, 1.3*ncols if suptitle is not None else 1*ncols),
+                          figsize=(5*nrows, 1.3 *
+                                   ncols if suptitle is not None else 1*ncols),
                           sharey=sharey,
                           sharex=sharex)
 
     sel_list = np.linspace(da[sel_col].min().values,
                            da[sel_col].max().values,
                            numplots+1)[:-1]
-    
+
     if one_colorbars:
         if vmin is None:
             vmin = da.min().compute()
         if vmax is None:
             vmax = da.max().compute()
-            
+
     for a, ax in enumerate(axs.flatten()):
         ims = da.sel({sel_col: sel_list[a]}, method='nearest').plot(
-            x=x, ax=ax, cmap=cmap,vmin=vmin, vmax=vmax, add_colorbar=not no_colorbar)
-        
+            x=x, ax=ax, cmap=cmap, vmin=vmin, vmax=vmax, add_colorbar=not no_colorbar)
+
     if one_colorbars:
         divider = make_axes_locatable(axs[nrows-1, ncols-1])
         cax = divider.append_axes('right', size='5%', pad=0.05, in_layout=True)
@@ -509,7 +510,7 @@ def custom_panels_keos(da,
     f.tight_layout()
 
     return f
-                
+
 
 def map_and_dials(dial_da,
                   total,
@@ -521,19 +522,24 @@ def map_and_dials(dial_da,
                   sel_map=None,
                   quiver_map_cols=None,
                   suptitle=None,
+                  suptitlesize='large',
                   time_start=None,
                   time_delta='1 hour',
                   save=None,
                   mask_dials=0.001,
+                  mask_maps=False,
                   dial_cmap='rainbow',
                   dial_JH_defaults=True,
                   map_cmap='rainbow',
                   vmin_dial=None,
                   vmax_dial=None,
+                  dial_kwargs={},
+                  map_kwargs={},
                   vmin_map=None,
                   vmax_map=None,
                   several_datasets=False,
-                  times_datasets=None):
+                  times_datasets=None,
+                  latlon_labeled=False):
 
     # setup data:
     if max_per_row is None:
@@ -555,10 +561,12 @@ def map_and_dials(dial_da,
     nrows = int(np.ceil(total/max_per_row))
     ncols = max_per_row
 
-    fig = plt.figure(figsize=(5*ncols, 5*nrows))
+    # if not latlon_labeled else (15*ncols, 15*nrows))
+    fig = plt.figure(figsize=(6*ncols, 6*nrows))
 
     gs0 = gridspec.GridSpec(nrows, ncols,
-                            figure=fig)
+                            figure=fig,
+                            wspace=.2)
 
     axs = []
 
@@ -569,7 +577,7 @@ def map_and_dials(dial_da,
 
     for i in range(total):
         # make figure
-        subgrids.append(gs0[i].subgridspec(2, 2))
+        subgrids.append(gs0[i].subgridspec(2, 2))  # , wspace=0.5, hspace=0.3))
 
         if several_datasets:
             dial_data = dial_da[list(dial_da.data_vars)[i]]
@@ -610,20 +618,24 @@ def map_and_dials(dial_da,
 
         if mask_dials != False:
             dial_data = dial_data.where(np.abs(dial_data) > mask_dials)
+        if mask_maps != False:
+            map_data = map_data.where(np.abs(map_data) > mask_maps)
 
         axs.append(fig.add_subplot(
             subgrids[-1][0, 0], projection=ccrs.Orthographic(central_lon, 90)))
         dial_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
-                       cmap=dial_cmap, cbar_kwargs={'label': "", },
-                       vmin=vmin_dial, vmax=vmax_dial)
+                       cmap=dial_cmap, cbar_kwargs={'label': "",
+                                                    'pad': 0.12},
+                       vmin=vmin_dial, vmax=vmax_dial, **dial_kwargs)
         axs[-1].set_title('')
         axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
 
         axs.append(fig.add_subplot(
             subgrids[-1][0, 1], projection=ccrs.Orthographic(central_lon-180, -90)))
         dial_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
-                       cmap=dial_cmap, cbar_kwargs={'label': "", },
-                       vmin=vmin_dial, vmax=vmax_dial)
+                       cmap=dial_cmap, cbar_kwargs={'label': "",
+                                                    'pad': 0.12},
+                       vmin=vmin_dial, vmax=vmax_dial, **dial_kwargs)
         axs[-1].set_title('')
         axs[-1].add_feature(Nightshade(time_here), alpha=0.3)
 
@@ -633,7 +645,7 @@ def map_and_dials(dial_da,
         if quiver_map_cols is None:
             map_data.plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
                           cmap=map_cmap, cbar_kwargs={'label': "", },
-                          vmin=vmin_map, vmax=vmax_map)
+                          vmin=vmin_map, vmax=vmax_map, **map_kwargs)
         else:
             if quiver_map_cols[2] == 'amp':
                 map_data[quiver_map_cols[2]] = np.sqrt(
@@ -642,7 +654,8 @@ def map_and_dials(dial_da,
             map_data[quiver_map_cols[2]].plot(ax=axs[-1], x='lon', transform=ccrs.PlateCarree(),
                                               cmap=map_cmap,
                                               cbar_kwargs={'label': ""},
-                                              vmin=vmin_map, vmax=vmax_map)
+                                              vmin=vmin_map, vmax=vmax_map,
+                                              *map_kwargs)
             map_data.coarsen(lat=3, lon=2).mean().where(np.abs(map_data.lat) < 84)\
                 .plot.quiver(x='lon', y='lat', u=quiver_map_cols[0], v=quiver_map_cols[1],
                              ax=axs[-1], transform=ccrs.PlateCarree(),
@@ -664,9 +677,11 @@ def map_and_dials(dial_da,
     times_plotted = np.array([times_plotted for i in range(total)]).flatten()
     for t, ax in enumerate(axs):
         ax.coastlines(zorder=3, color='black', alpha=1)
-        ax.gridlines(color='black', linestyle='--', alpha=0.6)
+        labs = ax.gridlines(color='black', linestyle='--',
+                            alpha=0.6, draw_labels='x' if latlon_labeled else False,
+                            xlabel_style={'fontsize': 'xx-small'} if latlon_labeled else None)
 
-    plt.suptitle(suptitle)
+    plt.suptitle(suptitle, fontsize=suptitlesize)
 
     fig.tight_layout()
 
