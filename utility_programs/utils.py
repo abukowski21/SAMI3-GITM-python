@@ -210,7 +210,7 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
 
         for do_lon in lons_to_iter:
             b = ds.isel(lon=do_lon).swap_dims(time='localtime')
-            ltds.append(b.interp(localtime=t))
+            ltds.append(b.interp(localtime=t, method='cubic'))
 
         lt_dss.append(xr.concat(ltds, dim=ds.time))
     return xr.concat(lt_dss, dim='localtime')
