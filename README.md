@@ -16,7 +16,7 @@ Git clone, get on this branch.
 
 `cd SAMI3-GITM-python/`
 
-`git checkout switch-to-xarray`
+`git checkout satellite_interpolations`
 
 To ensure compatibility, an Anaconda environment is available. Install it with:
 
