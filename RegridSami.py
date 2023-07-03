@@ -61,181 +61,181 @@ def latlonalt_to_cart(lat, lon, radius):
 #         return False
 
 
-def generate_interior_points(in_cart, old_shape):
-    """Generates interior points for each cube in the old grid.
+# def generate_interior_points(in_cart, old_shape):
+#     """Generates interior points for each cube in the old grid.
 
-    Args:
-        in_cart (numpy.ndarray): Cartesian coordinates of the old grid
-        old_shape (list): (nlt, nf, nz) of original sami run.
+#     Args:
+#         in_cart (numpy.ndarray): Cartesian coordinates of the old grid
+#         old_shape (list): (nlt, nf, nz) of original sami run.
 
-    Returns:
-        centers (numpy.ndarray): cartesian coordinates of the center of each
-            cube
-        coords (list): list of lists of the coordinates of each corner
-            of each cube.
-    """
+#     Returns:
+#         centers (numpy.ndarray): cartesian coordinates of the center of each
+#             cube
+#         coords (list): list of lists of the coordinates of each corner
+#             of each cube.
+#     """
 
-    nlt, nf, nz = old_shape
-    centers = []
-    coords = []
-    pbar = tqdm(total=np.product(old_shape), desc='Generating interior points')
-    badbadbad = []
+#     nlt, nf, nz = old_shape
+#     centers = []
+#     coords = []
+#     pbar = tqdm(total=np.product(old_shape), desc='Generating interior points')
+#     badbadbad = []
 
-    for lt in range(nlt):
-        for f in range(nf):
-            for z in range(nz):
+#     for lt in range(nlt):
+#         for f in range(nf):
+#             for z in range(nz):
 
-                if lt == old_shape[0] - 1:
-                    l2 = 0
-                else:
-                    l2 = lt + 1
+#                 if lt == old_shape[0] - 1:
+#                     l2 = 0
+#                 else:
+#                     l2 = lt + 1
 
-                if z == 0:
-                    z2 = -1
-                else:
-                    z2 = z - 1
+#                 if z == 0:
+#                     z2 = -1
+#                 else:
+#                     z2 = z - 1
 
-                f2 = f + 1
-                if f == old_shape[1] - 1:
-                    badbadbad.append([lt, f, z])
-                    continue
+#                 f2 = f + 1
+#                 if f == old_shape[1] - 1:
+#                     badbadbad.append([lt, f, z])
+#                     continue
 
-                cs = [[lt, f, z],
-                      [lt, f, z2],
-                      [l2, f, z2],
-                      [l2, f, z],
-                      [lt, f2, z],
-                      [lt, f2, z],
-                      [l2, f2, z2],
-                      [l2, f2, z2]]
+#                 cs = [[lt, f, z],
+#                       [lt, f, z2],
+#                       [l2, f, z2],
+#                       [l2, f, z],
+#                       [lt, f2, z],
+#                       [lt, f2, z],
+#                       [l2, f2, z2],
+#                       [l2, f2, z2]]
 
-                for c in cs:
-                    id_pt = []
-                    xs = []
-                    ys = []
-                    zs = []
-                    for c in cs:
-                        try:
-                            index = np.ravel_multi_index(c, old_shape)
-                        except ValueError:
-                            break
-                        id_pt.append(index)
+#                 for c in cs:
+#                     id_pt = []
+#                     xs = []
+#                     ys = []
+#                     zs = []
+#                     for c in cs:
+#                         try:
+#                             index = np.ravel_multi_index(c, old_shape)
+#                         except ValueError:
+#                             break
+#                         id_pt.append(index)
 
-                        xs.append(in_cart[0, index])
-                        ys.append(in_cart[1, index])
-                        zs.append(in_cart[2, index])
+#                         xs.append(in_cart[0, index])
+#                         ys.append(in_cart[1, index])
+#                         zs.append(in_cart[2, index])
 
-                center = np.sum(xs) / 8, np.sum(ys) / 8, np.sum(zs) / 8
+#                 center = np.sum(xs) / 8, np.sum(ys) / 8, np.sum(zs) / 8
 
-                centers.append(center)
-                coords.append(cs)
-                pbar.update()
-    pbar.close()
+#                 centers.append(center)
+#                 coords.append(cs)
+#                 pbar.update()
+#     pbar.close()
 
-    print('From %i grid points we generated %i cubes'
-          % (len(in_cart[0]), len(centers)))
+#     print('From %i grid points we generated %i cubes'
+#           % (len(in_cart[0]), len(centers)))
 
-    return centers, coords
-
-
-def make_weights(in_cart, out_cart, nearest, old_shape, coords):
-    """Generates weights for each point in the new grid.
-
-    Args:
-        in_cart (list-like): Cartesian coordinates of the old grid
-        out_cart (list-like): Cartesian coordinates of the new grid
-        nearest (list-like): list of nearest cube center in the old grid to
-            each point in the new grid
-        old_shape (list-like): (nlt, nf, nz) of original sami run.
-        coords (list-like): coordinates of each corner of each cube in the old
-            grid.
-
-    Returns:
-        weights (numpy.ndarray): Weights to multiply the old grid by to get
-            the new grid
-        src_idxs (numpy.ndarray): Indices of the old grid that contribute to
-            each point in the new grid.
-    """
-    weights=np.zeros([len(out_cart[0]), 8])
-    src_idxs=np.zeros([len(out_cart[0]), 8])
-    print('Calculating weights...')
-    for n, pt in enumerate(tqdm(nearest)):
-
-        idxs=[np.ravel_multi_index(c, old_shape) for c in coords[pt]]
-
-        xs=in_cart[0, idxs]
-        ys=in_cart[0, idxs]
-        zs=in_cart[2, idxs]
-
-        d=np.sqrt((xs - out_cart[0, n])**2 + (ys -
-                    out_cart[1, n])**2 + (zs - out_cart[2, n])**2)
-
-        weights[n]=1 / (d)
-        src_idxs[n]=idxs
-
-    print('Done, found %i valid points' % np.sum(weights > 0))
-
-    return weights, src_idxs
+#     return centers, coords
 
 
-def find_pairs(centers, out_cart):
-    """Find nearest point between two sets of coordinates.
-            (only works well for cartesian coordinates)
+# def make_weights(in_cart, out_cart, nearest, old_shape, coords):
+#     """Generates weights for each point in the new grid.
 
-    Args:
-        centers (numpy.ndarray): Centers of cubes in the old grid
-        out_cart (numpy.ndarray): Grid to search from.
+#     Args:
+#         in_cart (list-like): Cartesian coordinates of the old grid
+#         out_cart (list-like): Cartesian coordinates of the new grid
+#         nearest (list-like): list of nearest cube center in the old grid to
+#             each point in the new grid
+#         old_shape (list-like): (nlt, nf, nz) of original sami run.
+#         coords (list-like): coordinates of each corner of each cube in the old
+#             grid.
 
-    Returns:
-        numpy.ndarray: indices of the nearest point in the old grid to each
-            point in the new grid (out_cart).
-    """
-    tree=KDTree(centers)
-    _, nearest=tree.query(out_cart.T)
-    return nearest
+#     Returns:
+#         weights (numpy.ndarray): Weights to multiply the old grid by to get
+#             the new grid
+#         src_idxs (numpy.ndarray): Indices of the old grid that contribute to
+#             each point in the new grid.
+#     """
+#     weights=np.zeros([len(out_cart[0]), 8])
+#     src_idxs=np.zeros([len(out_cart[0]), 8])
+#     print('Calculating weights...')
+#     for n, pt in enumerate(tqdm(nearest)):
+
+#         idxs=[np.ravel_multi_index(c, old_shape) for c in coords[pt]]
+
+#         xs=in_cart[0, idxs]
+#         ys=in_cart[0, idxs]
+#         zs=in_cart[2, idxs]
+
+#         d=np.sqrt((xs - out_cart[0, n])**2 + (ys -
+#                     out_cart[1, n])**2 + (zs - out_cart[2, n])**2)
+
+#         weights[n]=1 / (d)
+#         src_idxs[n]=idxs
+
+#     print('Done, found %i valid points' % np.sum(weights > 0))
+
+#     return weights, src_idxs
 
 
-try:
-    from numba import jit
-    from numba import prange
-    print('Numba available! This will drastically speed up applying weights,')
+# def find_pairs(centers, out_cart):
+#     """Find nearest point between two sets of coordinates.
+#             (only works well for cartesian coordinates)
 
-    @ jit(nopython=True)
-    def numba_do_apply_weights(t0, src_idxs, weights, outv):
-        """Speed up applying weight function.
+#     Args:
+#         centers (numpy.ndarray): Centers of cubes in the old grid
+#         out_cart (numpy.ndarray): Grid to search from.
 
-        Args:
-            t0 (numpy.ndarray): data (all times)
-            src_idxs (numpy.ndarray): indexes from dst to src grid
-            weights (numpy.ndarray): generated weights.
-        """
-
-        for t in prange(t0.shape[-1]):
-            outv[t] += np.sum(weights * np.take(
-                t0[:, :, :, t], src_idxs), axis=1) \
-                / np.sum(weights, axis=1)
-
-        return outv
+#     Returns:
+#         numpy.ndarray: indices of the nearest point in the old grid to each
+#             point in the new grid (out_cart).
+#     """
+#     tree=KDTree(centers)
+#     _, nearest=tree.query(out_cart.T)
+#     return nearest
 
 
-except ImportError:
-    print('No Numba available')
+# try:
+#     from numba import jit
+#     from numba import prange
+#     print('Numba available! This will drastically speed up applying weights,')
 
-    def numba_do_apply_weights(t0, src_idxs, weights, outv):
-        """Speed up applying weight function.
+#     @ jit(nopython=True)
+#     def numba_do_apply_weights(t0, src_idxs, weights, outv):
+#         """Speed up applying weight function.
 
-        Args:
-            t0 (numpy.ndarray): data (all times)
-            src_idxs (numpy.ndarray): indexes from dst to src grid
-            weights (numpy.ndarray): generated weights.
-        """
+#         Args:
+#             t0 (numpy.ndarray): data (all times)
+#             src_idxs (numpy.ndarray): indexes from dst to src grid
+#             weights (numpy.ndarray): generated weights.
+#         """
 
-        for t in range(t0.shape[-1]):
-            outv[t] += np.sum(weights * np.take(
-                t0[:, :, :, t], src_idxs), axis=1) \
-                / np.sum(weights, axis=1)
+#         for t in prange(t0.shape[-1]):
+#             outv[t] += np.sum(weights * np.take(
+#                 t0[:, :, :, t], src_idxs), axis=1) \
+#                 / np.sum(weights, axis=1)
 
-        return outv
+#         return outv
+
+
+# except ImportError:
+#     print('No Numba available')
+
+#     def numba_do_apply_weights(t0, src_idxs, weights, outv):
+#         """Speed up applying weight function.
+
+#         Args:
+#             t0 (numpy.ndarray): data (all times)
+#             src_idxs (numpy.ndarray): indexes from dst to src grid
+#             weights (numpy.ndarray): generated weights.
+#         """
+
+#         for t in range(t0.shape[-1]):
+#             outv[t] += np.sum(weights * np.take(
+#                 t0[:, :, :, t], src_idxs), axis=1) \
+#                 / np.sum(weights, axis=1)
+
+#         return outv
 
 
 def main(
