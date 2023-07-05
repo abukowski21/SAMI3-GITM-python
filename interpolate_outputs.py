@@ -59,7 +59,45 @@ def do_interpolations(
     cols='all',
     show_progress=False,
     engine='h5netcdf',
+    return_ds_too=False,
     ):
+    """Interpolate SAMI (GITM functionality not done yet) to either a
+        standard geographic grid or to user-defined points.
+
+    Args:
+        sami_data_math (string): path to sami data.
+        dtime_sim_start (string/datetime.datetime): Start time of simulation.
+            Required to read SAMI data. Can be str (YYYYMMDD) or a pre-computed 
+            datetime object. 
+        out_latlonalt (numpy.array): Coordinates to interpolate to.
+            Must have dimenstions 3xN, where N is number of points.
+            Will be converted to cartesian coordinates.
+            Lon and Lat in degrees, Alt in km above earth surface.
+        out_path (str): Path to save regridded to. 
+        out_runname (str): Descriptive name for output file. Appended to 
+            out_path + SAMI_REGRID. 
+        save_delauney (bool): Option to save/read delauney weights to/from file.
+            It takes a while to compute them. Weight file is saved to the
+            sami_data_path path with a specification of the max_alt. Setting to True
+            allows the program to read weights as well as save them.
+        max_alt (int): specify maximum altitude of data grid to feed in to delauney
+            calculations. Useful if you don't want to recalculate weights and the
+            interpoaltion is different from one already done.
+        cols (str/list-like): Which variables to interpolate. Default is 'all'.
+            Can be any str from utility_programs.read_routines.SAMI.sami_og_vars.
+        show_progress (bool): Show progressbars? Default: False
+            Requires tqdm.
+        engine (str): Which engine to use when writing netcdf files.
+            Default is 'h5netcdf' but can cause some issues on some systems and 
+            some python environments. Set to None to use default xarray engine.
+        return_ds_too (bool): Set to True to also return the interpolated dataset.
+            Does not support multiple variables.
+            
+
+    Returns:
+        Nothing. Unless return_ds_too == True
+            - The interpolated data is written to a file.
+    """
     
 
     # deal with sami first
@@ -179,11 +217,13 @@ def do_interpolations(
                              len(lonout),
                              len(altout)))
             ds.to_netcdf(os.path.join(
-                out_path,'SAMI_REGRID'+out_runname),
+                out_path,'SAMI_REGRID' + out_runname + '.nc'),
                          engine=engine,
                          mode='w' if first else 'a',
                          encoding={'time':{'dtype':float}})
             first=False
+            if return_ds_too:
+                return ds            
             del ds, interpd, data #clean up memory
 
     
