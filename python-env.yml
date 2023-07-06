@@ -15,4 +15,4 @@ dependencies:
   - numba
   - ipykernel
   - xesmf
-prefix: /glade/work/abukowski/conda-envs/SAMI3-GITM
+
