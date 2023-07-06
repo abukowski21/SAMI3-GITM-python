@@ -12,8 +12,6 @@ Can read output coords from cdf/csv or by user-defined grid.
 
 """
 
-
-from distutils import filelist
 import xarray as xr
 
 from tqdm.auto import tqdm
@@ -84,6 +82,7 @@ def do_interpolations(
             Will be converted to cartesian coordinates.
             Lon and Lat in degrees, Alt in km above earth surface.
         out_path (str): Path to save regridded to.
+            Default is same as MODEL_data_path.
         out_runname (str): Descriptive name for output file. Appended to
             out_path + SAMI_REGRID.
         save_delauney (bool): Option to save/read delauney weights from file.
@@ -115,6 +114,12 @@ def do_interpolations(
     if sami_data_path is not None and gitm_data_path is not None:
         raise ValueError('Only one of sami_data_path or gitm_data_path can be'
                          ' specified at a time.')
+
+    if out_path is None:
+        if sami_data_path is not None:
+            out_path = sami_data_path
+        else:
+            out_path = gitm_data_path
 
     # outputs...
     if out_lat_lon_alt is None:
@@ -275,12 +280,12 @@ def do_interpolations(
                 return_vars=True)
             if cols != ['all']:
                 for varname in cols:
-                    if varname not in f0.keys():
+                    if varname not in f0['gitmvars']:
                         raise ValueError(
                             '{} not found in GITM files'.format(varname),
                             '\nData variables are: \n{}'.format(f0.keys()))
             else:
-                cols = f0.keys()
+                cols = f0['gitmvars']
 
             # make/load Delauney triangulation
             if os.path.exists(os.path.join(gitm_data_path,
@@ -301,7 +306,7 @@ def do_interpolations(
 
                 in_lat = f0['gitmgrid']['latitude'].flatten()
                 in_lon = f0['gitmgrid']['longitude'].flatten()
-                in_radius = f0['gitmgrid']['radius'].flatten() + 6371
+                in_radius = f0['gitmgrid']['altitude'].flatten() + 6371
 
                 in_cart = latlonalt_to_cart(in_lat, in_lon, in_radius).T
 
@@ -313,33 +318,37 @@ def do_interpolations(
                         pickle.dump(tri, f)
 
             # Now start grabbing model outputs...
-            numfiles = len(
-                glob.glob(os.path.join(gitm_data_path, '*.bin')))
+            files = glob.glob(os.path.join(gitm_data_path, '*.bin'))
+            times = GITM.gitm_times_from_filelist(files)
+            numfiles = len(files)
+
             if gitm_output_each_var:
                 if show_progress:
-                    pbar = tqdm(total=len(cols) * len(numfiles))
+                    pbar = tqdm(total=len(cols) * numfiles)
                 for varname in cols:
-                    pbar.set_description('Reading in GITM data')
+                    if show_progress:
+                        pbar.set_description('Reading in GITM data')
                     darr = GITM.read_bin_to_nparrays(
                         gitm_dir=gitm_data_path,
                         cols=[varname],
                         progress_bar=False)
                     interpd = []
-                    for t in range(len(numfiles)):
+                    for t in range(numfiles):
                         interp = LinearNDInterpolator(
                             tri,
-                            darr['gitmbins'][t, 0, :, t:].T.flatten())
+                            darr['gitmbins'][t, 0, :, :].T.flatten())
                         interpd.append(interp(out_lat_lon_alt.T))
                         if show_progress:
                             pbar.update()
-                    pbar.set_description('writing Dataset...')
+                    if show_progress:
+                        pbar.set_description('writing Dataset...')
                     ds = xr.Dataset(coords={
                         'time': (['time'], times),
                         'alt': (['alt'], altout),
                         'lat': (['lat'], latout),
                         'lon': (['lon'], lonout)},)
-                    ds[data_var] = (('time', 'lat', 'lon', 'alt'),
-                                    np.array(interpd).reshape(
+                    ds[varname] = (('time', 'lat', 'lon', 'alt'),
+                                   np.array(interpd).reshape(
                         len(times),
                         len(latout),
                         len(lonout),
@@ -348,15 +357,16 @@ def do_interpolations(
                         out_path,
                         'GITM_INTERP%s_%s.nc' % ('_' + out_runname if
                                                  out_runname != '' else '',
-                                                 varname) + '.nc'),
+                                                 varname)),
                                  engine=engine,
                                  mode='w',
                                  encoding={'time': {'dtype': float}})
                     del ds, interpd, darr  # clean up memory
 
             elif gitm_output_each_time:
-                for t in range(len(numfiles)):
-                    pbar.set_description('Reading in GITM data')
+                for t in range(numfiles):
+                    if show_progress:
+                        pbar.set_description('Reading in GITM data')
                     darr = GITM.read_bin_to_nparrays(
                         gitm_dir=gitm_data_path,
                         cols=cols,
@@ -366,19 +376,22 @@ def do_interpolations(
                         progress_bar=False)
                     interpd = []
                     ds = xr.Dataset(coords={
-                        'time': (['time'], times),
+                        'time': (['time'], [times[t]]),
                         'alt': (['alt'], altout),
                         'lat': (['lat'], latout),
                         'lon': (['lon'], lonout)},)
-                    for varnum in range(len(cols)):
+                    for varnum, varname in enumerate(cols):
+                        # print(darr['gitmbins'][t, varnum, :, :].shape,
+                        #       darr['gitmbins'][
+                        #           t, varnum, :, :].T.flatten().shape)
                         interp = LinearNDInterpolator(
                             tri,
-                            darr['gitmbins'][t, varnum, :, t:].T.flatten())
+                            darr['gitmbins'][0, varnum, :, :].T.flatten())
 
-                        ds[data_var] = (
+                        ds[varname] = (
                             ('time', 'lat', 'lon', 'alt'), np.array(
                                 interp(out_lat_lon_alt.T)).reshape(
-                                    len(times),
+                                    1,  # single time value
                                     len(latout),
                                     len(lonout),
                                     len(altout)))
@@ -386,10 +399,10 @@ def do_interpolations(
                         if show_progress:
                             pbar.update()
 
-                    pbar.set_description('writing Dataset...')
+                    if show_progress:
+                        pbar.set_description('writing Dataset...')
                     fname = make_ccmc_name('GITM_REGRID',
-                                           GITM.gitm_times_from_filelist(
-                                               [filelist[t]])[0],
+                                           times[t],
                                            out_runname if out_runname != ''
                                            else '')
                     ds.to_netcdf(os.path.join(out_path, fname),
