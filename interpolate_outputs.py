@@ -78,8 +78,12 @@ def do_interpolations(
             file. Will run faster for all variables than gitm_output_each_var,
             but will include variables the user does not care for.
         out_lat_lon_alt (numpy.array): Coordinates to interpolate to.
-            Must have dimenstions 3xN, where N is number of points.
-            Will be converted to cartesian coordinates.
+            A list of arrays whose first array has different latitudes,
+            second has different longitudes and third has different altitudes.
+            Arrays can be of different sizes such that the coordinates being
+            interpolated are all possible combinations of input latitudes,
+            longitudes and altitudes.
+            These will be converted to cartesian coordinates.
             Lon and Lat in degrees, Alt in km above earth surface.
         out_path (str): Path to save regridded to.
             Default is same as MODEL_data_path.
@@ -129,23 +133,25 @@ def do_interpolations(
             altout = np.arange(200, 2200, 50)
         else:
             altout = np.arange(120, 670, 50)
-        out_lats = []
-        out_lons = []
-        out_alts = []
 
-        for a in latout:
-            for o in lonout:
-                for l1 in altout:
-                    out_lats.append(a)
-                    out_lons.append(o)
-                    out_alts.append(l1)
-
-        out_lat_lon_alt = latlonalt_to_cart(
-            out_lats, out_lons, np.array(out_alts) + 6371)
     else:
-        out_lat_lon_alt = latlonalt_to_cart(
-            out_lat_lon_alt[0], out_lat_lon_alt[1],
-            np.array(out_lat_lon_alt[2]) + 6371)
+        latout = np.array(out_lat_lon_alt[0])
+        lonout = np.array(out_lat_lon_alt[1])
+        altout = np.array(out_lat_lon_alt[2])
+
+    out_lats = []
+    out_lons = []
+    out_alts = []
+
+    for a in latout:
+        for o in lonout:
+            for l1 in altout:
+                out_lats.append(a)
+                out_lons.append(o)
+                out_alts.append(l1)
+
+    out_lat_lon_alt = latlonalt_to_cart(
+        out_lats, out_lons, np.array(out_alts) + 6371)
 
     # deal with sami first
     if sami_data_path is not None:
@@ -232,9 +238,9 @@ def do_interpolations(
                 pbar.set_description('writing Dataset...')
             ds = xr.Dataset(coords={
                 'time': (['time'], times),
-                'alt': (['alt'], altout),
                 'lat': (['lat'], latout),
-                'lon': (['lon'], lonout)},)
+                'lon': (['lon'], lonout),
+                'alt': (['alt'], altout)})
             ds[data_var] = (('time', 'lat', 'lon', 'alt'),
                             np.array(interpd).reshape(
                 len(times),
@@ -344,9 +350,9 @@ def do_interpolations(
                         pbar.set_description('writing Dataset...')
                     ds = xr.Dataset(coords={
                         'time': (['time'], times),
-                        'alt': (['alt'], altout),
                         'lat': (['lat'], latout),
-                        'lon': (['lon'], lonout)},)
+                        'lon': (['lon'], lonout),
+                        'alt': (['alt'], altout)})
                     ds[varname] = (('time', 'lat', 'lon', 'alt'),
                                    np.array(interpd).reshape(
                         len(times),
@@ -377,9 +383,9 @@ def do_interpolations(
                     interpd = []
                     ds = xr.Dataset(coords={
                         'time': (['time'], [times[t]]),
-                        'alt': (['alt'], altout),
                         'lat': (['lat'], latout),
-                        'lon': (['lon'], lonout)},)
+                        'lon': (['lon'], lonout),
+                        'alt': (['alt'], altout)})
                     for varnum, varname in enumerate(cols):
                         # print(darr['gitmbins'][t, varnum, :, :].shape,
                         #       darr['gitmbins'][
