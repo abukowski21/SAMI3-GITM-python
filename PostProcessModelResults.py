@@ -5,8 +5,8 @@ Process GITM & SAMI data to NetCDF format.
 - More functionality is available in the individual model modules.
 - This program will process every column into netCDF files by time.
 - SAMI is regridded according to the default values in RegridSami.main()
-  - This can be adjusted with a custom grid, or use the individual model's 
-	post-processing routines for more fine control.
+  - This can be adjusted with a custom grid, or use the individual model's
+    post-processing routines for more fine control.
 
 ## TODO:
 - Automatically process all model outputs from a given directory.
@@ -67,7 +67,7 @@ def main(args):
             print('Attempting to postprocess...')
             gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/data')]
 
-            cmd = os.path.join('.', gitm_parent_dir , 'pGITM')
+            cmd = os.path.join('.', gitm_parent_dir, 'pGITM')
             print('Running: {}'.format(cmd))
             if args.verbose:
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -214,19 +214,20 @@ def main(args):
                                 else None)
 
             else:
-                RegridSami.main(sami_data_path=args.sami_dir,
-                                out_path=output_dir,
-                                save_weights=weights_exist,
-                                use_saved_weights=weights_exist,
-                                dtime_sim_start=args.dtime_sim_start,
-                                use_ccmc=args.ccmc,
-                                split_by_time=args.ccmc,
-                                split_by_var=not (
-                                    args.ccmc and args.single_file),
-                                numba=numba_installed and not args.low_mem,
-                                skip_time_check=args.skip_time_check,
-                                whole_run=True if args.single_file else False,
-                                run_name=args.single_file if args.single_file else None)
+                RegridSami.main(
+                    sami_data_path=args.sami_dir,
+                    out_path=output_dir,
+                    save_weights=weights_exist,
+                    use_saved_weights=weights_exist,
+                    dtime_sim_start=args.dtime_sim_start,
+                    use_ccmc=args.ccmc,
+                    split_by_time=args.ccmc,
+                    split_by_var=not (
+                        args.ccmc and args.single_file),
+                    numba=numba_installed and not args.low_mem,
+                    skip_time_check=args.skip_time_check,
+                    whole_run=True if args.single_file else False,
+                    run_name=args.single_file if args.single_file else None)
 
     return
 
@@ -244,10 +245,13 @@ if __name__ == '__main__':
     parser.add_argument('--gitm_types', type=str, default='all',
                         nargs='*', help='Which GITM data to process?'
                         ' (EX: 3DALL, 3DNEU, etc.) (Default: all)')
-    parser.add_argument('--single_file', type=str, default=False,
-                        help='Set this to the run name to output the entire'
-                        ' model run data to a single netCDF file (for each'
-                        ' model). Note: model name will be added automatically.')
+    parser.add_argument(
+        '--single_file',
+        type=str,
+        default=False,
+        help='Set this to the run name to output the entire'
+        ' model run data to a single netCDF file (for each'
+        ' model). Note: model name will be added automatically.')
     parser.add_argument('--set_custom_grid', type=bool, default=False,
                         help='Set a custom grid for SAMI regridding?'
                         ' Default: False')

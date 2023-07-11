@@ -21,9 +21,9 @@ Git clone, get on this branch.
 To ensure compatibility, an Anaconda environment is available. Install it with:
 
 `conda env create -f python-env.yml && conda activate SAMI3-GITM`
-> To create the environment with another name, edit the first line of `python-env.yml`
 
-> Anaconda installation information can be found at [this link](https://conda.io/projects/conda/en/latest/index.html)
+> To create the environment with another name, edit the first line of `python-env.yml`
+> Anaconda installation information can be found at [this link](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
 
 Data can be read directly from binary format and plotted, though there are scripts to postprocess
 these data into netCDF format. This will also interpolate SAMI3 model outputs to a "regular" grid
