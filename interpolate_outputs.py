@@ -25,6 +25,7 @@ import glob
 import pickle
 from scipy.spatial import Delaunay
 from scipy.interpolate import LinearNDInterpolator
+import math
 
 
 def latlonalt_to_cart(lat, lon, radius):
@@ -43,6 +44,24 @@ def latlonalt_to_cart(lat, lon, radius):
     x = radius * np.cos(lat) * np.cos(lon)
     y = radius * np.cos(lat) * np.sin(lon)
     z = radius * np.sin(lat)
+    return np.array([x, y, z])
+
+def gps_to_ecef_custom(lon, lat, alt, degrees=True):
+    a = 6378137.0
+    finv = 298.257223563
+    f = 1 / finv
+    e2 = 1 - (1 - f) * (1 - f)
+    
+    if degrees:
+        lat = np.deg2rad(lat)
+        lon = np.deg2rad(lon)
+        
+    v = a / np.sqrt(1 - e2 * np.sin(lat) * np.sin(lat))
+
+    x = (v + alt) * np.cos(lat) * np.cos(lon)
+    y = (v + alt) * np.cos(lat) * np.sin(lon)
+    z = (v * (1 - e2) + alt) * np.sin(lat)
+
     return np.array([x, y, z])
 
 
@@ -178,8 +197,8 @@ def do_interpolations(
             grid2[k] = grid[k][mask].flatten()
         del grid
 
-        in_cart = latlonalt_to_cart(grid2['glat'],
-                                    grid2['glon'],
+        in_cart = gps_to_ecef_custom(grid2['glon'],
+                                    grid2['glat'],
                                     grid2['malt']).T
 
         if os.path.exists(os.path.join(sami_data_path,
