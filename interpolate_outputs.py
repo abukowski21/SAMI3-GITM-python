@@ -46,11 +46,14 @@ def latlonalt_to_cart(lat, lon, radius):
     z = radius * np.sin(lat)
     return np.array([x, y, z])
 
-def gps_to_ecef_custom(lon, lat, alt, degrees=True):
+def gps_to_ecef_custom(lon, lat, alt, degrees=True, alt_in_m=False):
     a = 6378137.0
     finv = 298.257223563
     f = 1 / finv
     e2 = 1 - (1 - f) * (1 - f)
+    
+    if not alt_in_m:
+        alt = np.asarray(alt) * 1000
     
     if degrees:
         lat = np.deg2rad(lat)
@@ -169,8 +172,8 @@ def do_interpolations(
                 out_lons.append(o)
                 out_alts.append(l1)
 
-    out_lat_lon_alt = latlonalt_to_cart(
-        out_lats, out_lons, np.array(out_alts) + 6371)
+    out_lat_lon_alt = gps_to_ecef_custom(
+        out_lons, out_lats, out_alts)
 
     # deal with sami first
     if sami_data_path is not None:
@@ -199,7 +202,7 @@ def do_interpolations(
 
         in_cart = gps_to_ecef_custom(grid2['glon'],
                                     grid2['glat'],
-                                    grid2['malt']).T
+                                    grid2['alt']).T
 
         if os.path.exists(os.path.join(sami_data_path,
                                        'delauney_max-%i.pkl' % max_alt)):
@@ -266,6 +269,8 @@ def do_interpolations(
                 len(latout),
                 len(lonout),
                 len(altout)))
+            if out_runname != '':
+                out_runname = '_' + out_runname + '_'
             ds.to_netcdf(os.path.join(
                 out_path, 'SAMI_REGRID' + out_runname + '.nc'),
                 engine=engine,
@@ -331,9 +336,9 @@ def do_interpolations(
 
                 in_lat = f0['gitmgrid']['latitude'].flatten()
                 in_lon = f0['gitmgrid']['longitude'].flatten()
-                in_radius = f0['gitmgrid']['altitude'].flatten() + 6371
+                in_alt = f0['gitmgrid']['altitude'].flatten()
 
-                in_cart = latlonalt_to_cart(in_lat, in_lon, in_radius).T
+                in_cart = latlonalt_to_cart(in_lon, in_lat, in_alt).T
 
                 tri = Delaunay(in_cart)
                 if save_delauney:
