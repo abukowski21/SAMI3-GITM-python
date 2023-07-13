@@ -263,7 +263,7 @@ def do_interpolations(
 
             if show_progress:
                 pbar.set_description('interpolating')
-            for t in tqdm(range(len(times))):
+            for t in range(len(times)):
                 interp = LinearNDInterpolator(
                     tri,
                     data['data'][data_var][:, :, :, t][mask].flatten())
