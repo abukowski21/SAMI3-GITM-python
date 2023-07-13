@@ -25,6 +25,7 @@ import glob
 import pickle
 from scipy.spatial import Delaunay
 from scipy.interpolate import LinearNDInterpolator
+import math
 
 
 def latlonalt_to_cart(lat, lon, radius):
@@ -43,6 +44,27 @@ def latlonalt_to_cart(lat, lon, radius):
     x = radius * np.cos(lat) * np.cos(lon)
     y = radius * np.cos(lat) * np.sin(lon)
     z = radius * np.sin(lat)
+    return np.array([x, y, z])
+
+def gps_to_ecef_custom(lon, lat, alt, degrees=True, alt_in_m=False):
+    a = 6378137.0
+    finv = 298.257223563
+    f = 1 / finv
+    e2 = 1 - (1 - f) * (1 - f)
+    
+    if not alt_in_m:
+        alt = np.asarray(alt) * 1000
+    
+    if degrees:
+        lat = np.deg2rad(lat)
+        lon = np.deg2rad(lon)
+        
+    v = a / np.sqrt(1 - e2 * np.sin(lat) * np.sin(lat))
+
+    x = (v + alt) * np.cos(lat) * np.cos(lon)
+    y = (v + alt) * np.cos(lat) * np.sin(lon)
+    z = (v * (1 - e2) + alt) * np.sin(lat)
+
     return np.array([x, y, z])
 
 
@@ -143,9 +165,29 @@ def do_interpolations(
         out_lat_lon_alt = latlonalt_to_cart(
             out_lats, out_lons, np.array(out_alts) + 6371)
     else:
+<<<<<<< HEAD
         out_lat_lon_alt = latlonalt_to_cart(
             out_lat_lon_alt[0], out_lat_lon_alt[1],
             np.array(out_lat_lon_alt[2]) + 6371)
+=======
+        latout = np.array(out_lat_lon_alt[0])
+        lonout = np.array(out_lat_lon_alt[1])
+        altout = np.array(out_lat_lon_alt[2])
+
+    out_lats = []
+    out_lons = []
+    out_alts = []
+
+    for a in latout:
+        for o in lonout:
+            for l1 in altout:
+                out_lats.append(a)
+                out_lons.append(o)
+                out_alts.append(l1)
+
+    out_lat_lon_alt = gps_to_ecef_custom(
+        out_lons, out_lats, out_alts)
+>>>>>>> 548a59d664ddd861776d5dfd38fafee4f0fddf7f
 
     # deal with sami first
     if sami_data_path is not None:
@@ -172,9 +214,9 @@ def do_interpolations(
             grid2[k] = grid[k][mask].flatten()
         del grid
 
-        in_cart = latlonalt_to_cart(grid2['glat'],
-                                    grid2['glon'],
-                                    grid2['malt']).T
+        in_cart = gps_to_ecef_custom(grid2['glon'],
+                                    grid2['glat'],
+                                    grid2['alt']).T
 
         if os.path.exists(os.path.join(sami_data_path,
                                        'delauney_max-%i.pkl' % max_alt)):
@@ -241,6 +283,8 @@ def do_interpolations(
                 len(latout),
                 len(lonout),
                 len(altout)))
+            if out_runname != '':
+                out_runname = '_' + out_runname + '_'
             ds.to_netcdf(os.path.join(
                 out_path, 'SAMI_REGRID' + out_runname + '.nc'),
                 engine=engine,
@@ -306,9 +350,9 @@ def do_interpolations(
 
                 in_lat = f0['gitmgrid']['latitude'].flatten()
                 in_lon = f0['gitmgrid']['longitude'].flatten()
-                in_radius = f0['gitmgrid']['altitude'].flatten() + 6371
+                in_alt = f0['gitmgrid']['altitude'].flatten()
 
-                in_cart = latlonalt_to_cart(in_lat, in_lon, in_radius).T
+                in_cart = latlonalt_to_cart(in_lon, in_lat, in_alt).T
 
                 tri = Delaunay(in_cart)
                 if save_delauney:
