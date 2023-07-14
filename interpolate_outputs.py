@@ -331,6 +331,7 @@ def do_interpolations(
                 if show_progress:
                     pbar = tqdm(total=len(cols) * numfiles)
                 first=True
+                numcol_for_pbar = 1
                 for varname in cols:
                     if show_progress:
                         pbar.set_description('Reading in GITM data')
@@ -339,6 +340,9 @@ def do_interpolations(
                         cols=[varname],
                         progress_bar=False)
                     interpd = []
+                    if show_progress:
+                        pbar.set_description('interpolating %s (%i/%i)' 
+                                     %(varname, numcol_for_pbar, len(cols))
                     for t in range(numfiles):
                         interp = LinearNDInterpolator(
                             tri,
@@ -367,6 +371,7 @@ def do_interpolations(
                                  mode='w' if first else 'a',
                                  encoding={'time': {'dtype': float}})
                     first=False
+                    numcol_for_pbar += 1
                     del ds, interpd, darr  # clean up memory
 
             elif gitm_output_each_time:
