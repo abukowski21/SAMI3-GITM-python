@@ -175,7 +175,6 @@ def do_interpolations(
         in_cart = gps_to_ecef_custom(grid2['glon'],
                                     grid2['glat'],
                                     grid2['alt']).T
-        print(in_cart.shape)
 
         if os.path.exists(os.path.join(sami_data_path,
                                        'delauney_max-%i.pkl' % max_alt)):
@@ -233,11 +232,11 @@ def do_interpolations(
                     pbar.update()
             if show_progress:
                 pbar.set_description('writing Dataset...')
-            ds = xr.Dataset(coords={
+            ds =  xr.Dataset(coords={
                 'time': (['time'], times),
                 'alt': (['alt'], altout),
-                'lon': (['lat'], lonout),
-                'lat': (['lon'], latout)},)
+                'lon': (['lon'], lonout),
+                'lat': (['lat'], latout)},)
             ds[data_var] = (('time', 'lon', 'lat', 'alt'),
                             np.array(interpd).reshape(
                 len(times),
