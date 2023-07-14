@@ -245,9 +245,9 @@ def do_interpolations(
                 len(latout),
                 len(altout)))
             if out_runname != '':
-                out_runname = '_' + out_runname + '_'
+                out_runname = out_runname + '_'
             ds.to_netcdf(os.path.join(
-                out_path, 'SAMI_REGRID' + out_runname + '.nc'),
+                out_path, out_runname + 'SAMI_REGRID' + '.nc'),
                 engine=engine,
                 mode='w' if first else 'a',
                 encoding={'time': {'dtype': float}})
@@ -330,6 +330,7 @@ def do_interpolations(
             if gitm_output_each_var:
                 if show_progress:
                     pbar = tqdm(total=len(cols) * numfiles)
+                first=True
                 for varname in cols:
                     if show_progress:
                         pbar.set_description('Reading in GITM data')
@@ -360,12 +361,12 @@ def do_interpolations(
                         len(altout)))
                     ds.to_netcdf(os.path.join(
                         out_path,
-                        'GITM_INTERP%s_%s.nc' % ('_' + out_runname if
-                                                 out_runname != '' else '',
-                                                 varname)),
+                        '%sGITM_INTERP.nc' % (out_runname + '_' if
+                                                 out_runname != '' else '')),
                                  engine=engine,
-                                 mode='w',
+                                 mode='w' if first else 'a',
                                  encoding={'time': {'dtype': float}})
+                    first=False
                     del ds, interpd, darr  # clean up memory
 
             elif gitm_output_each_time:
