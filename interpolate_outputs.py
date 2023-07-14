@@ -159,12 +159,8 @@ def do_interpolations(
 
         # specify max alt to build delauney at
         if max_alt is None:
-            if out_lon_lat_alt is not None:
-                # alt will be the biggest coord:
-                max_alt = np.max(altout) + 300
-                # add 300 to make sure we have enough points above top
-            else:
-                max_alt = 2500
+            max_alt = np.max(altout) + 300
+
 
         mask = np.where(grid['alt'] < max_alt)
         grid2 = {}
