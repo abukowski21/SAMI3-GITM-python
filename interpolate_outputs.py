@@ -28,23 +28,6 @@ from scipy.interpolate import LinearNDInterpolator
 import math
 
 
-def latlonalt_to_cart(lat, lon, radius):
-    """Convert lat, lon, alt to cartesian coordinates.
-
-    Args:
-        lat (numpy.ndarray): latitude (in degrees)
-        lon (numpy.ndarray): longitude (in degrees)
-        radius (numpy.ndarray): radius in Re from center of Earth
-
-    Returns:
-        numpy.ndarray: 3xN array of cartesian coordinates
-    """
-    lat = np.deg2rad(lat)
-    lon = np.deg2rad(lon)
-    x = radius * np.cos(lat) * np.cos(lon)
-    y = radius * np.cos(lat) * np.sin(lon)
-    z = radius * np.sin(lat)
-    return np.array([x, y, z])
 
 def gps_to_ecef_custom(lon, lat, alt, degrees=True, alt_in_m=False):
     a = 6378137.0
@@ -146,48 +129,23 @@ def do_interpolations(
     # outputs...
     if out_lat_lon_alt is None:
         latout = np.arange(-90, 90, 2)
-        lonout = np.arange(0, 360, 5)
+        lonout = np.arange(0, 360, 6)
         if sami_data_path is not None:
             altout = np.arange(200, 2200, 50)
         else:
             altout = np.arange(120, 670, 50)
-        out_lats = []
-        out_lons = []
-        out_alts = []
+        
+        out_lats, out_lons, out_alts = np.meshgrid(latout, lonout, altout)
 
-        for a in latout:
-            for o in lonout:
-                for l1 in altout:
-                    out_lats.append(a)
-                    out_lons.append(o)
-                    out_alts.append(l1)
-
-        out_lat_lon_alt = latlonalt_to_cart(
-            out_lats, out_lons, np.array(out_alts) + 6371)
+        out_lon_lat_alt = gps_to_ecef_custom(
+            out_lons.flatten(), out_lats.flatten(), out_alts.flatten()).T
     else:
-<<<<<<< HEAD
-        out_lat_lon_alt = latlonalt_to_cart(
+        out_lon_lat_alt = gps_to_ecef_custom(
             out_lat_lon_alt[0], out_lat_lon_alt[1],
-            np.array(out_lat_lon_alt[2]) + 6371)
-=======
-        latout = np.array(out_lat_lon_alt[0])
-        lonout = np.array(out_lat_lon_alt[1])
-        altout = np.array(out_lat_lon_alt[2])
-
-    out_lats = []
-    out_lons = []
-    out_alts = []
-
-    for a in latout:
-        for o in lonout:
-            for l1 in altout:
-                out_lats.append(a)
-                out_lons.append(o)
-                out_alts.append(l1)
-
-    out_lat_lon_alt = gps_to_ecef_custom(
-        out_lons, out_lats, out_alts)
->>>>>>> 548a59d664ddd861776d5dfd38fafee4f0fddf7f
+            np.array(out_lat_lon_alt[2])).T
+        latout = np.array(out_lon_lat_alt[0])
+        lonout = np.array(out_lon_lat_alt[1])
+        altout = np.array(out_lon_lat_alt[2])
 
     # deal with sami first
     if sami_data_path is not None:
@@ -201,9 +159,9 @@ def do_interpolations(
 
         # specify max alt to build delauney at
         if max_alt is None:
-            if out_lat_lon_alt is not None:
+            if out_lon_lat_alt is not None:
                 # alt will be the biggest coord:
-                max_alt = np.max(out_lat_lon_alt) + 300
+                max_alt = np.max(altout) + 300
                 # add 300 to make sure we have enough points above top
             else:
                 max_alt = 2500
@@ -217,6 +175,7 @@ def do_interpolations(
         in_cart = gps_to_ecef_custom(grid2['glon'],
                                     grid2['glat'],
                                     grid2['alt']).T
+        print(in_cart.shape)
 
         if os.path.exists(os.path.join(sami_data_path,
                                        'delauney_max-%i.pkl' % max_alt)):
@@ -254,6 +213,7 @@ def do_interpolations(
                         desc='Reading in SAMI data')
 
         first = True  # for choosing which mode to write
+        numcol_for_pbar = 1
         for data_var in cols:
             interpd = []
             data, times = SAMI.read_to_nparray(
@@ -262,12 +222,13 @@ def do_interpolations(
                 skip_time_check=True)
 
             if show_progress:
-                pbar.set_description('interpolating')
+                pbar.set_description('interpolating %s (%i/%i)' 
+                                     %(data_var, numcol_for_pbar, len(cols))
             for t in range(len(times)):
                 interp = LinearNDInterpolator(
                     tri,
                     data['data'][data_var][:, :, :, t][mask].flatten())
-                interpd.append(interp(out_lat_lon_alt.T))
+                interpd.append(interp(out_lon_lat_alt))
                 if show_progress:
                     pbar.update()
             if show_progress:
@@ -381,7 +342,7 @@ def do_interpolations(
                         interp = LinearNDInterpolator(
                             tri,
                             darr['gitmbins'][t, 0, :, :].T.flatten())
-                        interpd.append(interp(out_lat_lon_alt.T))
+                        interpd.append(interp(out_lon_lat_alt.T))
                         if show_progress:
                             pbar.update()
                     if show_progress:
@@ -434,7 +395,7 @@ def do_interpolations(
 
                         ds[varname] = (
                             ('time', 'lat', 'lon', 'alt'), np.array(
-                                interp(out_lat_lon_alt.T)).reshape(
+                                interp(out_lon_lat_alt.T)).reshape(
                                     1,  # single time value
                                     len(latout),
                                     len(lonout),
