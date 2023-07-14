@@ -236,13 +236,13 @@ def do_interpolations(
             ds = xr.Dataset(coords={
                 'time': (['time'], times),
                 'alt': (['alt'], altout),
-                'lat': (['lat'], latout),
-                'lon': (['lon'], lonout)},)
-            ds[data_var] = (('time', 'lat', 'lon', 'alt'),
+                'lon': (['lat'], lonout),
+                'lat': (['lon'], latout)},)
+            ds[data_var] = (('time', 'lon', 'lat', 'alt'),
                             np.array(interpd).reshape(
                 len(times),
-                len(latout),
                 len(lonout),
+                len(latout),
                 len(altout)))
             if out_runname != '':
                 out_runname = '_' + out_runname + '_'
@@ -350,13 +350,13 @@ def do_interpolations(
                     ds = xr.Dataset(coords={
                         'time': (['time'], times),
                         'alt': (['alt'], altout),
-                        'lat': (['lat'], latout),
-                        'lon': (['lon'], lonout)},)
-                    ds[varname] = (('time', 'lat', 'lon', 'alt'),
+                        'lon': (['lat'], lonout),
+                        'lat': (['lon'], latout)},)
+                    ds[varname] = (('time', 'lon', 'lat', 'alt'),
                                    np.array(interpd).reshape(
                         len(times),
-                        len(latout),
                         len(lonout),
+                        len(latout),
                         len(altout)))
                     ds.to_netcdf(os.path.join(
                         out_path,
@@ -383,8 +383,8 @@ def do_interpolations(
                     ds = xr.Dataset(coords={
                         'time': (['time'], [times[t]]),
                         'alt': (['alt'], altout),
-                        'lat': (['lat'], latout),
-                        'lon': (['lon'], lonout)},)
+                        'lon': (['lon'], lonout),
+                        'lat': (['lat'], latout)},)
                     for varnum, varname in enumerate(cols):
                         # print(darr['gitmbins'][t, varnum, :, :].shape,
                         #       darr['gitmbins'][
@@ -394,11 +394,11 @@ def do_interpolations(
                             darr['gitmbins'][0, varnum, :, :].T.flatten())
 
                         ds[varname] = (
-                            ('time', 'lat', 'lon', 'alt'), np.array(
+                            ('time', 'lon', 'lat', 'alt'), np.array(
                                 interp(out_lon_lat_alt.T)).reshape(
                                     1,  # single time value
-                                    len(latout),
                                     len(lonout),
+                                    len(latout),
                                     len(altout)))
 
                         if show_progress:
