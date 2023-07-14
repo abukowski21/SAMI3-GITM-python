@@ -223,7 +223,7 @@ def do_interpolations(
 
             if show_progress:
                 pbar.set_description('interpolating %s (%i/%i)' 
-                                     %(data_var, numcol_for_pbar, len(cols))
+                                     %(data_var, numcol_for_pbar, len(cols)))
             for t in range(len(times)):
                 interp = LinearNDInterpolator(
                     tri,
@@ -342,7 +342,7 @@ def do_interpolations(
                     interpd = []
                     if show_progress:
                         pbar.set_description('interpolating %s (%i/%i)' 
-                                     %(varname, numcol_for_pbar, len(cols))
+                                     %(varname, numcol_for_pbar, len(cols)))
                     for t in range(numfiles):
                         interp = LinearNDInterpolator(
                             tri,
