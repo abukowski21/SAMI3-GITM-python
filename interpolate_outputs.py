@@ -58,6 +58,7 @@ def do_interpolations(
     gitm_output_each_var=True,
     gitm_output_each_time=False,
     out_lat_lon_alt=None,
+    aarons_mods=False,
     out_path=None,
     out_runname='',
     save_delauney=False,
@@ -98,6 +99,14 @@ def do_interpolations(
         max_alt (int): specify maximum altitude of data grid to feed in to
             delauney calculations. Useful if you don't want to recalculate
             weights and the interpoaltion is different from one already done.
+        aarons_mods (bool): Option to use modifications Aarton made to the interp
+            methodology. Off by default...
+            - Performs the interpolations at 2-4x output resolution, then coarsens
+                the dataset and reinterpolates. This effectively smooths
+                out the "weirdness" seen due to SAMI's grid while retaining the 
+                features we're looking for.
+            - Takes a decent amounbt more time
+            - Does not work with satellite (user-specified outputs) yet.
         cols (str/list-like): Which variables to interpolate. Default is 'all'.
             Can be any str from
             utility_programs.read_routines.SAMI.sami_og_vars.
@@ -128,12 +137,20 @@ def do_interpolations(
 
     # outputs...
     if out_lat_lon_alt is None:
-        latout = np.arange(-90, 90, 2)
-        lonout = np.arange(0, 360, 6)
-        if sami_data_path is not None:
-            altout = np.arange(200, 2200, 50)
+        if aarons_mods:
+            latout = np.arange(-90, 90, 0.5)
+            lonout = np.arange(0, 360, 1)
+            if sami_data_path is not None:
+                altout = np.arange(150, 2200, 25)
+            else:
+                altout = np.arange(120, 670, 25)
         else:
-            altout = np.arange(120, 670, 50)
+            latout = np.arange(-90, 90, 2)
+            lonout = np.arange(0, 360, 4)
+            if sami_data_path is not None:
+                altout = np.arange(200, 2200, 25)
+            else:
+                altout = np.arange(120, 670, 25)
         
         out_lats, out_lons, out_alts = np.meshgrid(latout, lonout, altout)
 
@@ -239,8 +256,17 @@ def do_interpolations(
                 len(lonout),
                 len(latout),
                 len(altout)))
+            
             if out_runname != '':
                 out_runname = out_runname + '_'
+            
+            if aarons_mods:
+                ds = ds.coarsen(lat=4, alt=2, lon=8,
+                                boundary='pad').mean().interp(
+                    lon=np.linspace(0,360,90),
+                    lat=np.linspace(-90,90,90),
+                    alt=np.arange(altout[1], altout[-2], 50))
+            
             ds.to_netcdf(os.path.join(
                 out_path, out_runname + 'SAMI_REGRID' + '.nc'),
                 engine=engine,
