@@ -152,17 +152,16 @@ def do_interpolations(
             else:
                 altout = np.arange(120, 670, 25)
         
-        out_lats, out_lons, out_alts = np.meshgrid(latout, lonout, altout)
-
-        out_lon_lat_alt = gps_to_ecef_custom(
-            out_lons.flatten(), out_lats.flatten(), out_alts.flatten()).T
     else:
-        out_lon_lat_alt = gps_to_ecef_custom(
-            out_lat_lon_alt[0], out_lat_lon_alt[1],
-            np.array(out_lat_lon_alt[2])).T
-        latout = np.array(out_lon_lat_alt[0])
-        lonout = np.array(out_lon_lat_alt[1])
-        altout = np.array(out_lon_lat_alt[2])
+        latout = sorted(set(out_lat_lon_alt[0]))
+        lonout = sorted(set(out_lat_lon_alt[1]))
+        altout = sorted(set(out_lat_lon_alt[2]))
+        
+    out_lats, out_lons, out_alts = np.meshgrid(latout, lonout, altout)
+
+    out_lon_lat_alt = gps_to_ecef_custom(
+        out_lons.flatten(), out_lats.flatten(), out_alts.flatten()).T
+        
 
     # deal with sami first
     if sami_data_path is not None:
