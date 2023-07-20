@@ -59,6 +59,7 @@ def do_interpolations(
     gitm_output_each_time=False,
     out_lat_lon_alt=None,
     aarons_mods=False,
+    sami_mintime=0,
     out_path=None,
     out_runname='',
     save_delauney=False,
@@ -213,7 +214,7 @@ def do_interpolations(
 
         # format 'cols' variable
         if cols == 'all':
-            cols = SAMI.sami_og_vars.items()
+            cols = SAMI.sami_og_vars.values()
         else:
             if isinstance(cols, str):
                 cols = [cols]
@@ -221,13 +222,16 @@ def do_interpolations(
                 cols = np.asarray(cols)
 
         if show_progress:
-            pbar = tqdm(total=len(cols) * nt,
+            pbar = tqdm(total=len(cols) * (nt - sami_mintime),
                         desc='Reading in SAMI data')
+            
+        if out_runname != '':
+            out_runname = out_runname + '_'
 
         first = True  # for choosing which mode to write
         numcol_for_pbar = 1
         for data_var in cols:
-            interpd = []
+            interpd_ds = []
             data, times = SAMI.read_to_nparray(
                 sami_data_path, dtime_sim_start,
                 cols=data_var,
@@ -236,33 +240,42 @@ def do_interpolations(
             if show_progress:
                 pbar.set_description('interpolating %s (%i/%i)' 
                                      %(data_var, numcol_for_pbar, len(cols)))
-            for t in range(len(times)):
+            
+            ds =  xr.Dataset(coords={
+                'time': (['time'], times[sami_mintime:]),
+                'alt': (['alt'], altout),
+                'lat': (['lat'], latout),
+                'lon': (['lon'], lonout)},)
+            ds[data_var] = (('time', 'lon', 'lat', 'alt'),
+                            np.zeros([len(times)-sami_mintime,
+                                    len(lonout),
+                                    len(latout),
+                                    len(altout)]))
+            
+            for t in range(len(times)-sami_mintime):
                 interp = LinearNDInterpolator(
                     tri,
-                    data['data'][data_var][:, :, :, t][mask].flatten())
-                interpd.append(interp(out_lon_lat_alt))
+                    data['data'][data_var][:, :, :, t+sami_mintime][mask].flatten())
+                
+
+                ds[data_var][t] = interp(out_lon_lat_alt).reshape(
+                                    len(lonout),
+                                    len(latout),
+                                    len(altout))
+
                 if show_progress:
                     pbar.update()
             if show_progress:
                 pbar.set_description('writing Dataset...')
-            ds =  xr.Dataset(coords={
-                'time': (['time'], times),
-                'alt': (['alt'], altout),
-                'lon': (['lon'], lonout),
-                'lat': (['lat'], latout)},)
-            ds[data_var] = (('time', 'lon', 'lat', 'alt'),
-                            np.array(interpd).reshape(
-                len(times),
-                len(lonout),
-                len(latout),
-                len(altout)))
-            
-            if out_runname != '':
-                out_runname = out_runname + '_'
             
             if aarons_mods:
-                ds = ds.coarsen(lat=4, alt=2, lon=8,
-                                boundary='pad').mean().interp(
+                ds2= ds.coarsen(lat=4, alt=2, lon=8,
+                                boundary='pad').mean()
+                del ds
+                ds = ds2
+                del ds2
+                
+                ds = ds.interp(
                     lon=np.linspace(0,360,90),
                     lat=np.linspace(-90,90,90),
                     alt=np.arange(altout[1], altout[-2], 50))
@@ -273,9 +286,10 @@ def do_interpolations(
                 mode='w' if first else 'a',
                 encoding={'time': {'dtype': float}})
             first = False
+            numcol_for_pbar += 1
             if return_ds_too:
                 return ds
-            del ds, interpd, data  # clean up memory
+            del ds, data  # clean up memory
 
     if gitm_data_path is not None:
         doraw = False
