@@ -244,7 +244,7 @@ def do_interpolations(
                 'time': (['time'], times[sami_mintime:]),
                 'alt': (['alt'], altout),
                 'lat': (['lat'], latout),
-                'lon': (['lon'], lonout)},)
+                'lon': (['lon'], lonout)})
             ds[data_var] = (('time', 'lon', 'lat', 'alt'),
                             np.zeros([len(times)-sami_mintime,
                                     len(lonout),
