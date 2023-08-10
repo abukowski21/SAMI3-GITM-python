@@ -58,8 +58,9 @@ def do_interpolations(
     gitm_output_each_var=True,
     gitm_output_each_time=False,
     out_lat_lon_alt=None,
+    do_set=True,
     aarons_mods=False,
-    sami_mintime=0,
+    sami_mintime=0, # TODO ADD TO DOCSTRING
     out_path=None,
     out_runname='',
     save_delauney=False,
@@ -153,10 +154,15 @@ def do_interpolations(
             else:
                 altout = np.arange(120, 670, 25)
         
-    else:
+    elif not do_set:
         latout = sorted(set(out_lat_lon_alt[0]))
         lonout = sorted(set(out_lat_lon_alt[1]))
         altout = sorted(set(out_lat_lon_alt[2]))
+        
+    else:
+        latout = out_lat_lon_alt[0]
+        lonout = out_lat_lon_alt[1]
+        altout = out_lat_lon_alt[2]
         
     out_lats, out_lons, out_alts = np.meshgrid(latout, lonout, altout)
 
