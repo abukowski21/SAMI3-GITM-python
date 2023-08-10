@@ -338,7 +338,7 @@ def get_sami_grid(sami_data_path, nlt, nf, nz):
 
 def read_to_nparray(sami_data_path, dtime_sim_start,
                     dtime_storm_start=None,
-                    t_start_idx=None, t_end_idx=None, pbar=False,
+                    hrs_before_storm=None, hrs_after_storm=None, pbar=False,
                     cols='all', need_help=False,
                     skip_time_check=False):
     """Automatically read in SAMI data.
@@ -402,7 +402,7 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     if dtime_storm_start is not None:
         times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
             nt, sami_data_path, dtime_sim_start, dtime_storm_start,
-            t_start_idx, t_end_idx, need_help, skip_time_chek=skip_time_check)
+            hrs_before_storm, hrs_after_storm, need_help, skip_time_check=skip_time_check)
     else:
         times = make_times(nt, sami_data_path, dtime_sim_start,
                            skip_time_check=skip_time_check)
@@ -500,14 +500,9 @@ def read_sami_dene_tec_MAG_GRID(sami_data_path, reshape=True):
         lines = fp.readlines()
         nt = len(lines) - 1
 
-    times = make_times(
-        nt, sami_data_path,
-        dtime_sim_start=datetime.datetime(2011, 5, 20),
-        skip_time_check=skip_time_check)
-
-    return sami_data, np.array(times)
 
 
+    return sami_data
 # def make_input_to_esmf(sami_data_path,
 #                        alt_min=200,
 #                        alt_max=2200,
