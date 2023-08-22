@@ -456,7 +456,9 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     return sami_data, np.array(times)
 
 
-def read_sami_dene_tec_MAG_GRID(sami_data_path, reshape=True):
+def read_sami_dene_tec_MAG_GRID(sami_data_path,
+                                dtime_sim_start=None,
+                                reshape=True):
     """ Read in TEC (and interpolated dene) data!
 
     """
@@ -936,6 +938,7 @@ def auto_read(sami_dir,
               progress_bar=False,
               use_dask=False,
               engine='h5netcdf',
+              skip_time_check=False,
               ):
     """Automatically reads in SAMI data and returns it in a format of your
     choice.
