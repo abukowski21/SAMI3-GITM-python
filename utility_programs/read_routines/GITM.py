@@ -623,7 +623,7 @@ def process_all_to_cdf(gitm_dir,
         ds = xr.open_mfdataset(files_written, engine='h5netcdf',
                                concat_dim='time', combine='nested')
 
-        print('writing...')
+        print('writing... (this takes a while)')
         ds.to_netcdf(os.path.join(out_dir, run_name + '_GITM.nc'),
                      encoding={'time': {'dtype': float}})
         print('cleaning up')

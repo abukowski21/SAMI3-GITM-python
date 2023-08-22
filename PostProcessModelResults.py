@@ -44,27 +44,22 @@ def main(args):
         raise ValueError(
             'You must specify at least one model output directory.')
 
-    need_output_dir = False
-    if args.output_dir is not None:
-        if pgitm or psami:
-            d = args.output_dir
-            if not os.path.exists(d):
-                print('making output directory: {}'.format(d))
-                os.makedirs(d)
-
+    if args.output_dir is None:
+        output_dir = os.path.join(os.getcwd(), 'OUTPUTS')
     else:
-        need_output_dir = True
+        output_dir = args.output_dir
+
+    if not os.path.exists(output_dir):
+        print('making output directory: {}'.format(output_dir))
+        os.makedirs(output_dir)
 
     if pgitm:
-        if need_output_dir:
-            output_dir = args.gitm_dir
-        else:
-            output_dir = args.output_dir
 
         header_files = glob.glob(os.path.join(args.gitm_dir, '*.header'))
         if len(header_files) > 0:
             print('GITM headers found in {}'.format(args.gitm_dir))
             print('Attempting to postprocess...')
+            print('(This is not very robust.)')
             gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/data')]
 
             cmd = os.path.join('.', gitm_parent_dir, 'pGITM')
@@ -81,16 +76,21 @@ def main(args):
             if len(glob.glob(os.path.join(args.gitm_dir, '*.bin'))) == 0:
                 raise ValueError(
                     'No GITM files found in {}'.format(args.gitm_dir),
-                    'And I could not postprocess myself. Go run pGITM.')
+                    'Double check the directory or go run pGITM.')
 
-        if len(glob.glob(os.path.join(args.output_dir, 'GITM*.nc'))) > 0:
+        if len(glob.glob(os.path.join(output_dir,
+                                      'GITM*.nc'))) > 0 or\
+            len(glob.glob(os.path.join(output_dir,
+                                       args.single_file + '*GITM.nc'))) > 0:
             if args.replace:
                 print('Replacing existing netCDF files...')
 
             else:
                 raise ValueError(
-                    'netCDF files already exist in {}'.format(output_dir),
-                    ' Run with --replace to overwrite.')
+                    "Postprocessed GITM files already exist in: {}\n"
+                    "Run with --replace to overwrite.\n"
+                    "   Contents: \n    {}".format(
+                        output_dir, os.listdir(output_dir)))
 
         GITM.process_all_to_cdf(
             gitm_dir=args.gitm_dir,
@@ -105,10 +105,6 @@ def main(args):
             run_name=args.single_file if args.single_file else None)
 
     if psami:
-        if need_output_dir:
-            output_dir = args.sami_dir
-        else:
-            output_dir = args.output_dir
 
         existing_sami_files = glob.glob(os.path.join(output_dir, 'SAMI*.nc'))
 
@@ -239,19 +235,20 @@ if __name__ == '__main__':
                         help='GITM Directory. Defaults to ./gitm_data')
     parser.add_argument('-sami', '--sami_dir', type=str, default='./dami_dir',
                         help='SAMI directory. Defaults to ./sami_data')
+    parser.add_argument('-out', '--output_dir', type=str, default=None,
+                        help='If you want to save the files to another'
+                        ' directory, specify it here. Defaults to a new'
+                        ' folder at "./OUTPUTS/".')
     parser.add_argument('--sami_type', type=str, default='all',
                         help='Which SAMI data to process? (Default: all)'
                         '(Options: "all", "raw", "regrid")')
     parser.add_argument('--gitm_types', type=str, default='all',
                         nargs='*', help='Which GITM data to process?'
                         ' (EX: 3DALL, 3DNEU, etc.) (Default: all)')
-    parser.add_argument(
-        '--single_file',
-        type=str,
-        default=False,
-        help='Set this to the run name to output the entire'
-        ' model run data to a single netCDF file (for each'
-        ' model). Note: model name will be added automatically.')
+    parser.add_argument('--single_file', type=str, default=False,
+                        help='Set this to the run name to output the entire'
+                        ' model run data to a single netCDF file.'
+                        ' Note: model name will be added automatically')
     parser.add_argument('--set_custom_grid', type=bool, default=False,
                         help='Set a custom grid for SAMI regridding?'
                         ' Default: False')
@@ -259,9 +256,6 @@ if __name__ == '__main__':
                         help='Process SAMI files in low memory mode?'
                         ' (NOTE: Memory usage is still 30GB+, without lowmem'
                         ' the entire run is read in at once.) Default: True')
-    parser.add_argument('-out', '--output_dir', type=str, default=None,
-                        help='If you want to save the files to another'
-                        ' directory, specify it here.')
     parser.add_argument('-c', '--ccmc', action='store', type=bool,
                         default=True,
                         help='Use CCMC naming conventions? (Default: True)')
@@ -286,8 +280,10 @@ if __name__ == '__main__':
                         help='Skip verifying accuracy of times. Useful when'
                         ' SAMI has been configured to skip some outputs '
                         '(hrpr != 0)')
-    parser.add_argument('-p', '--progress', action='store_true',
-                        help='Show progress bar? (Default: False)')
+    parser.add_argument('--no_progress', action='store_false', dest='progress',
+                        help='Show progress bar? (Default: True)'
+                        ' - recommended since things can take a LONG time.'
+                        ' Requires tqdm')
     parser.add_argument('--dtime_sim_start', type=str, default=None,
                         help='Start time of the simulation, in the format: '
                         'YYYYMMDDHHmmSS Required to process SAMI from *.dat')
@@ -325,7 +321,5 @@ if __name__ == '__main__':
     elif args.set_custom_grid and args.sami_type == 'raw':
         raise ValueError('You cannot set a custom grid for raw SAMI files,'
                          ' since nothing is being regridded.')
-
-    print('Outputting to: \n', args.output_dir)
 
     main(args)
