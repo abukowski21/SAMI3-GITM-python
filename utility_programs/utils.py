@@ -49,7 +49,7 @@ def make_ccmc_name(
     """
 
     # format ut str as YYYY-MM-DDThh-mm-ss
-    if type(ut) is np.datetime64:
+    if isinstance(ut, np.datetime64):
         ut = pd.Timestamp(ut)
     ut_str = ut.strftime('%Y-%m-%dT%H-%M-%S')
     # Make sure modelname & filt_type is all caps
@@ -73,7 +73,7 @@ def get_var_names(dir, models):
     import os
     from glob import glob
 
-    if type(models) is str:
+    if isinstance(models, str):
         models = [models]
 
     for model in models:
@@ -107,7 +107,7 @@ def autoread(file_list,
 
     import xarray as xr
 
-    if type(file_list) is str:
+    if isinstance(file_list, str):
         file_list = [file_list]
 
     ds0 = xr.open_dataset(file_list[0])
@@ -187,9 +187,9 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
     if localtimes is None:
         localtimes = len(ds.lon)
 
-    if type(localtimes) == int:
+    if isinstance(localtimes, int):
         # Make linspace of localtimes, 0-24, then chop at the ends.
-        localtimes = np.linspace(0, 24, localtimes+1,
+        localtimes = np.linspace(0, 24, localtimes + 1,
                                  endpoint=False)[:-1]
     else:
         localtimes = np.asarray(localtimes)
