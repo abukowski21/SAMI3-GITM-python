@@ -16,6 +16,8 @@ Process GITM & SAMI data to NetCDF format.
 import os
 import glob
 import subprocess
+
+from click import progressbar
 from utility_programs.read_routines import GITM, SAMI
 from utility_programs.utils import str_to_ut
 import RegridSami
@@ -117,6 +119,17 @@ def main(args):
             existing_sami_files = glob.glob(
                 os.path.join(output_dir, 'SAMI*.nc'))
 
+        if len(existing_sami_files) > 0:
+            if args.replace:
+                print('Replacing existing SAMI netCDF files in: {}'.format(
+                    output_dir))
+
+            else:
+                raise ValueError('Postprocessed SAMI files already exist in: '
+                                 '{}\nRun with --replace to overwrite.\n'
+                                 '   Contents: \n    {}'.format(
+                                     output_dir, os.listdir(output_dir)))
+
         do_write_raw = False
         do_write_regrid = False
 
@@ -124,18 +137,6 @@ def main(args):
             do_write_regrid = True
         if args.sami_type == 'all' or args.sami_type == 'raw':
             do_write_raw = True
-
-        if len(existing_sami_files) > 0:
-            if args.replace:
-                raise NotImplementedError(
-                    'Replacing existing netCDF files with SAMI is'
-                    ' not implemented yet. Go clear directory manually ')
-
-            else:
-                raise ValueError('Postprocessed SAMI files already exist in: '
-                                 '{}\nRun with --replace to overwrite.\n'
-                                 '   Contents: \n    {}'.format(
-                                     output_dir, os.listdir(output_dir)))
 
         if args.ccmc and not args.single_file:
             use_ccmc = True
@@ -176,62 +177,44 @@ def main(args):
                 run_name=args.single_file if args.single_file else None)
 
         if do_write_regrid:
-            print('attempting to regrid!')
-            try:
-                # ignore flake8 linting on the following line.
-                import numba  # noqa: F401
-                numba_installed = True
-                print('numba installed! Will speed up regridding.')
-            except ImportError:
-                numba_installed = False
-                print('Module numba not found.')
+            print('Attempting to regrid SAMI outputs!\n'
+                  'This may take a while...\n'
+                  'There may be memory issues if you have a long SAMI run.\n'
+                  'Try running with --sami_mintime'
+                  ' to limit the number of files processed.')
 
-            weights_exist = False
-            if args.reuse_weights:
-                if os.path.exists(os.path.join(output_dir, 'weights')):
-                    weights_exist = True
-                    print('found weights to reuse')
-                else:
-                    print('No existing weight file found')
+            if not args.single_file:
+                print('---> No output run_name is set (single_file=False).\n'
+                      '  Setting this will change the output file names.'
+                      '  Currently they will be named: '
+                      'SAMI_REGRID.nc')
 
             if args.set_custom_grid:
                 RegridSami.main(sami_data_path=args.sami_dir,
                                 out_path=output_dir,
-                                save_weights=weights_exist,
-                                use_saved_weights=weights_exist,
+                                save_weights=args.save_weights,
                                 dtime_sim_start=args.dtime_sim_start,
+                                sami_mintime=args.sami_mintime,
                                 lat_step=latstep,
                                 lon_step=lonstep,
                                 alt_step=altstep,
                                 minmax_alt=[minalt, maxalt],
-                                lat_finerinterps=latfiner,
-                                lon_finerinterps=lonfiner,
-                                alt_finerinterps=altfiner,
-                                use_ccmc=args.ccmc,
-                                split_by_time=args.ccmc,
-                                split_by_var=not (
-                                    args.ccmc and args.single_file),
-                                numba=numba_installed and not args.low_mem,
                                 skip_time_check=args.skip_time_check,
-                                whole_run=True if args.single_file else False,
                                 run_name=args.single_file if args.single_file
-                                else None)
+                                else '',
+                                progress_bar=args.progress)
 
             else:
                 RegridSami.main(
                     sami_data_path=args.sami_dir,
                     out_path=output_dir,
-                    save_weights=weights_exist,
-                    use_saved_weights=weights_exist,
+                    save_weights=args.save_weights,
                     dtime_sim_start=args.dtime_sim_start,
-                    use_ccmc=args.ccmc,
-                    split_by_time=args.ccmc,
-                    split_by_var=not (
-                        args.ccmc and args.single_file),
-                    numba=numba_installed and not args.low_mem,
+                    sami_mintime=args.sami_mintime,
                     skip_time_check=args.skip_time_check,
-                    whole_run=True if args.single_file else False,
-                    run_name=args.single_file if args.single_file else None)
+                    run_name=args.single_file if args.single_file
+                    else '',
+                    progress_bar=args.progress)
 
     return
 
@@ -257,27 +240,34 @@ if __name__ == '__main__':
                         help='Set this to the run name to output the entire'
                         ' model run data to a single netCDF file.'
                         ' Note: model name will be added automatically')
-    parser.add_argument('--set_custom_grid', type=bool, default=False,
+    parser.add_argument('--set_custom_grid', action='store_true',
                         help='Set a custom grid for SAMI regridding?'
                         ' Default: False')
     parser.add_argument('--low_mem', type=bool, default=True,
                         help='Process SAMI files in low memory mode?'
                         ' (NOTE: Memory usage is still 30GB+, without lowmem'
-                        ' the entire run is read in at once.) Default: True')
+                        ' the entire run is read in at once.) Default: True'
+                        ' (Type: bool)')
+    parser.add_argument('--sami_mintime', type=int, default=0,
+                        help='Minimum timestep to start SAMI regridding at.'
+                        ' Default: 0 (all files)'
+                        ' Use this to help with memory management.')
     parser.add_argument('-c', '--ccmc', action='store', type=bool,
                         default=True,
-                        help='Use CCMC naming conventions? (Default: True)')
+                        help='Use CCMC naming conventions? (Default: True)'
+                        ' (Type: bool)')
     parser.add_argument('-r', '--replace', action='store_true',
                         help='Replace existing netCDF files? (Default: False)'
                         ' (not implemented yet)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Print out more information? (Default: False)')
-    parser.add_argument('--reuse_weights', action='store_true',
+    parser.add_argument('--save_weights', action='store_true',
                         default=False,
-                        help='Reuse weight & index file? (default False \n'
-                        ' If True, weights will be re-used if they exist.'
+                        help='Reuse Delauney Triangulation? (default False \n'
+                        ' If True, triangulation file will be re-used if it'
+                        ' exists in the SAMI input directory.'
                         ' If the file is not found, a new one will be written'
-                        ' to the --output_dir')
+                        ' to the --sami_dir.')
     parser.add_argument('-d', '--delete_bins', action='store_true',
                         help='Delete binary files after processing? '
                         'Caution: This is irreversible! (Default: False)')
@@ -310,21 +300,12 @@ if __name__ == '__main__':
                                  or args.sami_type == 'all'):
 
         global latstep, lonstep, altstep, minalt, maxalt
-        global latfiner, lonfiner, altfiner
         print('We are going to set a custom grid for your sami regridding. ')
-        latstep = input('latitude step size in degrees (1):')
-        lonstep = input('longitude step size in degrees: (4):')
-        altstep = input('altitude step size in km (50):')
-        minalt = input('minimum altitude in km (100):')
-        maxalt = input('maximum altitude in km (2200):')
-        print('Now for the options to interpolate at a finer resolution'
-              ' and then coarsen afterwards. If you dont know what this'
-              ' means you can run with 1s and it will be faster. if you'
-              ' see weird artifacts in your outputs you can try '
-              ' adjusting this. Number given multiplies the step size')
-        latfiner = input('interpolate a finer resolution in latitude? (1):')
-        lonfiner = input('interpolate a finer resolution in longitude? (1):')
-        altfiner = input('interpolate a finer resolution in altitude? (1):')
+        latstep = int(input('latitude step size in degrees (1):') or 1)
+        lonstep = int(input('longitude step size in degrees: (4):') or 4)
+        altstep = int(input('altitude step size in km (50):') or 50)
+        minalt = int(input('minimum altitude in km (150):') or 150)
+        maxalt = int(input('maximum altitude in km (2200):') or 2200)
 
     elif args.set_custom_grid and args.sami_type == 'raw':
         raise ValueError('You cannot set a custom grid for raw SAMI files,'
