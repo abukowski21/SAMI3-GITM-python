@@ -106,7 +106,16 @@ def main(args):
 
     if psami:
 
-        existing_sami_files = glob.glob(os.path.join(output_dir, 'SAMI*.nc'))
+        if args.single_file:
+            existing_sami_files = glob.glob(
+                os.path.join(
+                    output_dir,
+                    args.single_file +
+                    '*SAMI*.nc'))
+
+        else:
+            existing_sami_files = glob.glob(
+                os.path.join(output_dir, 'SAMI*.nc'))
 
         do_write_raw = False
         do_write_regrid = False
@@ -118,17 +127,15 @@ def main(args):
 
         if len(existing_sami_files) > 0:
             if args.replace:
-                print('Replacing existing netCDF files...')
-                print(' not implemented yet. Go clear directory manually ')
+                raise NotImplementedError(
+                    'Replacing existing netCDF files with SAMI is'
+                    ' not implemented yet. Go clear directory manually ')
+
             else:
-                if 'RAW' in str(existing_sami_files) and do_write_raw:
-                    raise ValueError(
-                        'RAW files already exist in output_dir. You may want'
-                        ' to set --replace, or delete them.')
-                if 'REGRID' in str(existing_sami_files) and do_write_regrid:
-                    raise ValueError(
-                        'REGRID files already exist in output_dir. You may'
-                        ' want to set --replace, or delete them.')
+                raise ValueError('Postprocessed SAMI files already exist in: '
+                                 '{}\nRun with --replace to overwrite.\n'
+                                 '   Contents: \n    {}'.format(
+                                     output_dir, os.listdir(output_dir)))
 
         if args.ccmc and not args.single_file:
             use_ccmc = True
@@ -148,8 +155,9 @@ def main(args):
 
             if args.dtime_sim_start is None:
                 raise ValueError(
-                    'You must specify a start time for the SAMI simulation,',
-                    'in the format YYYYMMDDHHMMSS')
+                    'You must specify a start time for the SAMI simulation'
+                    ' in order to processes SAMI outputs. Use --dtime_sim_start'
+                    ' in the format YYYYMMDDHHMMSS (or YYYYMMDD)')
 
             SAMI.process_all_to_cdf(
                 sami_data_path=args.sami_dir,

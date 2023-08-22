@@ -252,8 +252,10 @@ def make_times(nt, sami_data_path, dtime_sim_start,
         'T') == times[t] for t in range(len(times))])
     if truths.sum() != len(truths) and not skip_time_check:
         raise ValueError(
-            'The times are wrong! Somehow this needs to be fixed.'
-            'probably outputting fake files again... \n')
+            '\nThe times are wrong! Somehow this needs to be fixed.'
+            ' SAMI may be outputting fake files again... \n'
+            ' (this is a known issue - run with --skip_time_check'
+            ' to ignore this error)')
     elif skip_time_check:
         times = times_list
 
@@ -770,7 +772,8 @@ def process_all_to_cdf(sami_data_path,
                     dtime_sim_start=dtime_sim_start,
                     cols=sami_og_vars[ftype],
                     start_dtime=start_dtime,
-                    end_dtime=end_dtime)
+                    end_dtime=end_dtime,
+                    skip_time_check=skip_time_check)
                 for nfile in range(len(times)):
                     try:
                         ds.isel(time=nfile).to_netcdf(
@@ -790,7 +793,8 @@ def process_all_to_cdf(sami_data_path,
                 if sami_og_vars[ftype] in cols:
 
                     ds = read_raw_to_xarray(sami_data_path, dtime_sim_start,
-                                            cols=sami_og_vars[ftype])
+                                            cols=sami_og_vars[ftype],
+                                            skip_time_check=skip_time_check)
 
                     if start_dtime is not None or end_dtime is not None:
                         if start_dtime is not None:
@@ -818,7 +822,8 @@ def process_all_to_cdf(sami_data_path,
                                     out_dir,
                                     run_name +
                                     '_SAMI_RAW.nc'),
-                                mode='a')
+                                mode='a',
+                                engine='h5netcdf')
                         except FileNotFoundError:
                             ds.to_netcdf(
                                 os.path.join(
