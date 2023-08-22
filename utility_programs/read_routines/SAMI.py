@@ -451,8 +451,6 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     if pbar:
         progress.close()
 
-    print(sami_data['data']['edens'].shape, len(times), start_idx, end_idx)
-
     return sami_data, np.array(times)
 
 
