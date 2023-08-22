@@ -25,8 +25,6 @@ import glob
 import pickle
 from scipy.spatial import Delaunay
 from scipy.interpolate import LinearNDInterpolator
-import math
-
 
 
 def gps_to_ecef_custom(lon, lat, alt, degrees=True, alt_in_m=False):
@@ -34,14 +32,14 @@ def gps_to_ecef_custom(lon, lat, alt, degrees=True, alt_in_m=False):
     finv = 298.257223563
     f = 1 / finv
     e2 = 1 - (1 - f) * (1 - f)
-    
+
     if not alt_in_m:
         alt = np.asarray(alt) * 1000
-    
+
     if degrees:
         lat = np.deg2rad(lat)
         lon = np.deg2rad(lon)
-        
+
     v = a / np.sqrt(1 - e2 * np.sin(lat) * np.sin(lat))
 
     x = (v + alt) * np.cos(lat) * np.cos(lon)
@@ -54,13 +52,14 @@ def gps_to_ecef_custom(lon, lat, alt, degrees=True, alt_in_m=False):
 def do_interpolations(
     sami_data_path=None,
     dtime_sim_start=None,
+    skip_time_check=False,
     gitm_data_path=None,
     gitm_output_each_var=True,
     gitm_output_each_time=False,
     out_lat_lon_alt=None,
-    do_set=True,
+    is_grid=False,
     aarons_mods=False,
-    sami_mintime=0, # TODO ADD TO DOCSTRING
+    sami_mintime=0,
     out_path=None,
     out_runname='',
     save_delauney=False,
@@ -78,6 +77,8 @@ def do_interpolations(
         dtime_sim_start (string/datetime.datetime): Start time of simulation.
             Required to read SAMI data. Can be str (YYYYMMDD) or a pre-computed
             datetime object.
+        skip_time_check (bool): If True, skip the check to make sure the
+            SAMI times are self-consistent (not always true...).
         gitm_data_path (string): path to gitm data.
         gitm_output_each_var (bool): If True, output each variable to a
             separate file. Requires looping through the GITM output files
@@ -91,8 +92,8 @@ def do_interpolations(
             Lon and Lat in degrees, Alt in km above earth surface.
         out_path (str): Path to save regridded to.
             Default is same as MODEL_data_path.
-        out_runname (str): Descriptive name for output file. Appended to
-            out_path + SAMI_REGRID.
+        out_runname (str): Descriptive name for output file. Saved as:
+            out_path/{out_runname + "SAMI_REGRID.nc"}.
         save_delauney (bool): Option to save/read delauney weights from file.
             It takes a while to compute them. Weight file is saved to the
             sami_data_path path with a specification of the max_alt.
@@ -105,10 +106,14 @@ def do_interpolations(
             methodology. Off by default...
             - Performs the interpolations at 2-4x output resolution, then coarsens
                 the dataset and reinterpolates. This effectively smooths
-                out the "weirdness" seen due to SAMI's grid while retaining the 
+                out the "weirdness" seen due to SAMI's grid while retaining the
                 features we're looking for.
             - Takes a decent amounbt more time
             - Does not work with satellite (user-specified outputs) yet.
+        sami_mintime (int): Minimum time to start interpolating SAMI data.
+            Default is 0.
+            Use this to skip the first few timesteps of SAMI data if you
+            notice there are issues with the memory usage.
         cols (str/list-like): Which variables to interpolate. Default is 'all'.
             Can be any str from
             utility_programs.read_routines.SAMI.sami_og_vars.
@@ -153,22 +158,21 @@ def do_interpolations(
                 altout = np.arange(200, 2200, 25)
             else:
                 altout = np.arange(120, 670, 25)
-        
-    elif not do_set:
-        latout = sorted(set(out_lat_lon_alt[0]))
-        lonout = sorted(set(out_lat_lon_alt[1]))
-        altout = sorted(set(out_lat_lon_alt[2]))
-        
+
+        out_lats, out_lons, out_alts = np.meshgrid(latout, lonout, altout)
+
     else:
-        latout = out_lat_lon_alt[0]
-        lonout = out_lat_lon_alt[1]
-        altout = out_lat_lon_alt[2]
-        
-    out_lats, out_lons, out_alts = np.meshgrid(latout, lonout, altout)
+        out_lats = out_lat_lon_alt[0]
+        out_lons = out_lat_lon_alt[1]
+        out_alts = out_lat_lon_alt[2]
+
+        if is_grid:
+            latout = out_lats[:, 0, 0]
+            lonout = out_lons[0, :, 0]
+            altout = out_alts[0, 0, :]
 
     out_lon_lat_alt = gps_to_ecef_custom(
         out_lons.flatten(), out_lats.flatten(), out_alts.flatten()).T
-        
 
     # deal with sami first
     if sami_data_path is not None:
@@ -184,7 +188,6 @@ def do_interpolations(
         if max_alt is None:
             max_alt = np.max(altout) + 300
 
-
         mask = np.where(grid['alt'] < max_alt)
         grid2 = {}
         for k in grid.keys():
@@ -192,8 +195,8 @@ def do_interpolations(
         del grid
 
         in_cart = gps_to_ecef_custom(grid2['glon'],
-                                    grid2['glat'],
-                                    grid2['alt']).T
+                                     grid2['glat'],
+                                     grid2['alt']).T
 
         if os.path.exists(os.path.join(sami_data_path,
                                        'delauney_max-%i.pkl' % max_alt)):
@@ -229,62 +232,60 @@ def do_interpolations(
         if show_progress:
             pbar = tqdm(total=len(cols) * (nt - sami_mintime),
                         desc='Reading in SAMI data')
-            
         if out_runname != '':
             out_runname = out_runname + '_'
 
         first = True  # for choosing which mode to write
         numcol_for_pbar = 1
         for data_var in cols:
-            interpd_ds = []
             data, times = SAMI.read_to_nparray(
                 sami_data_path, dtime_sim_start,
                 cols=data_var,
-                skip_time_check=True)
+                skip_time_check=skip_time_check)
 
             if show_progress:
-                pbar.set_description('interpolating %s (%i/%i)' 
-                                     %(data_var, numcol_for_pbar, len(cols)))
-            
-            ds =  xr.Dataset(coords={
+                pbar.set_description('interpolating %s (%i/%i)'
+                                     % (data_var, numcol_for_pbar, len(cols)))
+
+            ds = xr.Dataset(coords={
                 'time': (['time'], times[sami_mintime:]),
                 'alt': (['alt'], altout),
                 'lat': (['lat'], latout),
                 'lon': (['lon'], lonout)})
             ds[data_var] = (('time', 'lon', 'lat', 'alt'),
-                            np.zeros([len(times)-sami_mintime,
-                                    len(lonout),
-                                    len(latout),
-                                    len(altout)]))
-            
-            for t in range(len(times)-sami_mintime):
+                            np.zeros([len(times) - sami_mintime,
+                                      len(lonout),
+                                      len(latout),
+                                      len(altout)]))
+
+            for t in range(len(times) - sami_mintime):
                 interp = LinearNDInterpolator(
                     tri,
-                    data['data'][data_var][:, :, :, t+sami_mintime][mask].flatten())
-                
+                    data['data'][data_var][:, :, :, t + sami_mintime][mask]
+                    .flatten())
 
                 ds[data_var][t] = interp(out_lon_lat_alt).reshape(
-                                    len(lonout),
-                                    len(latout),
-                                    len(altout))
+                    len(lonout),
+                    len(latout),
+                    len(altout))
 
                 if show_progress:
                     pbar.update()
             if show_progress:
                 pbar.set_description('writing Dataset...')
-            
+
             if aarons_mods:
-                ds2= ds.coarsen(lat=4, alt=2, lon=8,
-                                boundary='pad').mean()
+                ds2 = ds.coarsen(lat=4, alt=2, lon=8,
+                                 boundary='pad').mean()
                 del ds
                 ds = ds2
                 del ds2
-                
+
                 ds = ds.interp(
-                    lon=np.linspace(0,360,90),
-                    lat=np.linspace(-90,90,90),
+                    lon=np.linspace(0, 360, 90),
+                    lat=np.linspace(-90, 90, 90),
                     alt=np.arange(altout[1], altout[-2], 50))
-            
+
             ds.to_netcdf(os.path.join(
                 out_path, out_runname + 'SAMI_REGRID' + '.nc'),
                 engine=engine,
@@ -353,7 +354,7 @@ def do_interpolations(
                 in_lon = f0['gitmgrid']['longitude'].flatten()
                 in_alt = f0['gitmgrid']['altitude'].flatten()
 
-                in_cart = latlonalt_to_cart(in_lon, in_lat, in_alt).T
+                in_cart = gps_to_ecef_custom(in_lon, in_lat, in_alt).T
 
                 tri = Delaunay(in_cart)
                 if save_delauney:
@@ -370,7 +371,7 @@ def do_interpolations(
             if gitm_output_each_var:
                 if show_progress:
                     pbar = tqdm(total=len(cols) * numfiles)
-                first=True
+                first = True
                 numcol_for_pbar = 1
                 for varname in cols:
                     if show_progress:
@@ -381,8 +382,9 @@ def do_interpolations(
                         progress_bar=False)
                     interpd = []
                     if show_progress:
-                        pbar.set_description('interpolating %s (%i/%i)' 
-                                     %(varname, numcol_for_pbar, len(cols)))
+                        pbar.set_description(
+                            'interpolating %s (%i/%i)' %
+                            (varname, numcol_for_pbar, len(cols)))
                     for t in range(numfiles):
                         interp = LinearNDInterpolator(
                             tri,
@@ -406,11 +408,11 @@ def do_interpolations(
                     ds.to_netcdf(os.path.join(
                         out_path,
                         '%sGITM_INTERP.nc' % (out_runname + '_' if
-                                                 out_runname != '' else '')),
+                                              out_runname != '' else '')),
                                  engine=engine,
                                  mode='w' if first else 'a',
                                  encoding={'time': {'dtype': float}})
-                    first=False
+                    first = False
                     numcol_for_pbar += 1
                     del ds, interpd, darr  # clean up memory
 
