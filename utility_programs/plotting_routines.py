@@ -181,7 +181,15 @@ def panel_plot(da,
                out_fname=None,
                isel_plotvals=False,
                tight_layout=False,
+               cbar_label=None
                ):
+    
+    if suptitle is None:
+        add_cbar = False
+    elif cbar_label is not None:
+        add_cbar=False
+    else:
+        add_cbar=True
 
     if do_map:
         if isel_plotvals:
@@ -191,6 +199,7 @@ def panel_plot(da,
                 subplot_kws={"projection": ccrs.PlateCarree(),
                              },
                 col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
+                add_colorbar=add_cbar,
                 cmap=cmap, aa=True)
         else:
             if vlims is not None:
@@ -199,12 +208,14 @@ def panel_plot(da,
                     transform=ccrs.PlateCarree(),
                     subplot_kws={"projection": ccrs.PlateCarree(),
                                  },
+                    add_colorbar=add_cbar,
                     col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
                     cmap=cmap, aa=True)
             else:
                 p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
                     x=x, y=y, col=wrap_col,
                     transform=ccrs.PlateCarree(),
+                    add_colorbar=add_cbar,
                     subplot_kws={"projection": ccrs.PlateCarree(),
                                  },
                     col_wrap=col_wrap,
@@ -217,17 +228,20 @@ def panel_plot(da,
         if vlims is not None:
             p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
                 x=x, y=y, col=wrap_col,
+                add_colorbar=add_cbar,
                 col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
                 cmap=cmap, aa=True)
         else:
             p = da.sel({wrap_col: plot_vals}, method='nearest').plot(
                 x=x, y=y, col=wrap_col,
+                add_colorbar=add_cbar,
                 col_wrap=col_wrap,
                 cmap=cmap, aa=True)
 
     else:
         p = da.isel({wrap_col: plot_vals}).plot(
             x=x, y=y, col=wrap_col,
+            add_colorbar=add_cbar,
             col_wrap=col_wrap, vmin=-vlims, vmax=vlims,
             cmap=cmap, aa=True)
 
@@ -235,6 +249,11 @@ def panel_plot(da,
 
     if tight_layout:
         p.fig.tight_layout()
+    
+    if not add_cbar:
+        p.add_colorbar()
+    if cbar_label is not None:
+        p.cbar.set_label(cbar_label)
 
     if out_fname is None:
         plt.show()
