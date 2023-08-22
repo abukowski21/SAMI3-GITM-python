@@ -29,4 +29,6 @@ gitm_out_plots
 PET*
 core*
 
-
+# Testing folders
+OUTPUTS
+test
