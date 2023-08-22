@@ -31,7 +31,9 @@ in geographic coordinates.
 
 To postprocess model outputs: `python PostProcessModelResults.py [args]`
 
-To generate plots with these postprocessed outputs: `python basic_plots_from_netcdf.py [args]`
+To generate plots with these postprocessed outputs: `python gitm_basic_plots.py -gitm_data_path gitm_data 201105211340 -k -m --cols Rho [e-] --plot_start_delta=3 --plot_end_delta=8 --save_or_show=show -lat_lim 65`
+
+`python sami-fieldline-plots.py 2011052112 20110520 ~/scratch/GITM-simstorm-run1/sami-gitm-coupled -out_path . --plot_start_delta 2 --plot_end_delta 6 --cols "edens" --interpolate --plot_type diff --fpeak`
 
 
 ## Notes:

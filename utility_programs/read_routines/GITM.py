@@ -3,7 +3,6 @@ import glob
 import os
 
 import numpy as np
-
 from tqdm.auto import tqdm
 from struct import unpack
 import xarray as xr

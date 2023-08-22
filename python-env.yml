@@ -15,4 +15,6 @@ dependencies:
   - numba
   - ipykernel
   - xesmf
+  - ipywidgets
+
 

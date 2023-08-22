@@ -6,6 +6,7 @@ Created March 13 2023 by Aaron Bukowski.
 import datetime
 from utility_programs.read_routines import SAMI
 from utility_programs.plot_help import UT_from_Storm_onset
+from utility_programs import filters
 from scipy.interpolate import LinearNDInterpolator, interp1d
 from scipy import signal
 import numpy as np
@@ -16,26 +17,6 @@ import time
 import aacgmv2
 from tqdm.auto import tqdm
 
-
-def make_filter(params=None):
-    # Define the cutoff frequencies
-    lowcut = 1/(100/60)  # 100 minutes in units of sample^-1
-    highcut = 1/(30/60)  # 30 minutes in units of sample^-1
-
-    # Define the Butterworth filter
-    nyquist = 0.5 * 5  # 5 minutes is the sampling frequency
-    low = lowcut / nyquist
-    high = highcut / nyquist
-    sos = signal.butter(2, [low, high], btype='bandstop', output='sos')
-    return sos
-
-
-def remove_background(time_series, sos):
-
-    # Apply the filter to the time series
-    filtered_data = signal.sosfiltfilt(sos, time_series)
-
-    return filtered_data
 
 
 def draw_field_line_plot(x, y, z, title, interpolate=False,
@@ -54,15 +35,21 @@ def draw_field_line_plot(x, y, z, title, interpolate=False,
     x = x[plot_mask]
     y = y[plot_mask]
     z = z[plot_mask]
-    fpeak_col = fpeak_col[plot_mask]
+    if fpeak_col is not None:
+        fpeak_col = fpeak_col[plot_mask]
 
     if interpolate:
 
         grid_x, grid_y = np.meshgrid(
             np.linspace(x_lims[0], x_lims[1], 100),
             np.linspace(y_lims[0], y_lims[1], 150))
+        in_x, in_y = np.meshgrid(
+            x,y)
+
         loc_grid = list(zip(x, y))
-        interp = LinearNDInterpolator(loc_grid, z, rescale=True)
+        interp = LinearNDInterpolator(
+            loc_grid, z,
+            rescale=True)
 
         znew = interp(list(zip(grid_x.flatten(), grid_y.flatten())))
 
@@ -152,11 +139,20 @@ def main(args):
                                            dtime_storm_start=dtime_storm_start,
                                            t_start_idx=args.plot_start_delta,
                                            t_end_idx=args.plot_end_delta,
+                                           cols=args.cols,
                                            pbar=True)
 
     mlons = np.unique(sami_data['grid']['mlon'].round(2))
 
-    mlons_to_plot = mlons[::10]
+    if args.mlons_to_plot==None:
+        mlons_to_plot = mlons[::10]
+    else:
+        if (args.mlons_to_plot) == int:
+            mlons_to_plot = [np.min(np.abs(mlons-args.mlons_to_plot))]
+        else:
+            mlons_to_plot = []
+            for m in args.mlons_to_plot:
+                mlons_to_plot.append(np.min(np.abs(mlons-m)))
 
     if args.cols == 'all':
         cols_to_plot = sami_data['data'].keys()
@@ -180,17 +176,15 @@ def main(args):
 
             for type in plot_type:
                 if type == 'raw':
-                    data_src = sami_data['data'][col][mask, :]
+                    data_src = sami_data['data'][col][mask, :].copy()
                     cbar_lims = [np.min(data_src), np.max(data_src)]
                 elif type == 'bandpass':
-                    data_raw = sami_data['data'][col][mask, :]
-                    sos = make_filter()
-                    data_src = remove_background(data_raw, sos)
+                    data_raw = sami_data['data'][col][mask, :].copy()\
+                    data_src = filters.make_fits(data_raw, sos, axis = 1)
                     cbar_lims = [np.min(data_src), np.max(data_src)]
                 elif type == 'diff':
-                    data_raw = sami_data['data'][col][mask, :]
-                    sos = make_filter()
-                    data_src = remove_background(data_raw, sos)
+                    data_raw = sami_data['data'][col][mask, :].copy()
+                    data_src = filters.make_fits(data_raw, sos, axis = 1)
                     data_src = 100*(data_raw - data_src)/data_raw
                     cbar_lims = [-3, 3]
                 else:
@@ -242,7 +236,7 @@ if __name__ == '__main__':
         help='Path to sami data', action='store')
 
     parser.add_argument(
-        'out_path', type=str,
+        '-out_path', type=str, default='./', required=False,
         help='path to where plots will be saved', action='store')
 
     parser.add_argument(
@@ -274,6 +268,10 @@ if __name__ == '__main__':
         '--plot_type', type=str,
         default='diff',
         help='which type of plot? raw, bandpass, diff, or all. Default: diff')
+    
+    parser.add_argument(
+        '--mlons_to_plot',type=int,nargs='+',default=None,
+        help='specify (nearest) mlons to plot. Defaults to every 10')
 
     args = parser.parse_args()
 

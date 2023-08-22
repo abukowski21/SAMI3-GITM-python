@@ -59,7 +59,7 @@ def main(args):
     dtime_storm_start = datetime.datetime.strptime(
         args.dtime_storm_start.ljust(14, '0'), '%Y%m%d%H%M%S')
 
-    # Read in files, if cut alt, use 3DALL. make sure all vars r there
+    # Read in files, if cut alt, use 3DALL. make sure all vars are there
     # If not, read in 2DANC.
     need_2d = True
     need_3d = False
@@ -105,7 +105,8 @@ def main(args):
             map_in_3d = False
 
     # alt cuts?
-    if args.alt_cut is not None and need_3d is False and args.sami_path is not None:
+    if args.alt_cut is not None and need_3d is False and \
+            args.sami_path is not None:
         raise ValueError('Alt cut requested, but no 3D files needed')
     elif args.alt_cut is not None and need_3d is True:
         if args.alt_cut < np.min(gitm_grid3['altitude']):
@@ -160,8 +161,7 @@ def main(args):
             args.polar_var), :, :].copy().reshape(new_shape)
     polar_fits = filters.make_fits(polar_data)
     polar_percents = 100*(polar_data - polar_fits)/polar_data
-    
-    
+
     if args.sami_path is None:
         if map_in_3d:
             map_data = gitm_f3[:, gitm_vars2.index(
@@ -172,12 +172,20 @@ def main(args):
                 args.map_var), :, :].copy().reshape(new_shape)
         map_fits = filters.make_fits(map_data)
         map_percents = 100*(map_data - map_fits)/map_data
-    
+
     else:
+        if args.dtime_sim_start != '':
+            dtime_sim_start = datetime.datetime.strptime(
+                args.dtime_sim_start.ljust(14, '0'),
+                '%Y%m%d%H%M%S')
+        else:
+            raise ValueError("""Simulation start time must
+                             be given to read SAMI data""")
         f, tectimes = SAMI.read_sami_dene_tec(
-            args.sami_path, reshape = True)
+            args.sami_path,dtime_sim_start=dtime_sim_start,
+            reshape=True)
         tectimes = list(tectimes)
-        
+
         if args.plot_start_delta != 0:
             start_idx = tectimes.index(
                 dtime_storm_start - datetime.timedelta(
@@ -191,17 +199,16 @@ def main(args):
                     hours=args.plot_end_delta))
             f['data'][args.map_var] = f['data'][args.map_var][:end_idx]
             tectimes = tectimes[:end_idx]
-        
+
         if alt_cut is not None:
             sami_alt_cut = np.argmin(np.abs(f['data']['alt'] - args.alt_cut))
-            map_data = f['data'][args.map_var][:,:,sami_alt_cut,:]
+            map_data = f['data'][args.map_var][:, :, sami_alt_cut, :]
             map_fits = filters.make_fits(map_data)
             map_percents = 100*(map_data - map_fits)/map_data
         else:
             map_data = f['data'][args.map_var]
             map_fits = filters.make_fits(map_data)
             map_percents = (map_data - map_fits)
-        
 
     # Set up masks
     maskNorth = ((lats > 45))
@@ -249,8 +256,7 @@ def main(args):
                 mapdata[m_fig] = map_percents
             else:
                 raise ValueError('Unknown map figure type %s' % m_fig)
-                
-                
+
     pbar = tqdm(total=len(times)*len(figtype_polar)
                 * len(figtype_map), desc='making plots')
 
@@ -279,9 +285,9 @@ def main(args):
                            vmin=np.min(poldata[p_fig]),
                            vmax=np.max(poldata[p_fig]))
                 ylabels = ['80', '70', '60', '50']
-                ax0.set_yticklabels(ylabels)
                 ax0.set_xticks(np.arange(0, 2*np.pi, np.pi/2))
                 ax0.set_yticks(np.arange(10, 50, 10))
+                ax0.set_yticklabels(ylabels)
                 ax0.set_title('North')
 
                 r, theta = np.meshgrid(lats[maskSouth], lons)
@@ -311,7 +317,7 @@ def main(args):
                         '/', '-').replace('(', '-').replace(')', '-')
 
                     fname = os.path.join(
-                        args.out_path + str(alt_cut),
+                        args.out_path, str(alt_cut),
                         'map_' + mvar + m_fig + str(args.diff_lim),
                         'polar_' + pvar + p_fig,
                         str(nt).rjust(3, '0') + '.png')
@@ -346,6 +352,7 @@ def main(args):
                         args.save_or_show)
 
                 pbar.update()
+    print(fname)
 
 
 def mapping(data_arr, lats, lons, map_var, title=None,
@@ -405,6 +412,10 @@ if __name__ == "__main__":
     parser.add_argument(
         '-map_var', type=str,
         help='which variable to plot on the map')
+    
+    parser.add_argument(
+        '-dtime_sim_start',type=str,default='',
+        help='Start datetime (as YYMMDDhhmmss). Reqd if using SAMI')
 
     parser.add_argument(
         '--alt_cut', type=int, default=None,
