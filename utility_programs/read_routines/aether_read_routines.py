@@ -2,8 +2,8 @@
 # Copyright 2020, the Aether Development Team (see doc/dev_team.md for members)
 # Full license can be found in License.md
 
-## TAKEN FROM https://github.com/aethermodel/aetherpy on April 10 2023
-##  and modified slightly.
+# TAKEN FROM https://github.com/aethermodel/aetherpy on April 10 2023
+# and modified slightly.
 
 """Routines to read Aether files."""
 
@@ -139,8 +139,8 @@ def read_gitm_headers(filelist, finds=-1):
                 header["nlons"] = nlons
                 header["nlats"] = nlats
                 header["nalts"] = nalts
-            elif(header['nlons'] != nlons or header['nlats'] != nlats
-                 or header['nalts'] != nalts):
+            elif (header['nlons'] != nlons or header['nlats'] != nlats
+                  or header['nalts'] != nalts):
                 raise IOError(''.join(['unexpected dimensions in file ',
                                        filename]))
 
@@ -164,13 +164,15 @@ def read_gitm_headers(filelist, finds=-1):
                                        'variables in file ', filename]))
 
             # Extract time
-            out_time = np.array(unpack(end_char + 'lllllll', fin.read(rec_len)))
+            out_time = np.array(
+                unpack(
+                    end_char +
+                    'lllllll',
+                    fin.read(rec_len)))
             out_time[-1] *= 1000  # Convert from millisec to microsec
             header["time"].append(dt.datetime(*out_time))
 
     return header
-
-
 
 
 def read_gitm_file(filename, file_vars=None):
