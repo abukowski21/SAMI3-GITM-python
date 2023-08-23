@@ -583,7 +583,7 @@ def process_all_to_cdf(gitm_dir,
 
     if skip_existing:
         files_written = glob.glob(os.path.join(tmp_dir, '*.nc'))
-        indiv_ends = indiv_ends[len(files_written)]
+        indiv_ends = indiv_ends[len(files_written):]
 
     for fileend in indiv_ends:
 
