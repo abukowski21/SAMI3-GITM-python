@@ -556,12 +556,6 @@ def process_all_to_cdf(gitm_dir,
             ' If you want to skip existing files, set skip_existing=True\n'
             % (num_existing_cdfs, len(indiv_ends)))
 
-    if progress_bar:
-        if skip_existing:
-            pbar = tqdm(total=len(indiv_ends) - num_existing_cdfs)
-        else:
-            pbar = tqdm(total=len(indiv_ends), desc='Processing GITM')
-
     to_remove = []
 
     if single_file:
@@ -584,6 +578,12 @@ def process_all_to_cdf(gitm_dir,
     if skip_existing:
         files_written = glob.glob(os.path.join(tmp_dir, '*.nc'))
         indiv_ends = indiv_ends[len(files_written):]
+
+    if progress_bar:
+        if skip_existing:
+            pbar = tqdm(total=len(indiv_ends) - num_existing_cdfs)
+        else:
+            pbar = tqdm(total=len(indiv_ends), desc='Processing GITM')
 
     for fileend in indiv_ends:
 
