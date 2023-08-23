@@ -20,7 +20,7 @@ import numpy as np
 import os
 from utility_programs.read_routines import SAMI, GITM
 from utility_programs.utils import str_to_ut, make_ccmc_name
-# import argparse
+import pandas as pd
 import glob
 import pickle
 from scipy.spatial import Delaunay
@@ -53,19 +53,20 @@ def do_interpolations(
     sami_data_path=None,
     dtime_sim_start=None,
     skip_time_check=False,
+    out_lat_lon_alt=None,
+    out_path=None,
+    out_runname='',
+    sat_times=None,
+    cols='all',
+    show_progress=False,
     gitm_data_path=None,
     gitm_output_each_var=True,
     gitm_output_each_time=False,
-    out_lat_lon_alt=None,
     is_grid=False,
     aarons_mods=False,
     sami_mintime=0,
-    out_path=None,
-    out_runname='',
     save_delauney=False,
     max_alt=None,
-    cols='all',
-    show_progress=False,
     engine='h5netcdf',
     return_ds_too=False,
 ):
@@ -79,13 +80,6 @@ def do_interpolations(
             datetime object.
         skip_time_check (bool): If True, skip the check to make sure the
             SAMI times are self-consistent (not always true...).
-        gitm_data_path (string): path to gitm data.
-        gitm_output_each_var (bool): If True, output each variable to a
-            separate file. Requires looping through the GITM output files
-            multiple times. If False, gitm_output_each_time must be True.
-        gitm_output_each_time (bool): If True, output each time to a separate
-            file. Will run faster for all variables than gitm_output_each_var,
-            but will include variables the user does not care for.
         out_lat_lon_alt (numpy.array): Coordinates to interpolate to.
             Must have dimenstions 3xN, where N is number of points.
             Will be converted to cartesian coordinates.
@@ -94,6 +88,20 @@ def do_interpolations(
             Default is same as MODEL_data_path.
         out_runname (str): Descriptive name for output file. Saved as:
             out_path/{out_runname + "SAMI_REGRID.nc"}.
+        out_times (list): List of times to interpolate to. Must be a list of
+            (python or pandas) datetime objects.
+        cols (str/list-like): Which variables to interpolate. Default is 'all'.
+            Can be any str from
+            utility_programs.read_routines.SAMI.sami_og_vars.
+        show_progress (bool): Show progressbars? Default: False
+            Requires tqdm.
+        gitm_data_path (string): path to gitm data.
+        gitm_output_each_var (bool): If True, output each variable to a
+            separate file. Requires looping through the GITM output files
+            multiple times. If False, gitm_output_each_time must be True.
+        gitm_output_each_time (bool): If True, output each time to a separate
+            file. Will run faster for all variables than gitm_output_each_var,
+            but will include variables the user does not care for.
         save_delauney (bool): Option to save/read delauney weights from file.
             It takes a while to compute them. Weight file is saved to the
             sami_data_path path with a specification of the max_alt.
@@ -102,7 +110,7 @@ def do_interpolations(
         max_alt (int): specify maximum altitude of data grid to feed in to
             delauney calculations. Useful if you don't want to recalculate
             weights and the interpoaltion is different from one already done.
-        aarons_mods (bool): Option to use modifications Aarton made to the interp
+        aarons_mods (bool): Option to use modifications Aaron made to the interp
             methodology. Off by default...
             - Performs the interpolations at 2-4x output resolution, then coarsens
                 the dataset and reinterpolates. This effectively smooths
@@ -114,11 +122,6 @@ def do_interpolations(
             Default is 0.
             Use this to skip the first few timesteps of SAMI data if you
             notice there are issues with the memory usage.
-        cols (str/list-like): Which variables to interpolate. Default is 'all'.
-            Can be any str from
-            utility_programs.read_routines.SAMI.sami_og_vars.
-        show_progress (bool): Show progressbars? Default: False
-            Requires tqdm.
         engine (str): Which engine to use when writing netcdf files.
             Default is 'h5netcdf' but can cause some issues on some systems and
             some python environments. Set to None to use default xarray engine.
@@ -166,6 +169,9 @@ def do_interpolations(
         out_lons = out_lat_lon_alt[1]
         out_alts = out_lat_lon_alt[2]
 
+        if sat_times is None and not is_grid:
+            raise ValueError('Must specify sat_times if not using a grid')
+
         if is_grid:
             latout = out_lats[:, 0, 0]
             lonout = out_lons[0, :, 0]
@@ -176,7 +182,6 @@ def do_interpolations(
 
     # deal with sami first
     if sami_data_path is not None:
-
         if isinstance(dtime_sim_start, str):
             dtime_sim_start = str_to_ut(dtime_sim_start)
 
@@ -186,7 +191,7 @@ def do_interpolations(
 
         # specify max alt to build delauney at
         if max_alt is None:
-            max_alt = np.max(altout) + 300
+            max_alt = 2500
 
         mask = np.where(grid['alt'] < max_alt)
         grid2 = {}
@@ -232,6 +237,9 @@ def do_interpolations(
         if show_progress:
             pbar = tqdm(total=len(cols) * (nt - sami_mintime),
                         desc='Reading in SAMI data')
+        else:
+            print('Interpolating SAMI data...')
+
         if out_runname != '':
             out_runname = out_runname + '_'
 
@@ -247,27 +255,42 @@ def do_interpolations(
                 pbar.set_description('interpolating %s (%i/%i)'
                                      % (data_var, numcol_for_pbar, len(cols)))
 
-            ds = xr.Dataset(coords={
-                'time': (['time'], times[sami_mintime:]),
-                'alt': (['alt'], altout),
-                'lat': (['lat'], latout),
-                'lon': (['lon'], lonout)})
-            ds[data_var] = (('time', 'lon', 'lat', 'alt'),
-                            np.zeros([len(times) - sami_mintime,
-                                      len(lonout),
-                                      len(latout),
-                                      len(altout)]))
+            if is_grid:  # holds interpolated grid
+                ds = xr.Dataset(coords={
+                    'time': (['time'], times[sami_mintime:]),
+                    'alt': (['alt'], altout),
+                    'lat': (['lat'], latout),
+                    'lon': (['lon'], lonout)})
+                ds[data_var] = (('time', 'lon', 'lat', 'alt'),
+                                np.zeros([len(times) - sami_mintime,
+                                          len(lonout),
+                                          len(latout),
+                                          len(altout)]))
+            # If we have a list of points that aren't a grid, do it this way
+            else:
+                ds = xr.Dataset(
+                    coords={
+                        'sami_time': (['sami_time'], times),
+                        'glat': (['sat_step'], out_lats),
+                        'glon': (['sat_step'], out_lons),
+                        'alt': (['sat_step'], out_alts),
+                        'sat_time': (['sat_step'], [
+                            pd.Timestamp(i) for i in sat_times])})
+                ds[data_var] = (('sami_time', 'sat_step'),
+                                np.zeros([len(times), len(sat_times)]))
 
             for t in range(len(times) - sami_mintime):
                 interp = LinearNDInterpolator(
                     tri,
                     data['data'][data_var][:, :, :, t + sami_mintime][mask]
                     .flatten())
-
-                ds[data_var][t] = interp(out_lon_lat_alt).reshape(
-                    len(lonout),
-                    len(latout),
-                    len(altout))
+                if is_grid:
+                    ds[data_var][t] = interp(out_lon_lat_alt).reshape(
+                        len(lonout),
+                        len(latout),
+                        len(altout))
+                else:
+                    ds[data_var][t] = interp(out_lon_lat_alt)
 
                 if show_progress:
                     pbar.update()
@@ -286,11 +309,14 @@ def do_interpolations(
                     lat=np.linspace(-90, 90, 90),
                     alt=np.arange(altout[1], altout[-2], 50))
 
-            ds.to_netcdf(os.path.join(
-                out_path, out_runname + 'SAMI_REGRID' + '.nc'),
+            ds.to_netcdf(
+                os.path.join(
+                    out_path,
+                    out_runname +
+                    'SAMI_REGRID.nc' if is_grid else
+                    out_runname + 'SAT_INTERP.nc'),
                 engine=engine,
-                mode='w' if first else 'a',
-                encoding={'time': {'dtype': float}})
+                mode='w' if first else 'a')
             first = False
             numcol_for_pbar += 1
             if return_ds_too:
