@@ -105,7 +105,8 @@ def main(args):
             file_types=args.gitm_types,
             single_file=True if args.single_file else False,
             run_name=args.single_file if args.single_file else None,
-            tmp_dir=args.tmp_dir)
+            tmp_dir=args.tmp_dir,
+            skip_existing=args.skip_existing,)
 
     if psami:
 
@@ -296,7 +297,10 @@ if __name__ == '__main__':
                         ' files) \n'
                         'This exists because some systems have faster'
                         ' local storage than mass storage.\n'
-                        'NOTE: This is not used for SAMI processing,''')
+                        'NOTE: This is not used for SAMI processing,')
+    parser.add_argument('--skip_existing', action='store_true',
+                        help='Skip existing temp files when doing single_file?'
+                        'Useful if processing was interrupted.')
 
     args = parser.parse_args()
 
