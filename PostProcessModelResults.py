@@ -181,12 +181,13 @@ def main(args):
                   'This may take a while...\n'
                   'There may be memory issues if you have a long SAMI run.\n'
                   'Try running with --sami_mintime'
-                  ' to limit the number of files processed.')
+                  ' to limit the number of files processed.'
+                  '\n   ====== \n')
 
             if not args.single_file:
                 print('---> No output run_name is set (single_file=False).\n'
                       '  Setting this will change the output file names.'
-                      '  Currently they will be named: '
+                      '  Currently there will only be one output file named: '
                       'SAMI_REGRID.nc')
 
             if args.set_custom_grid:
