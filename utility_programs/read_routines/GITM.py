@@ -452,6 +452,7 @@ def process_all_to_cdf(gitm_dir,
                        use_ccmc=True,
                        single_file=False,
                        run_name=None,
+                       tmp_dir=None
                        ):
     """Process all GITM .bin files in a directory to .cdf files.
 
@@ -459,12 +460,17 @@ def process_all_to_cdf(gitm_dir,
         gitm_dir (str: path-like): Directory containing GITM .bin files.
         out_dir (str: path-like, optional): Directory to output .cdf files.
             If None, will go into the same directory as the .bin files.
+            Defaults to None.
+        dtime_storm_start (datetime, optional): Attribute added to the
+            netCDF file. Defaults to None.
         delete_bins (bool, optional): Delete GITM bins after making Datasets?
             Defaults to False.
         replace_cdfs (bool, optional): Replace pre-existing netCDF files?
             Defaults to False.
         progress_bar (bool, optional):  Whether or not to show progress bar.
-            Requires tqdm. Defaults to True.
+            Requires tqdm. Defaults to True. If outputting to a single file,
+            a progress bar will be added when writing files to disk. This
+            cannot be changed.
         drop_ghost_cells (bool, optional): Drop GITM ghost cells?
             Defaults to True.
         drop_before (datetime, optional): Similar to start_dtime.
@@ -475,8 +481,20 @@ def process_all_to_cdf(gitm_dir,
                 Defaults to None.
         skip_existing (bool, optional): Skip existing netCDF files?
             Defaults to False. This will slow down the program significantly.
+        file_types (str or list-like, optional): Which file types to process.
+            Defaults to 'all'. Can be a list of strings or a single string.
+            Example usage is ['3DALL', '2DALL'] or '3DALL'.
         use_ccmc (bool, optional): Write files with CCMC naming convention?
-            Defaults to True. Recommended.
+            Defaults to True. Recommended if not using single_file.
+        single_file (bool, optional): Output to a single file?
+            Defaults to False. If True, will output to a single netCDF file.
+            If False, will output to multiple netCDF files, one for each time.
+        run_name (str, optional): Name of the run. Only used if single_file.
+            Defaults to None. '_GITM.nc' will be appended to this.
+        tmp_dir (str, optional): Temporary directory to write files to.
+            Only used if single_file. Defaults to None.
+            * Some systems have a local temp directory that's much faster
+            than the standard output_directory.
     """
 
     if not drop_ghost_cells:
@@ -550,9 +568,18 @@ def process_all_to_cdf(gitm_dir,
         # things we need to keep track of for single_file
         # existing vars cannot be replaced in a netcdf file so
         #   we have to write temp files, combine them, then delete them.
+
+        if tmp_dir is None:
+            tmp_dir = out_dir
+
+        print('writing temp files to %s' % tmp_dir)
+
         files_written = []
-        if not os.path.exists(os.path.join(out_dir, run_name + '_tmp')):
-            os.makedirs(os.path.join(out_dir, run_name + '_tmp'))
+        if not os.path.exists(os.path.join(tmp_dir, run_name + '_tmp')):
+            os.makedirs(os.path.join(tmp_dir, run_name + '_tmp'))
+
+    elif tmp_dir is not None:
+        raise ValueError('tmp_dir is only used if single_file=True')
 
     for fileend in indiv_ends:
 
@@ -591,7 +618,7 @@ def process_all_to_cdf(gitm_dir,
                 make_ccmc_name('GITM', ut))
 
         elif single_file:
-            outfile = os.path.join(out_dir, run_name + '_tmp',
+            outfile = os.path.join(tmp_dir, run_name + '_tmp',
                                    fileend[fileend.rfind('t'):
                                            ].replace('.bin', '.nc'))
 
@@ -628,10 +655,10 @@ def process_all_to_cdf(gitm_dir,
         with ProgressBar():
             ds.to_netcdf(os.path.join(out_dir, run_name + '_GITM.nc'),
                          encoding={'time': {'dtype': float}})
-        print('cleaning up')
+        print('cleaning up temp files')
         for f in files_written:
             os.remove(f)
-        os.removedirs(os.path.join(out_dir, run_name + '_tmp'))
+        os.removedirs(os.path.join(tmp_dir, run_name + '_tmp'))
 
     if delete_bins:
         print('FILES WILL BE DELETED. YOU HAVE BEEN WARNED.',

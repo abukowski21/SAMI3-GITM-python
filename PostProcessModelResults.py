@@ -104,7 +104,8 @@ def main(args):
             use_ccmc=args.ccmc,
             file_types=args.gitm_types,
             single_file=True if args.single_file else False,
-            run_name=args.single_file if args.single_file else None)
+            run_name=args.single_file if args.single_file else None,
+            tmp_dir=args.tmp_dir)
 
     if psami:
 
@@ -289,6 +290,13 @@ if __name__ == '__main__':
     parser.add_argument('--dtime_event_start', type=str, default=None,
                         help='Event (storm) start time, in the format: '
                         'YYYYMMDDHHmmSS (Optional. added as attr to netCDFs)')
+    parser.add_argument('--tmp_dir', type=str, default=None,
+                        help='Temporary directory for GITM processing.'
+                        '\nDefault: None (uses output_dir for storing temp'
+                        ' files) \n'
+                        'This exists because some systems have faster'
+                        ' local storage than mass storage.\n'
+                        'NOTE: This is not used for SAMI processing,''')
 
     args = parser.parse_args()
 
