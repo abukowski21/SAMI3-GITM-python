@@ -580,7 +580,7 @@ def process_all_to_cdf(gitm_dir,
         indiv_ends = indiv_ends[len(files_written):]
 
     if progress_bar:
-        if skip_existing:
+        if skip_existing and not single_file:
             pbar = tqdm(total=len(indiv_ends) - num_existing_cdfs)
         else:
             pbar = tqdm(total=len(indiv_ends), desc='Processing GITM')
