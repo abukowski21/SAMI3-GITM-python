@@ -576,7 +576,9 @@ def process_all_to_cdf(gitm_dir,
         raise ValueError('tmp_dir is only used if single_file=True')
 
     if skip_existing:
-        files_written = glob.glob(os.path.join(tmp_dir, '*.nc'))
+        files_written = glob.glob(
+            os.path.join(
+                tmp_dir, run_name + '_tmp', '*.nc'))
         indiv_ends = indiv_ends[len(files_written):]
 
     if progress_bar:
