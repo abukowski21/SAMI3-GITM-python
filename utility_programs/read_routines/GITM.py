@@ -631,6 +631,8 @@ def process_all_to_cdf(gitm_dir,
             if os.path.exists(outfile):
                 if progress_bar:
                     pbar.update()
+                if single_file:
+                    files_written.append(outfile)
                 continue
 
         if single_file:
