@@ -7,6 +7,7 @@ from tqdm.auto import tqdm
 from struct import unpack
 import xarray as xr
 from utility_programs.utils import make_ccmc_name
+from dask.diagnostics import ProgressBar
 
 
 def read_bin_to_nparrays(gitm_dir,
@@ -624,8 +625,9 @@ def process_all_to_cdf(gitm_dir,
                                concat_dim='time', combine='nested')
 
         print('writing... (this takes a while)')
-        ds.to_netcdf(os.path.join(out_dir, run_name + '_GITM.nc'),
-                     encoding={'time': {'dtype': float}})
+        with ProgressBar():
+            ds.to_netcdf(os.path.join(out_dir, run_name + '_GITM.nc'),
+                         encoding={'time': {'dtype': float}})
         print('cleaning up')
         for f in files_written:
             os.remove(f)
