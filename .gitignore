@@ -32,3 +32,8 @@ core*
 # Testing folders
 OUTPUTS
 test
+
+
+# temp files:
+tmp_*
+
