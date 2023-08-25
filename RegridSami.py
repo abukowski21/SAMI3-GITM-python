@@ -131,7 +131,7 @@ def main(
     else:
         # read in the file
         # try:
-        coord_df = pd.read_csv(args.input_coord_file, sep=',')
+        coord_df = pd.read_csv(out_coord_file, sep=',')
         out_time = pd.to_datetime(coord_df['time']).values
         out_latlonalt = coord_df[['lat', 'lon', 'alt']].values.T
 
