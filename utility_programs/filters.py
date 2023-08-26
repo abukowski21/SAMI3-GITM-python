@@ -43,13 +43,15 @@ def make_fits(gitm_bins, lowcut=80, highcut=40, order=3):
 
     """
     sos = make_filter(lowcut, highcut, order)
-    
 
-    
-    if type(gitm_bins) == xr.Dataset or type(gitm_bins) == xr.DataArray:
-        filtered_arr = xr.apply_ufunc(signal.sosfiltfilt, 
+    if isinstance(
+            gitm_bins,
+            xr.Dataset) or isinstance(
+            gitm_bins,
+            xr.DataArray):
+        filtered_arr = xr.apply_ufunc(signal.sosfiltfilt,
                                       sos, gitm_bins,
-                                     dask='allowed')
+                                      dask='allowed')
     else:
         filtered_arr = signal.sosfiltfilt(sos, gitm_bins, axis=0)
     return filtered_arr
@@ -69,10 +71,9 @@ def remove_outliers(array):
 
 
 def filter_xarray_DA_diff(da, dim='time', order=2, percent=False,
-                         label='lower'):
-    
+                          label='lower'):
+
     if percent:
-        return 100*(da.diff(dim, order, label)/da)
+        return 100 * (da.diff(dim, order, label) / da)
     else:
         return da.diff(dim, order, label)
-
