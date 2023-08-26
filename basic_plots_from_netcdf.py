@@ -1,14 +1,17 @@
 import argparse
-from utility_programs.utils import get_var_names, str_to_ut
-from utility_programs.filters import make_filter
-from scipy.signal import sosfiltfilt
 import glob
 import os
-import xarray as xr
-import cartopy.crs as ccrs
 from datetime import datetime
-import numpy as np
+
+import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
+from scipy.signal import sosfiltfilt
+from tqdm.auto import tqdm
+
+from utility_programs.filters import make_filter
+from utility_programs.utils import get_var_names, str_to_ut
 
 
 def make_keogram():
@@ -53,7 +56,7 @@ def run_processing_options(ds,
 
 
 def autoplot(
-        data_dir,
+        file_list,
         columns_to_plot,
         model,
         output_dir=None,
@@ -69,16 +72,16 @@ def autoplot(
     # We will glob the directory for all files with the model name,
     #   and parse for the specified times.
 
-    file_list = glob.glob(os.path.join(data_dir, model + '*.nc'))
+    # file_list = glob.glob(os.path.join(data_dir, model + '*.nc'))
     file_list = np.sort(file_list)
 
-    if len(file_list) == 0:
-        raise ValueError(
-            'No files found in %s' %
-            os.path.join(
-                data_dir,
-                model +
-                '*.nc'))
+    # if len(file_list) == 0:
+    #     raise ValueError(
+    #         'No files found in %s' %
+    #         os.path.join(
+    #             data_dir,
+    #             model +
+    #             '*.nc'))
     # trim file_list to only include files within time_lims
     if time_lims[1] == -1:
         time_lims[1] = len(file_list)
@@ -148,9 +151,12 @@ def autoplot(
     # Now plot the data with the cuts specified.
 
     for var in columns_to_plot:
-        for nplot in range(ds[loop_var].shape[0]):
+        for nplot in tqdm(range(ds[loop_var].shape[0]),
+                          desc='%s loop for %s plots: '
+                          % (loop_var, var)):
             out_fname = os.path.join(out_dir,
                                      var + '_' + str(nplot))
+
             if show_map:
                 p = ds[var].isel({loop_var: nplot}).sel(
                     cut_dict, method='nearest').plot(
@@ -260,10 +266,10 @@ if __name__ == '__main__':
                         "         150 and 750.\n "
                         )
 
-    parser.add_argument('--loop_var', type=str, nargs=1,
+    parser.add_argument('--loop_var', type=str, nargs='*', default='time',
                         help='Dimension to loop over when plotting.\n'
-                        ' Example: --loop_var time will make a single plot'
-                        ' for each time step.\n'
+                        ' Example: --loop_var time (default) will make a'
+                        ' single plot for each time step.\n'
                         '          --loop_var alt will make a single plot'
                         ' for each altitude.\n'
                         'Not required (will just make one plot).\n')
@@ -363,10 +369,11 @@ if __name__ == '__main__':
                              ' when not using AltInt variable.')
         made_plots[col] = 0
         for model in models:
-            files = glob.glob(os.path.join(args.data_dir, model + '*.nc'))
+            files = glob.glob(
+                os.path.join(args.data_dir, '*' + model + '.nc'))
             ds0 = xr.open_dataset(files[0])
             if col in ds0:
-                autoplot(args.data_dir,
+                autoplot(files,
                          columns_to_plot=col,
                          model=model,
                          output_dir=args.out_dir,
