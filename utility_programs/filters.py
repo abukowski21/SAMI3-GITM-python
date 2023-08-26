@@ -28,7 +28,7 @@ def make_filter(lowcut=80, highcut=40, order=3):
     return sos
 
 
-def make_fits(gitm_bins, lowcut=80, highcut=40, order=3):
+def make_fits(DATA, lowcut=80, highcut=40, order=3):
     """
     calculate bandpass filter for all data previously read in.
 
@@ -45,15 +45,15 @@ def make_fits(gitm_bins, lowcut=80, highcut=40, order=3):
     sos = make_filter(lowcut, highcut, order)
 
     if isinstance(
-            gitm_bins,
+            DATA,
             xr.Dataset) or isinstance(
-            gitm_bins,
+            DATA,
             xr.DataArray):
         filtered_arr = xr.apply_ufunc(signal.sosfiltfilt,
-                                      sos, gitm_bins,
+                                      sos, DATA,
                                       dask='allowed')
     else:
-        filtered_arr = signal.sosfiltfilt(sos, gitm_bins, axis=0)
+        filtered_arr = signal.sosfiltfilt(sos, DATA, axis=0)
     return filtered_arr
 
 
