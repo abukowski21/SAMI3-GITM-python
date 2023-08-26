@@ -1,7 +1,7 @@
 """
 Make plots of Electron density or TEC from SAMI3 model run
 
-### NOTES: 
+### NOTES:
 - TEC & BtoG programs must be run first!!*
 - Plots are not updated with title/colorbar labels yet.
     - TEC plots will be right, edens won't
@@ -103,7 +103,7 @@ def main(args):
             ins.append(index)
             new_times.append(t)
             hrs_since_storm_onset.append((pd.Timestamp(t) -
-                                           dtime_storm_start) /
+                                          dtime_storm_start) /
                                          pd.Timedelta(1, 'hour'))
     times = new_times
 
@@ -118,10 +118,10 @@ def main(args):
         for a in given_alts:
             alt_idxs.append(np.argmin(np.abs(a - alts)))
         print('\n=======\n you gave %s alt inputs. \n'
-            %(str(given_alts)),
-            'available alts are: \n',
-            alts, '\nThe closest I found are:\n',
-            alts[alt_idxs])
+              % (str(given_alts)),
+              'available alts are: \n',
+              alts, '\nThe closest I found are:\n',
+              alts[alt_idxs])
         sami_edens = []
         actual_alts = []
         for a in alt_idxs:
@@ -150,12 +150,12 @@ def main(args):
 
     if DO_ALT_PLOTS:
         print('Done! Shape of edens data: ', len(sami_edens),
-            sami_edens[0].shape,
-            '\nLaunching plotting routine now.')
+              sami_edens[0].shape,
+              '\nLaunching plotting routine now.')
 
     else:
         print('Done! Shape of TEC data: ', sami_tec.shape,
-            '\nLaunching plotting routine now.')
+              '\nLaunching plotting routine now.')
 
     if args.figtype == 'all':
         plot_types = ['raw', 'fit', 'diff']
@@ -164,10 +164,10 @@ def main(args):
 
     try:
         cbar_lims_dict = {
-        'ONE_FILE': {
-            'raw': [0, .7*np.max(sami_edens)],
-            'fit': [0, .7*np.max(sami_edens)],
-            'diff': [-4, 4]}}
+            'ONE_FILE': {
+                'raw': [0, .7 * np.max(sami_edens)],
+                'fit': [0, .7 * np.max(sami_edens)],
+                'diff': [-4, 4]}}
     except UnboundLocalError:
         cbar_lims_dict = {
             'TWO_FILES': {
@@ -234,213 +234,238 @@ def main(args):
 
                         if DO_ALT_PLOTS:
                             title = title.replace('TEC', 'edens at %i km'
-                                %(alt_here))
-                            fname=fname.replace('keo', 'keo/edens-at-%i-km'
-                                %(alt_here))
-                            cbar_name='Electron Density'
+                                                  % (alt_here))
+                            fname = fname.replace('keo', 'keo/edens-at-%i-km'
+                                                  % (alt_here))
+                            cbar_name = 'Electron Density'
 
-
-                        data, extent=plotting_routines.interpolate_2d_plot(
+                        data, extent = plotting_routines.interpolate_2d_plot(
                             hrs_since_storm_onset, glats[sel_pts], tec,
                             len(hrs_since_storm_onset), 80)
 
-                        plotting_routines.make_a_keo(data.T, title, cbar_lims,
-                                   cbar_name=cbar_name,
-                                   fname=fname, OVERWRITE=OVERWRITE,
-                                   extent=extent)
+                        plotting_routines.make_a_keo(
+                            data.T,
+                            title,
+                            cbar_lims,
+                            cbar_name=cbar_name,
+                            fname=fname,
+                            OVERWRITE=OVERWRITE,
+                            extent=extent)
                         pbar.update()
 
                     if plot_type == 'fit':
-                        tec=fit.copy()
+                        tec = fit.copy()
                         if TWO_FILES:
                             tec -= fit2
-                            title="Diff of Fit TEC at lon = {}".format(
+                            title = "Diff of Fit TEC at lon = {}".format(
                                 real_lon)
-                            cbar_lims=cbar_lims_dict['TWO_FILES']['fit']
+                            cbar_lims = cbar_lims_dict['TWO_FILES']['fit']
                         else:
-                            title="Fit TEC at lon = {}".format(real_lon)
-                            cbar_lims=cbar_lims_dict['ONE_FILE']['fit']
+                            title = "Fit TEC at lon = {}".format(real_lon)
+                            cbar_lims = cbar_lims_dict['ONE_FILE']['fit']
 
-                        cbar_name='Vertically Integrated TEC'
+                        cbar_name = 'Vertically Integrated TEC'
 
                         if DO_ALT_PLOTS:
-                            title=title.replace('TEC', 'edens at %i km'
-                                %(alt_here))
-                            fname=fname.replace('keo', 'keo/edens-at-%i-km'
-                                %(alt_here))
-                            cbar_name='Electron Density'
+                            title = title.replace('TEC', 'edens at %i km'
+                                                  % (alt_here))
+                            fname = fname.replace('keo', 'keo/edens-at-%i-km'
+                                                  % (alt_here))
+                            cbar_name = 'Electron Density'
 
-
-                        data, extent=plotting_routines.interpolate_2d_plot(
+                        data, extent = plotting_routines.interpolate_2d_plot(
                             hrs_since_storm_onset, glats[sel_pts], tec,
                             len(hrs_since_storm_onset), 80)
 
-                        plotting_routines.make_a_keo(data.T, title, cbar_lims,
-                                   cbar_name=cbar_name,
-                                   fname=fname, OVERWRITE=OVERWRITE,
-                                   extent=extent)
+                        plotting_routines.make_a_keo(
+                            data.T,
+                            title,
+                            cbar_lims,
+                            cbar_name=cbar_name,
+                            fname=fname,
+                            OVERWRITE=OVERWRITE,
+                            extent=extent)
                         pbar.update()
 
                     if plot_type == 'diff':
-                        tec=raw.copy() - fit.copy()
+                        tec = raw.copy() - fit.copy()
                         if TWO_FILES:
-                            tec -= (100*(raw2.copy() - fit2.copy())
-                                        / raw2.copy())
-                            title="Diff of % over BG of TEC at lon = {}".format(
+                            tec -= (100 * (raw2.copy() - fit2.copy())
+                                    / raw2.copy())
+                            title = "Diff of % over BG of TEC at lon = {}".format(
                                 real_lon)
-                            cbar_lims=cbar_lims_dict['TWO_FILES']['diff']
+                            cbar_lims = cbar_lims_dict['TWO_FILES']['diff']
                         else:
-                            title="TEC over Background at lon = {}".format(
+                            title = "TEC over Background at lon = {}".format(
                                 real_lon)
-                            cbar_lims=cbar_lims_dict['ONE_FILE']['diff']
-                        fname=os.path.join(
+                            cbar_lims = cbar_lims_dict['ONE_FILE']['diff']
+                        fname = os.path.join(
                             out_path, 'keo',
                             'diff', "lon" + str(int(real_lon)),
                             'tec' + ".png")
 
-                        cbar_name='Vertically Integrated TEC'
+                        cbar_name = 'Vertically Integrated TEC'
 
                         if DO_ALT_PLOTS:
-                            tec=100 * tec / (raw.copy())
-                            title=title.replace('TEC', 'edens at %i km'
-                                %(alt_here))
-                            fname=fname.replace('keo', 'keo/edens-at-%i-km'
-                                %(alt_here))
-                            cbar_name='% over Background Electron Density'
+                            tec = 100 * tec / (raw.copy())
+                            title = title.replace('TEC', 'edens at %i km'
+                                                  % (alt_here))
+                            fname = fname.replace('keo', 'keo/edens-at-%i-km'
+                                                  % (alt_here))
+                            cbar_name = '% over Background Electron Density'
 
-
-                        data, extent=plotting_routines.interpolate_2d_plot(
+                        data, extent = plotting_routines.interpolate_2d_plot(
                             hrs_since_storm_onset, glats[sel_pts], tec,
                             len(hrs_since_storm_onset), 80)
 
-                        plotting_routines.make_a_keo(data.T, title, cbar_lims,
-                                   cbar_name=cbar_name,
-                                   fname=fname, OVERWRITE=OVERWRITE,
-                                   extent=extent)
+                        plotting_routines.make_a_keo(
+                            data.T,
+                            title,
+                            cbar_lims,
+                            cbar_name=cbar_name,
+                            fname=fname,
+                            OVERWRITE=OVERWRITE,
+                            extent=extent)
                         pbar.update()
 
             pbar.close()
 
         if args.map:
-            pbar=tqdm(total=len(times) * len(plot_types),
+            pbar = tqdm(total=len(times) * len(plot_types),
                         desc="Making maps")
 
             for nt, dtime in enumerate(times):
-                raw=sami_tec[nt, :, :].copy()
-                fit=fits_sami[nt, :, :].copy()
+                raw = sami_tec[nt, :, :].copy()
+                fit = fits_sami[nt, :, :].copy()
                 if TWO_FILES:
-                    raw2=sami_tec2[nt, :, :].copy()
-                    fit2=fits_sami2[nt, :, :].copy()
+                    raw2 = sami_tec2[nt, :, :].copy()
+                    fit2 = fits_sami2[nt, :, :].copy()
                 for plot_type in plot_types:
                     if plot_type == 'raw':
-                        tec=raw.copy()
+                        tec = raw.copy()
                         if TWO_FILES:
                             tec -= raw2
-                            title="Diff of Raw TEC at {} from storm onset".\
+                            title = "Diff of Raw TEC at {} from storm onset".\
                                 format(UT_from_Storm_onset(
                                     dtime, dtime_storm_start))
-                            cbar_lims=cbar_lims_dict['TWO_FILES']['raw']
+                            cbar_lims = cbar_lims_dict['TWO_FILES']['raw']
                         else:
-                            title="Raw TEC at {} from storm onset".format(
+                            title = "Raw TEC at {} from storm onset".format(
                                 UT_from_Storm_onset(dtime, dtime_storm_start))
-                            cbar_lims=cbar_lims_dict['ONE_FILE']['raw']
-                        fname=os.path.join(
+                            cbar_lims = cbar_lims_dict['ONE_FILE']['raw']
+                        fname = os.path.join(
                             out_path, 'map', 'tec',
                             "raw", str(nt).rjust(3, '0') + ".png")
 
-                        data, extent=plotting_routines.interpolate_2d_plot(
+                        data, extent = plotting_routines.interpolate_2d_plot(
                             glons, glats, tec, 80, 100, map=True)
 
-                        cbar_name='Vertically Integrated TEC'
+                        cbar_name = 'Vertically Integrated TEC'
 
                         if DO_ALT_PLOTS:
-                            title=title.replace('TEC', 'edens at %i km'
-                                %(alt_here))
-                            fname=fname.replace('map', 'map/edens-at-%i-km'
-                                %(alt_here))
-                            cbar_name='Electron Density'
+                            title = title.replace('TEC', 'edens at %i km'
+                                                  % (alt_here))
+                            fname = fname.replace('map', 'map/edens-at-%i-km'
+                                                  % (alt_here))
+                            cbar_name = 'Electron Density'
 
-                        plotting_routines.draw_map(data.T, title=title,
+                        plotting_routines.draw_map(data.T,
+                                                   title=title,
                                                    cbarlims=cbar_lims,
-                                   cbar_label=cbar_name,
-                                   fname=fname, OVERWRITE=OVERWRITE,
-                                   ylims=(-lat_lim, lat_lim), plot_extent=extent, )
+                                                   cbar_label=cbar_name,
+                                                   fname=fname,
+                                                   OVERWRITE=OVERWRITE,
+                                                   ylims=(-lat_lim,
+                                                          lat_lim),
+                                                   plot_extent=extent,
+                                                   )
                         pbar.update()
 
                     if plot_type == 'fit':
-                        tec=fit.copy()
+                        tec = fit.copy()
                         if TWO_FILES:
                             tec -= fit2
-                            title="Diff of Fit TEC at {} from storm onset".\
+                            title = "Diff of Fit TEC at {} from storm onset".\
                                 format(UT_from_Storm_onset(
                                     dtime, dtime_storm_start))
-                            cbar_lims=cbar_lims_dict['TWO_FILES']['fit']
+                            cbar_lims = cbar_lims_dict['TWO_FILES']['fit']
                         else:
-                            title="Fit TEC at {} from storm onset".format(
+                            title = "Fit TEC at {} from storm onset".format(
                                 UT_from_Storm_onset(dtime, dtime_storm_start))
-                            cbar_lims=cbar_lims_dict['ONE_FILE']['fit']
-                        fname=os.path.join(
+                            cbar_lims = cbar_lims_dict['ONE_FILE']['fit']
+                        fname = os.path.join(
                             out_path, 'map', 'tec',
                             "fit", str(nt).rjust(3, '0') + ".png")
 
-                        data, extent=plotting_routines.interpolate_2d_plot(
+                        data, extent = plotting_routines.interpolate_2d_plot(
                             glons, glats, tec, 80, 100, map=True)
 
-                        cbar_name='Vertically Integrated TEC'
+                        cbar_name = 'Vertically Integrated TEC'
 
                         if DO_ALT_PLOTS:
-                            title=title.replace('TEC', 'edens at %i km'
-                                %(alt_here))
-                            fname=fname.replace('map', 'map/edens-at-%i-km'
-                                %(alt_here))
-                            cbar_name='Electron Density'
+                            title = title.replace('TEC', 'edens at %i km'
+                                                  % (alt_here))
+                            fname = fname.replace('map', 'map/edens-at-%i-km'
+                                                  % (alt_here))
+                            cbar_name = 'Electron Density'
 
-                        plotting_routines.draw_map(data.T, title=title,
+                        plotting_routines.draw_map(data.T,
+                                                   title=title,
                                                    cbarlims=cbar_lims,
-                                   cbar_label=cbar_name,
-                                   fname=fname, OVERWRITE=OVERWRITE,
-                                   ylims=(-lat_lim, lat_lim), plot_extent=extent, )
+                                                   cbar_label=cbar_name,
+                                                   fname=fname,
+                                                   OVERWRITE=OVERWRITE,
+                                                   ylims=(-lat_lim,
+                                                          lat_lim),
+                                                   plot_extent=extent,
+                                                   )
                         pbar.update()
 
                     if plot_type == 'diff':
-                        tec=raw.copy() - fit.copy()
+                        tec = raw.copy() - fit.copy()
                         if TWO_FILES:
-                            tec -= (raw2-fit2)
-                            title=("Diff of % over BG of TEC at " +
+                            tec -= (raw2 - fit2)
+                            title = ("Diff of % over BG of TEC at " +
                                      UT_from_Storm_onset(
                                          dtime, dtime_storm_start) +
                                      " from storm onset")
-                            cbar_lims=cbar_lims_dict['TWO_FILES']['diff']
+                            cbar_lims = cbar_lims_dict['TWO_FILES']['diff']
                         else:
-                            title=("TEC over background at {} from storm onset".
-                                     format(UT_from_Storm_onset(
-                                         dtime, dtime_storm_start)))
-                            cbar_lims=cbar_lims_dict['ONE_FILE']['diff']
+                            title = (
+                                "TEC over background at {} from storm onset". format(
+                                    UT_from_Storm_onset(
+                                        dtime, dtime_storm_start)))
+                            cbar_lims = cbar_lims_dict['ONE_FILE']['diff']
 
-                        fname=os.path.join(
+                        fname = os.path.join(
                             out_path, 'map', 'tec',
                             "diff", str(nt).rjust(3, '0')
                             + ".png")
 
-                        cbar_name='Vertically Integrated TEC'
+                        cbar_name = 'Vertically Integrated TEC'
 
                         if DO_ALT_PLOTS:
-                            tec=100 * tec / raw.copy()
-                            title=title.replace('TEC',
-                                                'Electron Density % over Background at %i km'
-                                %(alt_here))
-                            fname=fname.replace('map', 'map/edens-at-%i-km'
-                                %(alt_here))
-                            cbar_name='% over Background Electron Density'
+                            tec = 100 * tec / raw.copy()
+                            title = title.replace(
+                                'TEC', 'Electron Density % over Background at %i km' %
+                                (alt_here))
+                            fname = fname.replace('map', 'map/edens-at-%i-km'
+                                                  % (alt_here))
+                            cbar_name = '% over Background Electron Density'
 
-                        data, extent=plotting_routines.interpolate_2d_plot(
+                        data, extent = plotting_routines.interpolate_2d_plot(
                             glons, glats, tec, 80, 100, map=True)
 
-                        plotting_routines.draw_map(data.T, title=title,
+                        plotting_routines.draw_map(data.T,
+                                                   title=title,
                                                    cbarlims=cbar_lims,
-                                   cbar_label=cbar_name,
-                                   fname=fname, OVERWRITE=OVERWRITE,
-                                   ylims=(-lat_lim, lat_lim), plot_extent=extent, )
+                                                   cbar_label=cbar_name,
+                                                   fname=fname,
+                                                   OVERWRITE=OVERWRITE,
+                                                   ylims=(-lat_lim,
+                                                          lat_lim),
+                                                   plot_extent=extent,
+                                                   )
 
                         pbar.update()
 
@@ -450,16 +475,14 @@ def main(args):
             alt_num += 1
             print('done with %i/%i loops' % (alt_num, len(alt_idxs)))
             if alt_num == len(alt_idxs):
-                DOING_PLOTS=False
+                DOING_PLOTS = False
         else:
-            DOING_PLOTS=False
-
-
+            DOING_PLOTS = False
 
 
 if __name__ == "__main__":
 
-    parser=argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="This script will plot keograms of the post-processed sami tec data.")
 
     parser.add_argument(
@@ -529,6 +552,6 @@ if __name__ == "__main__":
         'not plot TEC anymore, just electron density at the closest ' +
         'given altitudes.')
 
-    args=parser.parse_args()
+    args = parser.parse_args()
 
     main(args)
