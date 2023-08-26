@@ -2,6 +2,7 @@
 
 *.pyc
 *ynb_checkpoin*
+__pycache__/
 
 
 =======
