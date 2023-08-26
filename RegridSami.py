@@ -11,7 +11,7 @@ Postprocess SAMI data to be read into xarrays.
 import os
 import numpy as np
 import pandas as pd
-from test_interpolate_outputs import do_interpolations
+from utility_programs.interpolate_outputs import do_interpolations
 from utility_programs.utils import str_to_ut
 import argparse
 
