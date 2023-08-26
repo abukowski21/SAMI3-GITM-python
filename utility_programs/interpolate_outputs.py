@@ -110,10 +110,10 @@ def do_interpolations(
         max_alt (int): specify maximum altitude of data grid to feed in to
             delauney calculations. Useful if you don't want to recalculate
             weights and the interpoaltion is different from one already done.
-        aarons_mods (bool): Option to use modifications Aaron made to the interp
+        aarons_mods (bool): Option to use modifications Aaron made to the
             methodology. Off by default...
-            - Performs the interpolations at 2-4x output resolution, then coarsens
-                the dataset and reinterpolates. This effectively smooths
+            - Perform the interpolations at 4x output resolution, then coarsen
+                the dataset and reinterpolate. This effectively smooths
                 out the "weirdness" seen due to SAMI's grid while retaining the
                 features we're looking for.
             - Takes a decent amounbt more time
@@ -173,9 +173,9 @@ def do_interpolations(
             raise ValueError('Must specify sat_times if not using a grid')
 
         if is_grid:
-            latout = out_lats[:, 0, 0]
-            lonout = out_lons[0, :, 0]
-            altout = out_alts[0, 0, :]
+            latout = np.unique(out_lats)
+            lonout = np.unique(out_lons)
+            altout = np.unique(out_alts)
 
     out_lon_lat_alt = gps_to_ecef_custom(
         out_lons.flatten(), out_lats.flatten(), out_alts.flatten()).T
