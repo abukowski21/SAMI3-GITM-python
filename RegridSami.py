@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 from test_interpolate_outputs import do_interpolations
 from utility_programs.utils import str_to_ut
-from utility_programs.interpolate_outputs import do_interpolations
 import argparse
 
 
