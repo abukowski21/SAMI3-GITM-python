@@ -5,12 +5,12 @@ Introduction
 
 This project will not run any models for you, only manipulate the outputs into a more user-friendly format. 
 
-For example, GITM outputs can be converted from several `.bin` files (one for each time-step) to a single (or multiple) netCDF files. SAMI3 outputs can be converted to netCDF files indexed with the native grid (nlt, nf, nz) or interpolated to a standard geographic grid.
+For example, GITM outputs can be converted from several ``.bin`` files (one for each time-step) to a single (or multiple) netCDF files. SAMI3 outputs can be converted to netCDF files indexed with the native grid (nlt, nf, nz) or interpolated to a standard geographic grid.
 
 
 
 
-Limitations
+Project Scope
 ***********
 
 Again, these scripts do not interface with the models at all. They will only read outputs and convert files.

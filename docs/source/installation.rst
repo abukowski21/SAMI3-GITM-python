@@ -1,8 +1,8 @@
 Installation
-=====
+============
 
 Quickstart
------
+*********
 
 
 This package is based on GitHub and Conda [1]_. To begin, go to a clean folder on your computer where you want to do the install.
@@ -35,8 +35,8 @@ And activate:
 
 
 Known Issues
------
+************
 
 - Older GitHub versions may require a slightly different command to access the correct branch.
 - If you do not have ``conda`` installed and don't want to install it, you can install the required packages with ``pip``. For help on this, contact the author as the documentation has not been built yet.
-
+- If you encounter more problems, please either fill out a GitHub issue or contact the author directly.
