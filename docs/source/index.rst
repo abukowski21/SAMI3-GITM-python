@@ -15,10 +15,3 @@ Welcome to SAMI3-GITM-Python's documentation!
    usage
 
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
