@@ -7,10 +7,9 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
-from scipy.signal import sosfiltfilt
 from tqdm.auto import tqdm
 
-from utility_programs.filters import make_filter
+from utility_programs.filters import make_fits
 from utility_programs.utils import get_var_names, str_to_ut
 
 
@@ -44,10 +43,7 @@ def run_processing_options(ds,
         ds = ds.mean(dim='alt')
 
     if 'bandpass' in process_options:
-        sos = make_filter()
-        ds2 = xr.apply_ufunc(sosfiltfilt, sos, ds,
-                             kwargs={"axis": 0},)
-        ds = 100 * (ds - ds2) / ds
+        ds = make_fits(ds)
 
     if 'transpose' in process_options:
         ds = ds.transpose()
@@ -58,7 +54,6 @@ def run_processing_options(ds,
 def autoplot(
         file_list,
         columns_to_plot,
-        model,
         output_dir=None,
         show_map=False,
         time_lims=[0, -1],
@@ -69,20 +64,8 @@ def autoplot(
         plot_arg_dict=None,
         concat_dim='time'):
 
-    # We will glob the directory for all files with the model name,
-    #   and parse for the specified times.
-
-    # file_list = glob.glob(os.path.join(data_dir, model + '*.nc'))
     file_list = np.sort(file_list)
 
-    # if len(file_list) == 0:
-    #     raise ValueError(
-    #         'No files found in %s' %
-    #         os.path.join(
-    #             data_dir,
-    #             model +
-    #             '*.nc'))
-    # trim file_list to only include files within time_lims
     if time_lims[1] == -1:
         time_lims[1] = len(file_list)
 
@@ -121,7 +104,16 @@ def autoplot(
     ds = xr.concat(ds, dim=concat_dim)
     print('Done reading files.')
 
-    # process the plotlims first to minimize memory usage & speed up
+    if 'alt' in cut_dict:
+        if 'alt_int' in process_options:
+            raise ValueError('Cannot select altitude when using alt_int.')
+
+    # look thru the process options:
+    if process_options is not None:
+        ds = run_processing_options(ds, process_options)
+        # With Dask it shouldn't matter if we trim the ds before or after
+
+    # process the plotlims now:
     if lim_dict is not None:
         if 'alt' in lim_dict:
             alt_lim = lim_dict.pop('alt')
@@ -133,21 +125,18 @@ def autoplot(
         if len(lim_dict) > 0:
             ds = ds.sel(lim_dict, method='nearest')
 
-    # look thru the process options:
-    if process_options is not None:
-        ds = run_processing_options(ds, process_options)
-
     # check if output dir exists:
     a = ''
-    for i in cut_dict.keys():
-        a += str(i) + '-' + str(int(cut_dict[i])) + '_'
-    a = a[:-1]
-    out_dir = os.path.join(output_dir, model, a)
+    if len(cut_dict) > 0:
+        for i in cut_dict.keys():
+            a += str(i) + '-' + str(int(cut_dict[i])) + '_'
+        a = a[:-1]
+    out_dir = os.path.join(output_dir, a)
     out_dir = out_dir.replace('//', '/')
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
         print('created directory: ', out_dir)
-
+    print('Saving plots as: ', os.path.join(out_dir, 'var_####.png'))
     # Now plot the data with the cuts specified.
 
     for var in columns_to_plot:
@@ -344,7 +333,7 @@ if __name__ == '__main__':
 
     """
     This loop will look for the column requested in the data files,
-    and make the requested plots.
+    and then make the requested plots.
 
     - Files are listed out twice (here & in autoplot), this is so that
         autoplot can be run interactively and leaves the time stuff
@@ -375,7 +364,6 @@ if __name__ == '__main__':
             if col in ds0:
                 autoplot(files,
                          columns_to_plot=col,
-                         model=model,
                          output_dir=args.out_dir,
                          show_map=args.show_map,
                          time_lims=args.time_lims,
