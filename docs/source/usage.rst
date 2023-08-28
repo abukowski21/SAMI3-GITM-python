@@ -5,7 +5,7 @@ Using the Command Line
 **********************
 
 
-..note:: 
+.. note:: 
     These steps will assume you have installed the package and have the required python packages installed. You can check your python Environments with:
     ``conda info --envs``
     And assuming you have installed the package with conda, you can activate it with:
@@ -26,25 +26,25 @@ To create a file for each timestep, combining the output ``3DALL``, ``2DANC``, e
 
     python PostProcessModelResults.py -gitm /path/to/gitm/run/UA/data/ -out /path/to/output/directory/ 
 
-..note::
+.. note::
     A progress bar will be displayed. You can turn this off tih the ``--no_progress`` flag.
 
-..note::
+.. note::
     By default, GITM's "Ghost Cells" are dropped. You can include them with the ``-g`` or ``ghost_cells`` flag.
 
 And then a NetCDF file will be created for each timestep. For longer runs, often it is easier to have a single file for the entire run. This speeds up file reads and with Dask_ we do not have to worry about memory usage. To create a single file for the entire run:
 
-:: _Dask: https://docs.xarray.dev/en/stable/user-guide/dask.html
+.. _Dask: https://docs.xarray.dev/en/stable/user-guide/dask.html
 
 .. code-block:: bash
 
     python PostProcessModelResults.py -gitm /path/to/gitm/run/UA/data/ -out /path/to/output/directory/ -single_file RUN_NAME
 
 
-..note::
+.. note::
     ``_GITM.nc`` will be appended to RUN_NAME. So if you want the optput file to be saved as ``/Users/me/Documents/GITM_RUNS/test_GITM.nc``, you would say ``[..] -out /Users/me/Documents/GITM_RUNS/ -single_file test``
 
-..note::
+.. note::
     Writing GITM outputs to a single file is incredibly memory intense. To solve this, temp files are written to a temp directory (in the our_dir) folder. YOu can change this to another location if you would like with the ``tmp_dir`` flag.
 
 
@@ -59,7 +59,7 @@ SAMI3 natively writes one file for each variable. Longer model runs do not resul
 
 We automatically read the user-specified resoltion of the model run but **do not** read in the start time of the simulation. This must be supplied by the user. SAMI3 files have two processing options.
 
-..note::
+.. note::
     By default, both `raw` and `regrid` files are written when a user runs PostProcessModelResults.py. 
 
 Writing raw SAMI3 Outputs to NetCDF
@@ -78,7 +78,7 @@ Regridding SAMI3 Outputs
 
 It is often more useful to have SAMI3 outputs on a regular grid. This can be done with the ``--sami_type regrid`` flag. This will regrid the SAMI3 outputs to a regular grid, using Scipy's LinearNDInterpolator_
 
-:: _LinearNDInterpolator: https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.LinearNDInterpolator.html
+.. _LinearNDInterpolator: https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.LinearNDInterpolator.html
 
 
 To keep things approachable and streamlined, PostProcessModelResults.py does not have very robust options with the regridding. From the command line, the ``RegridSami.py`` script has a lot more functionality accessible to the user. For example, you can specify the grid yourself with:
