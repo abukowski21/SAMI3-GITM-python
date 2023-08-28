@@ -11,6 +11,8 @@ Welcome to SAMI3-GITM-Python's documentation!
    :caption: Contents:
 
    intro
+   installation
+   usage
 
 
 
