@@ -17,14 +17,14 @@ Checkout the correct branch:
 
 Enter the directory:
 
-``cd SAMI3-GITM-python```
+``cd SAMI3-GITM-python``
 
 Create a new conda[1] environment accoring to the specs listed:
 ``conda env create -f python-env.yml``
 
 And activate:
 
-``conda activate SAMI3-GITM```
+``conda activate SAMI3-GITM``
 
 
 .. [1] Additional information on ``conda`` can be found on their website at the Installation_ and Environment_ pages.
