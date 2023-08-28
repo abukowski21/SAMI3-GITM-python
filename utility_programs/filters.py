@@ -1,60 +1,58 @@
 
-from scipy import signal
 import numpy as np
-import xarray as xr
+from scipy import signal
 
 
-def make_filter(lowcut=80, highcut=40, order=3):
-    """_summary_
-
-    Args:
-        lowcut (int, optional): lowcut of the filter. Defaults to 100.
-        highcut (int, optional): highcut of the filter. Defaults to 30.
-        order (int, optional): Order of the filter (how steep the filter
-            cuts at the cutoff frequencies). Defaults to 2.
-
-    Returns:
-        scipy butterworth filter: the filter with settings defined by the user.
-    """
-    # Define the cutoff frequencies
-    lowcut_f = 1 / (lowcut / 60)  # 100 minutes in units of sample^-1
-    highcut_f = 1 / (highcut / 60)  # 30 minutes in units of sample^-1
-
-    # Define the Butterworth filter
-    nyquist = 0.5 * 5  # 5 minutes is the sampling frequency
-    low = lowcut_f / nyquist
-    high = highcut_f / nyquist
-    sos = signal.butter(order, [low, high], btype="bandstop", output="sos")
-    return sos
-
-
-def make_fits(DATA, lowcut=80, highcut=40, order=3):
+def make_fits(da,
+              freq=5,
+              lims=[40, 85],
+              order=1,
+              percent=True):
     """
     calculate bandpass filter for all data previously read in.
+    this is a wrapper for the scipy bandpass filter.
 
-    inputs: nparray (or xarray.DataArray) of gitmdata
+    Args:
+        da (xarray DataArray): data to be filtered
+        freq (int, optional): sampling frequency . Defaults to 5.
+        lims (list, optional): limits of the bandpass filter.
+            Defaults to [40, 85].
+        order (int, optional): order of the filter. Defaults to 1.
+        percent (bool, optional): whether to return the filtered data as
+            a percentage of the original data. Defaults to True.
 
-    returns:
-    fits: np array indexed at fits[time][col][ilon][ilat][ialt]
+    Returns:
+        xarray DataArray: filtered data
 
-
-    todo: you can thread this by splitting the alts into different threads.
-    then just append the fits_full later.
 
     """
-    sos = make_filter(lowcut, highcut, order)
 
-    if isinstance(
-            DATA,
-            xr.Dataset) or isinstance(
-            DATA,
-            xr.DataArray):
-        filtered_arr = xr.apply_ufunc(signal.sosfiltfilt,
-                                      sos, DATA,
-                                      dask='allowed')
+    # Define sampling frequency and limits in minutes
+    sampling_freq = freq
+    lower_limit = min(lims)
+    upper_limit = max(lims)
+
+    # Convert limits to corresponding indices
+    lower_index = int(lower_limit / sampling_freq)
+    upper_index = int(upper_limit / sampling_freq)
+
+    # Design the bandpass filter
+    nyquist_freq = 0.5 * sampling_freq
+    lower_cutoff = lower_index / nyquist_freq
+    upper_cutoff = upper_index / nyquist_freq
+    b, a = signal.butter(order, [1 / upper_cutoff, 1 / lower_cutoff],
+                         btype='band', analog=False)
+
+    # Apply the filter to the data
+    filtd = signal.filtfilt(b, a, da, axis=0)
+    # filtd = xr.apply_ufunc(filtfilt, b, a, da, dask='allowed')
+
+    if percent:
+        return (100 * (filtd) / da)
+
     else:
-        filtered_arr = signal.sosfiltfilt(sos, DATA, axis=0)
-    return filtered_arr
+        da.values = filtd
+        return da
 
 
 def remove_outliers(array):
