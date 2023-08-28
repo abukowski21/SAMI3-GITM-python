@@ -1,8 +1,7 @@
-Usage Examples 
+Post-Processing
 ##############
 
-Using the Command Line
-**********************
+
 
 
 .. note:: 
@@ -11,11 +10,9 @@ Using the Command Line
     And assuming you have installed the package with conda, you can activate it with:
     ``conda activate SAMI3-GITM-python`` (Adapt this last command if you have done the installation differently)
 
-Post-Processing 
-==============
 
 GITM Outputs
-------------
+============
 
 
 GITM natively writes files out at each timestep, for each worker. These are un the ``run/UA/data`` directory and are stored as ``*.header`` and ``*.b0000`` files (one header for each time-step and one .b#### file for each worker, at each time-step). These are not meant to be interfaced with by the user. To run any of these scripts, you need to process them into the user-interfacable files with ``pGITM``. This is located in your ``run/`` directory. 
@@ -52,7 +49,7 @@ Additional arguments are available to unlock more complex features. Run ``python
 
 
 SAMI3 Outputs
--------------
+=============
 
 
 SAMI3 natively writes one file for each variable. Longer model runs do not result in more files, but rather longer files. These files are indiced with ``(nz, nf, nlt, nt)`` accorrding to the user settings, where ``nz`` is the index of the grid point (along the field line), ``nf`` is the index of the field line (along the longitude), ``nlt`` is the number of magnetic longitues, and ``nt`` is the time step.
@@ -63,7 +60,7 @@ We automatically read the user-specified resoltion of the model run but **do not
     By default, both `raw` and `regrid` files are written when a user runs PostProcessModelResults.py. 
 
 Writing raw SAMI3 Outputs to NetCDF
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------------
 
 To write the raw SAMI3 outputs to a single NetCDF file, you will run:
 
@@ -74,7 +71,7 @@ To write the raw SAMI3 outputs to a single NetCDF file, you will run:
 These outputs retain the same indexing as the original files. 
 
 Regridding SAMI3 Outputs
-^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------
 
 It is often more useful to have SAMI3 outputs on a regular grid. This can be done with the ``--sami_type regrid`` flag. This will regrid the SAMI3 outputs to a regular grid, using Scipy's LinearNDInterpolator_
 
@@ -95,7 +92,7 @@ There is also the option to "fly a satellite through" the model outputs, interpo
 
 
 Using in a Python script
-*************************
+========================
 
 These scripts are not available on conda-forge or via pip. There is no current plan to make them available on a python package manager, or to make these scripts install-able in a python environment. 
 
