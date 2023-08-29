@@ -19,12 +19,16 @@ Enter the directory:
 
 ``cd SAMI3-GITM-python``
 
-Create a new conda[1] environment accoring to the specs listed:
-``conda env create -f python-env.yml``
+Create a new conda[1] environment accoring to the requirements specified by this project:
 
-And activate:
+``conda env create -f python-env.yml && conda activate SAMI3-GITM``
 
-``conda activate SAMI3-GITM``
+.. note::
+    Conda is not required, but it makes things easier. If you do not want to use conda, you can install the packages with pip or manually. To use pip:
+
+    ``pip install -r docs/requirements.txt``
+
+    This usage is not supported, so you may run into dependency issues doing this.
 
 
 .. [1] Additional information on ``conda`` can be found on their website at the Installation_ and Environment_ pages.
