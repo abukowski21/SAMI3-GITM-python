@@ -32,7 +32,7 @@ docs/build
 # core dumps, esmf logs
 PET*
 core*
-*DS*
+*DS_*
 
 # Testing folders
 OUTPUTS
