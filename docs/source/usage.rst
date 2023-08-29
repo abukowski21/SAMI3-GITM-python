@@ -5,7 +5,7 @@ Post-Processing
 
 
 .. note:: 
-    These steps will assume you have installed the package and have the required python packages installed. You can check your python Environments with:
+    These steps will assume you have installed the package and have the required python packages installed. You can check your installed conda environments with:
     ``conda info --envs``
     And assuming you have installed the package with conda, you can activate it with:
     ``conda activate SAMI3-GITM-python`` (Adapt this last command if you have done the installation differently)
@@ -23,12 +23,12 @@ To create a file for each timestep, combining the output ``3DALL``, ``2DANC``, e
 
     python PostProcessModelResults.py -gitm /path/to/gitm/run/UA/data/ -out /path/to/output/directory/ 
 
-A progress bar will be displayed. You can turn this off tih the ``--no_progress`` flag.
+A progress bar will be displayed. You can turn this off with the ``--no_progress`` flag.
 
 .. note::
     By default, GITM's "Ghost Cells" are dropped. You can include them with the ``-g`` or ``ghost_cells`` flag.
 
-And then a NetCDF file will be created for each timestep. For longer runs, often it is easier to have a single file for the entire run. This speeds up file reads and with Dask_ we do not have to worry about memory usage. To create a single file for the entire run:
+After things are done processing, a NetCDF file will be created for each timestep. For longer runs, often it is easier to have a single file for the entire run. This speeds up file reads and with Dask_ we do not have to worry about memory usage. To create a single file for the entire run:
 
 .. _Dask: https://docs.xarray.dev/en/stable/user-guide/dask.html
 
@@ -43,7 +43,7 @@ And then a NetCDF file will be created for each timestep. For longer runs, often
     Writing GITM outputs to a single file is incredibly memory and I/O intense. To solve this, temporary files are written to a temp directory (in the out_dir) folder. You can change this to another location if you would like with the ``tmp_dir`` flag.
 
 
-Additional arguments are available to unlock more complex features. Run ``python PostProcessModelResults.py -h`` to see them all.
+Additional arguments are available to unlock more complex features. Run ``python PostProcessModelResults.py -h`` or  to see them all.
 
 
 SAMI3 Outputs
