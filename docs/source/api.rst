@@ -4,6 +4,10 @@ API
 Processing Model Results
 -----------------------
 
+
+Hello there
+^^^^^^^^^^^
+
 To postprocess model results, you need to do this:
 
 .. automodule:: PostProcessModelResults
@@ -16,7 +20,7 @@ Plotting
 .. automodule:: basic_plots_from_netcdf
     :members:
 
-.. automodule:: plotting_routines
+.. automodule:: utility_programs.plotting_routines
     :members:
     :undoc-members:
     :show-inheritance:
@@ -24,17 +28,17 @@ Plotting
 Utilities
 ---------
 
-.. automodule:: filters
+.. automodule:: utility_programs.filters
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: utils
+.. automodule:: utility_programs.utils
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: time_conversion
+.. automodule:: utility_programs.time_conversion
     :members:
     :undoc-members:
     :show-inheritance:
@@ -44,3 +48,4 @@ Utilities
    *.py
    ../*.py
    ../../*.py
+   utility_programs/*.py

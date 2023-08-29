@@ -37,6 +37,13 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+# Autodoc settings
+# Configure autoapi
+autoapi_type = 'python'
+autoapi_dirs = ['../../']
+autoapi_keep_files = True
+autoapi_root = 'autoapi/generated'
+
 
 # -- Options for HTML output -------------------------------------------------
 
