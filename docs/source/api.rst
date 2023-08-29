@@ -4,10 +4,8 @@ API
 Processing Model Results
 -----------------------
 
-.. automodule:: ../../PostProcessModelResults.py
+.. automodule:: PostProcessModelResults
     :members:
-    :undoc-members:
-    :show-inheritance:
 
 .. automodule:: RegridSami
     :members:
@@ -52,6 +50,6 @@ Utilities
 
 .. autosummary::
    :toctree: _autosummary
-
    *.py
-   *.py
+   ../*.py
+   ../../*.py
