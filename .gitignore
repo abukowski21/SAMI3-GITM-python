@@ -29,6 +29,7 @@ gitm_out_plots
 # core dumps, esmf logs
 PET*
 core*
+*DS*
 
 # Testing folders
 OUTPUTS
