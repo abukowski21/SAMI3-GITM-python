@@ -13,6 +13,5 @@ Welcome to SAMI3-GITM-Python's documentation!
    intro
    installation
    usage
-   modules
 
 
