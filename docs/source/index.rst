@@ -14,6 +14,5 @@ Welcome to SAMI3-GITM-Python's documentation!
    installation
    usage
    api
-   modules
 
 
