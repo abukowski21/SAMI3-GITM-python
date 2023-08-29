@@ -1,3 +1,13 @@
 sphinx
 sphinx_rtd_theme
 readthedocs-sphinx-search
+sphinx
+sphinx-rtd-theme
+scipy
+xarray
+numpy
+matplotlib
+cartopy
+dask
+tqdm
+geopandas
