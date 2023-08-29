@@ -13,6 +13,6 @@ Welcome to SAMI3-GITM-Python's documentation!
    intro
    installation
    usage
-   api
+   modules
 
 
