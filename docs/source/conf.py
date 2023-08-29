@@ -14,6 +14,8 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
 
+print(os.listdir('../../'))
+
 
 # -- Project information -----------------------------------------------------
 
@@ -36,13 +38,6 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
-# Autodoc settings
-# Configure autoapi
-autoapi_type = 'python'
-autoapi_dirs = ['../../']
-autoapi_keep_files = True
-autoapi_root = 'autoapi/generated'
 
 
 # -- Options for HTML output -------------------------------------------------

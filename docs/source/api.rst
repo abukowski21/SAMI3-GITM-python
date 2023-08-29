@@ -42,10 +42,3 @@ Utilities
     :members:
     :undoc-members:
     :show-inheritance:
-
-.. autosummary::
-   :toctree: _autosummary
-   *.py
-   ../*.py
-   ../../*.py
-   utility_programs/*.py
