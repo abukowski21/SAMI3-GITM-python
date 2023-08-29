@@ -12,16 +12,10 @@ import argparse
 import datetime
 from utility_programs.read_routines import SAMI
 import os
-import time
-
-import geopandas
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy import signal
 from tqdm.auto import tqdm
 
-import scipy.integrate as integ
 
 from utility_programs.plot_help import UT_from_Storm_onset
 from utility_programs import plotting_routines
@@ -29,11 +23,6 @@ from utility_programs import filters
 
 
 def main(args):
-
-    if args.map:
-        global world
-        world = geopandas.read_file(
-            geopandas.datasets.get_path('naturalearth_lowres'))
 
     # Lon to keo:
     global sami_keo_lons
@@ -88,10 +77,6 @@ def main(args):
     glons = np.array(glons)
     glats = np.array(glats)
 
-    global hrs_since_storm_onset
-    hrs_full = [(i - pd.Timestamp(dtime_storm_start))
-                / pd.Timedelta('1 hour') for i in times]
-
     ins = []
     hrs_since_storm_onset = []
     t_start = dtime_storm_start - \
@@ -111,7 +96,6 @@ def main(args):
 
     if args.altitudes is not None:
         given_alts = np.asarray(args.altitudes)
-        nalts = sami_data['grid']['glon'].shape[1]
         alts = sami_data['grid']['alt']
         alt_idxs = []
         # find closest alts...
@@ -292,8 +276,8 @@ def main(args):
                         if TWO_FILES:
                             tec -= (100 * (raw2.copy() - fit2.copy())
                                     / raw2.copy())
-                            title = "Diff of % over BG of TEC at lon = {}".format(
-                                real_lon)
+                            title = "Diff of % over BG of TEC at lon = {}".\
+                                format(real_lon)
                             cbar_lims = cbar_lims_dict['TWO_FILES']['diff']
                         else:
                             title = "TEC over Background at lon = {}".format(
@@ -432,9 +416,9 @@ def main(args):
                             cbar_lims = cbar_lims_dict['TWO_FILES']['diff']
                         else:
                             title = (
-                                "TEC over background at {} from storm onset". format(
-                                    UT_from_Storm_onset(
-                                        dtime, dtime_storm_start)))
+                                "TEC over background at {} from storm onset".
+                                format(UT_from_Storm_onset(
+                                    dtime, dtime_storm_start)))
                             cbar_lims = cbar_lims_dict['ONE_FILE']['diff']
 
                         fname = os.path.join(
@@ -447,7 +431,8 @@ def main(args):
                         if DO_ALT_PLOTS:
                             tec = 100 * tec / raw.copy()
                             title = title.replace(
-                                'TEC', 'Electron Density % over Background at %i km' %
+                                'TEC',
+                                'Electron Density % over Background at %i km' %
                                 (alt_here))
                             fname = fname.replace('map', 'map/edens-at-%i-km'
                                                   % (alt_here))
@@ -483,7 +468,8 @@ def main(args):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="This script will plot keograms of the post-processed sami tec data.")
+        description="This script will plot keograms of the post-processed sami"
+        " tec data.")
 
     parser.add_argument(
         'dtime_storm_start',
