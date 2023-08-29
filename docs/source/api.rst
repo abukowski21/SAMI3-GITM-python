@@ -4,7 +4,7 @@ API
 Processing Model Results
 -----------------------
 
-.. automodule:: PostProcessModelResults
+.. automodule:: ../../PostProcessModelResults.py
     :members:
     :undoc-members:
     :show-inheritance:
@@ -49,3 +49,9 @@ Utilities
     :members:
     :undoc-members:
     :show-inheritance:
+
+.. autosummary::
+   :toctree: _autosummary
+
+   *.py
+   *.py
