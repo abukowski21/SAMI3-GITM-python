@@ -1,29 +1,40 @@
+[![Documentation Status](https://readthedocs.org/projects/sami3-gitm-python/badge/?version=latest)](https://sami3-gitm-python.readthedocs.io/en/latest/?badge=latest)
+    
+
 # SAMI3-GITM-python
 
-Here is all the current work being done. See the main branch for info on what needs to be done.
+This repository contains many scripts to deal with both SAMI3 and GITM outputs. Primarily, they are converted to NetCDF format and the remaining analysis is left to the user. However, many examples of analyses and other processing options are available. 
 
 
-## Please feel free to make any changes you would like!!
+Please contact the author or fill out a GitHub issue if you notice any problems. 
 
+
+Further documentation is available at https://sami3-gitm-python.readthedocs.io/en/latest/
 
 ---
 
-## USAGE:
+## Installation
 
 Git clone, get on this branch. 
 
-`git clone git@github.com:abukowski21/SAMI3-GITM-python`
+```
+git clone git@github.com:abukowski21/SAMI3-GITM-python.git
+cd SAMI3-GITM-python/
+git switch -c develop origin/develop
+```
 
-`cd SAMI3-GITM-python/`
+> Older versions of Git may require different commands... If the above doesn't work, try `git checkout develop`
 
-`git checkout satellite_interpolations`
 
 To ensure compatibility, an Anaconda environment is available. Install it with:
 
 `conda env create -f python-env.yml && conda activate SAMI3-GITM`
 
-> To create the environment with another name, edit the first line of `python-env.yml`
+> To create the environment with another name, edit the first line of `python-env.yml`, or use the `-n` flag.
 > Anaconda installation information can be found at [this link](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
+
+
+## USAGE
 
 Data can be read directly from binary format and plotted, though there are scripts to postprocess
 these data into netCDF format. This will also interpolate SAMI3 model outputs to a "regular" grid
