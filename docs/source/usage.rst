@@ -23,8 +23,7 @@ To create a file for each timestep, combining the output ``3DALL``, ``2DANC``, e
 
     python PostProcessModelResults.py -gitm /path/to/gitm/run/UA/data/ -out /path/to/output/directory/ 
 
-.. note::
-    A progress bar will be displayed. You can turn this off tih the ``--no_progress`` flag.
+A progress bar will be displayed. You can turn this off tih the ``--no_progress`` flag.
 
 .. note::
     By default, GITM's "Ghost Cells" are dropped. You can include them with the ``-g`` or ``ghost_cells`` flag.
@@ -38,11 +37,10 @@ And then a NetCDF file will be created for each timestep. For longer runs, often
     python PostProcessModelResults.py -gitm /path/to/gitm/run/UA/data/ -out /path/to/output/directory/ -single_file RUN_NAME
 
 
-.. note::
-    ``_GITM.nc`` will be appended to RUN_NAME. So if you want the optput file to be saved as ``/Users/me/Documents/GITM_RUNS/test_GITM.nc``, you would say ``[..] -out /Users/me/Documents/GITM_RUNS/ -single_file test``
+``_GITM.nc`` will be appended to RUN_NAME. So if you want the optput file to be saved as ``/Users/me/Documents/GITM_RUNS/test_GITM.nc``, you would say ``[...] -out /Users/me/Documents/GITM_RUNS/ -single_file test``
 
 .. note::
-    Writing GITM outputs to a single file is incredibly memory intense. To solve this, temp files are written to a temp directory (in the our_dir) folder. YOu can change this to another location if you would like with the ``tmp_dir`` flag.
+    Writing GITM outputs to a single file is incredibly memory and I/O intense. To solve this, temporary files are written to a temp directory (in the out_dir) folder. You can change this to another location if you would like with the ``tmp_dir`` flag.
 
 
 Additional arguments are available to unlock more complex features. Run ``python PostProcessModelResults.py -h`` to see them all.
