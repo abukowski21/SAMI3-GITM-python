@@ -8,65 +8,58 @@ import xarray as xr
 def str_to_ut(in_str):
     """Convert a string to a datetime object.
 
-    Parameters
-    ----------
-    in_str : str
-        String to convert to datetime object.
-
-    Returns
-    -------
-    datetime
-        Datetime object.
-
+    :param in_str: String to convert
+    :type in_str: str
+    :return: Datetime object
+    :rtype: datetime
     """
 
     return datetime.strptime(
         in_str.ljust(14, '0'), '%Y%m%d%H%M%S')
 
 
-def make_ccmc_name(
-        modelname,
-        ut,
-        data_type=None):
-    """Make a CCMC-formatted filename.
-    Returns a string of the form:
-        modelname_datatype_YYYY-MM-DDThh-mm-ss.nc
+def make_ccmc_name(modelname, ut, data_type=None):
+    """
+    Make a CCMC-formatted filename.
 
-    Parameters
-    ----------
-    modelname : str
-        Name of model.
-    ut : datetime
-        Datetime object of the time of the file.
-    data_type : str
-        Type of data in the file (3DALL/2DANC/ALL/etc.).
+    :param modelname: Name of model.
+    :type modelname: str
+    :param ut: Datetime object of the time of the file.
+    :type ut: datetime
+    :param data_type: Type of data in the file (3DALL/2DANC/REGRID/etc.).
+    :type data_type: str, optional
+    :return: CCMC-formatted filename.
+    :rtype: str
 
-    Returns
-    -------
-    str
-        CCMC-formatted filename.
+    :raises TypeError: If ut is not a datetime object.
 
+    :example:
+
+    >>> from datetime import datetime
+    >>> make_ccmc_name('model', datetime(2022, 1, 1), '3DALL')
+    'MODEL_3DALL_2022-01-01T00-00-00.nc'
     """
 
-    # format ut str as YYYY-MM-DDThh-mm-ss
-    if isinstance(ut, np.datetime64):
-        ut = pd.Timestamp(ut)
+    if not isinstance(ut, pd.Timestamp):
+        raise TypeError('ut must be a datetime object')
+
     ut_str = ut.strftime('%Y-%m-%dT%H-%M-%S')
-    # Make sure modelname & filt_type is all caps
 
     if data_type is not None:
-        return '{}_{}_{}.nc'.format(modelname, data_type, ut_str)
-
+        return '{}_{}_{}.nc'.format(
+            modelname.upper(), data_type.upper(), ut_str)
     else:
-        return '{}_{}.nc'.format(modelname, ut_str)
+        return '{}_{}.nc'.format(modelname.upper(), ut_str)
 
 
 def get_var_names(dir, models):
-    """Print out a list of variable names.
+    """Print out a list of variable names from a NetCDF file.
 
-    Args:
-        dir (str: path-like): directory of outputs
-        models (str/list): name of model.
+    :param dir: Directory to look in.
+    :type dir: str
+    :param models: Model name(s) to look for.
+    :type models: str or list-like
+    :return: None
     """
 
     import xarray as xr
@@ -91,18 +84,17 @@ def autoread(file_list,
              ):
     """Automatically read in a list of files and concatenate them.
 
-    Args:
-        file_list (str or list of paths): List of files to read in.
-        columns_to_return (str or list, optional):
-            Columns (data_vars) to return. Defaults to None.
-        concat_dim (str, optional): concat along this dimension.
-                No reason to ever change. Defaults to 'time'.
-
-    Raises:
-        ValueError: Column not found in files.
-
-    Returns:
-        xarray.Dataset: Dataset holding requested variable(s).
+    :param file_list: List of files to read in.
+    :type file_list: list-like
+    :param columns_to_return: Columns (data_vars) to return, defaults to None
+        (Read in all comunns)
+    :type columns_to_return: str or list-like, optional
+    :param concat_dim: concat along this dimension.
+        No reason to ever change. Defaults to 'time'.
+    :type concat_dim: str, optional
+    :raises ValueError: If the requested columns are not in the file.
+    :return: Concatenated dataset
+    :rtype: xarray.Dataset
     """
 
     import xarray as xr
@@ -134,41 +126,30 @@ def autoread(file_list,
 def ut_to_lt(time_array, glon):
     """Compute local time from date and longitude.
 
-    Parameters
-    ----------
-    time_array : array-like
-        Array-like of datetime objects in universal time
-    glon : array-like or float
-        Float or array-like of floats containing geographic longitude in
-        degrees. If single value or array of a different shape, all longitudes
-        are applied to all times. If the shape is the same as `time_array`,
-        the values are paired in the SLT calculation.
-
-    Returns
-    -------
-    lt : array of floats
-        List of local times in hours
-
-    Raises
-    ------
-    TypeError
-        For badly formatted input
-
+    :param time_array: Array-like of datetime objects in universal time
+    :type time_array: array-like
+    :param glon: Float or array-like of floats containing geographic longitude
+        in degrees. If single value or array of a different shape, all
+        longitudes are applied to all times. If the shape is the same as
+        `time_array`, the values are paired in the SLT calculation.
+    :type glon: array-like or float
+    :return: List of local times in hours
+    :rtype: array of floats
     """
 
     time_array = np.asarray(time_array)
     glon = np.asarray(glon)
 
     # Get UT seconds of day
-    try: #if numpy timestamps
+    try:  # if numpy timestamps
         utsec = [(ut.hour * 3600.0 + ut.minute * 60.0 + ut.second
-              + ut.microsecond * 1.0e-6) / 3600.0 for ut in time_array]
-    except:
+                  + ut.microsecond * 1.0e-6) / 3600.0 for ut in time_array]
+    except BaseException:
         utsec = []
         for ut in time_array:
             ut = pd.Timestamp(ut)
             utsec.append((ut.hour * 3600.0 + ut.minute * 60.0 + ut.second
-                  + ut.microsecond * 1.0e-6) / 3600.0)
+                          + ut.microsecond * 1.0e-6) / 3600.0)
     # Determine if the calculation is paired or broadcasted
     if glon.shape == time_array.shape:
         lt = np.array([utime + glon[i] / 15.0 for i,
@@ -186,10 +167,17 @@ def ut_to_lt(time_array, glon):
     return lt
 
 
-def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
-                      localtimes=None):  # int (for number of localtimes)
-    # or list-like for converting those localtimes
+def add_lt_to_dataset(ds,
+                      localtimes=None):
+    """Add local time to a dataset.
 
+    :param ds: Dataset to add local time to
+    :type ds: xarray.Dataset
+    :param localtimes: Localtimes, defaults to None
+    :type localtimes: list or array, optional
+    :return: Dataset with local time added
+    :rtype: xarray.Dataset
+    """
     if localtimes is None:
         localtimes = len(ds.lon)
 
@@ -223,6 +211,18 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
 
 
 def hours_from_storm_onset_into_ds(ds, onset_ut):
+    """Add hours from storm onset to a dataset.
+    Column is added as "HoursFromStormOnset".
+
+    :param ds: Dataset to add hours from storm onset to
+    :type ds: xarray.Dataset
+    :param onset_ut: Datetime of the storm onset
+    :type onset_ut: datetime
+    :raises ValueError: If the dataset spans multiple days
+    :return: Dataset with hours from storm onset added
+    :rtype: xarray.Dataset
+    """
+
     if ds.day[0] != ds.day[-1]:
         raise ValueError(' Does not yet support multiple days!')
     ds['HoursFromStormOnset'] = ((ds.time.dt.hour - (onset_ut.hour)) +

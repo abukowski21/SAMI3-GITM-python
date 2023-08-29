@@ -25,10 +25,14 @@ out_plots_gitm
 out_plots_sami
 gitm_out_plots
 
+# Doc build
+docs/build
+
 
 # core dumps, esmf logs
 PET*
 core*
+*DS_*
 
 # Testing folders
 OUTPUTS

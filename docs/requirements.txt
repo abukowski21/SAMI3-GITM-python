@@ -1,0 +1,11 @@
+sphinx
+sphinx_rtd_theme
+readthedocs-sphinx-search
+scipy
+xarray
+numpy
+matplotlib
+cartopy
+dask
+tqdm
+geopandas

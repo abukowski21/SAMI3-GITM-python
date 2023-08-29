@@ -12,9 +12,7 @@ dependencies:
   - geopandas
   - dask
   - h5netcdf
-  - numba
   - ipykernel
-  - xesmf
   - ipywidgets
-
+  - matplotlib
 
