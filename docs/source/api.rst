@@ -4,26 +4,17 @@ API
 Processing Model Results
 -----------------------
 
+To postprocess model results, you need to do this:
+
 .. automodule:: PostProcessModelResults
-    :members:
+    :members: 
 
-.. automodule:: RegridSami
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-.. automodule:: interpolate_outputs
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 Plotting
 --------
 
 .. automodule:: basic_plots_from_netcdf
     :members:
-    :undoc-members:
-    :show-inheritance:
 
 .. automodule:: plotting_routines
     :members:
