@@ -13,24 +13,26 @@ from utility_programs.filters import make_fits
 from utility_programs.utils import get_var_names, str_to_ut
 
 
-def run_processing_options(ds,
-                           process_options,):
-    """Process Dataset for Plots:
-
-    Args:
-        ds (xarray.Dataset):
-            Dataset to be processed
-        process_options (str or list):
-            Options to be applied to the dataset.
-            Currently supported options:
-                'alt_int': integrate over altitude
-                'bandpass': apply bandpass filter
-                'transpose': transpose the dataset
-
-    Returns:
-        xarray.Dataset: Dataset with processing options applied
-
+def run_processing_options(ds, process_options):
     """
+    Process the given xarray.Dataset according to the specified options.
+
+    :param ds: The dataset to be processed.
+    :type ds: xarray.Dataset
+    :param process_options: The processing options to be applied to the
+        input dataset. Currently supported options:
+
+        'alt_int': integrate over altitude
+
+        'bandpass': apply bandpass filter
+
+        'transpose': transpose the dataset
+
+    :type process_options: str or list
+    :return: The processed dataset.
+    :rtype: xarray.Dataset
+    """
+
     if 'alt_int' in process_options:
         ds = ds.mean(dim='alt')
 
@@ -55,6 +57,47 @@ def autoplot(
         process_options=None,
         plot_arg_dict=None,
         concat_dim='time'):
+    """
+    Plot data from netCDF files.
+
+    :param file_list: List of file paths to netCDF files.
+    :type file_list: list of str or str
+    :param columns_to_plot: Name(s) of the variable(s) to plot.
+    :type columns_to_plot: str or list of str
+    :param output_dir: Directory to save the plots. If not specified, plots
+        will not be saved to the same directory as file_list.
+    :type output_dir: str, optional
+    :param show_map: Whether to plot the data on a map. Default is False.
+    :type show_map: bool, optional
+    :param time_lims: Time limits to plot. Default is [0, -1], which plots all
+        available times.
+    :type time_lims: list of int, optional
+    :param cut_dict: Dictionary of cuts to apply to the data. Default is an
+        empty dictionary (no cuts). Format as {'lon': 240, 'alt':450}.
+    :type cut_dict: dict, optional
+    :param lim_dict: Dictionary of limits to apply to the data. Default is an
+        empty dictionary.
+    :type lim_dict: dict, optional
+    :param loop_var: Name of the variable to loop over. This will make plots
+        for all values of the variable (within the limits specified).
+        Default is 'time'.
+    :type loop_var: str, optional
+    :param process_options: Dictionary of processing options to apply to the
+        data. Default is None. See run_processing_options() for supported
+        options.
+    :type process_options: dict, optional
+    :param plot_arg_dict: Dictionary of arguments to pass to the plot function.
+        Default is None.
+    :type plot_arg_dict: dict, optional
+    :param concat_dim: Name of the dimension to concatenate the data along
+        when reading netCDF files with Dask. Optional. Only change this if you
+        are having trouble reading in files. Default is 'time'.
+    :type concat_dim: str, optional
+    :raises ValueError: If altitude is selected when using alt_int, or if
+        lon/lat cuts are used when making maps.
+    :return: None
+    :rtype: None
+    """
 
     # Check validity of cuts & args... :
     if 'alt' in cut_dict:
