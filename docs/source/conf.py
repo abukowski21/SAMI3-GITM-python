@@ -41,7 +41,10 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-autoapi_dirs = ['../../', '../../utility_programs/']
+apidoc_module_dir = '../../'
+apidoc_output_dir = 'api'
+apidoc_excluded_paths = ['tests']
+apidoc_separate_modules = True
 
 # -- Options for HTML output -------------------------------------------------
 
