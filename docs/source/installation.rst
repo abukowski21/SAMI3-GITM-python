@@ -2,7 +2,7 @@ Installation
 ============
 
 Quickstart
-*********
+**********
 
 
 This package is based on GitHub and Conda [1]_. To begin, go to a clean folder on your computer where you want to do the install.

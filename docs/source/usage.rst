@@ -1,5 +1,5 @@
 Post-Processing
-##############
+###############
 
 
 
@@ -100,6 +100,7 @@ Instead, to interface with any script available in a standalone python script, y
 
 
 .. code-block:: python
+    
     import sys
     sys.path.append('/path/to/SAMI3-GITM-python/')
     from RegridSami import main

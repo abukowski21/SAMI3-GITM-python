@@ -11,7 +11,7 @@ For example, GITM outputs can be converted from several ``.bin`` files (one for 
 
 
 Project Scope
-***********
+*************
 
 Again, these scripts do not interface with the models at all. They will only read outputs and convert files.
 

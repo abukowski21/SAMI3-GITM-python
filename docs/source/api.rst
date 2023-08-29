@@ -2,7 +2,7 @@ API
 ===
 
 Processing Model Results
------------------------
+------------------------
 
 To postprocess model results, you need to do this:
 
@@ -10,11 +10,6 @@ Here is the PostProcessModelResults information...
 
 .. automodule:: PostProcessModelResults
     :members: 
-
-.. autosummary::
-    :toctree: generated/
-    PostProcessModelResults
-
 
 
 Plotting
