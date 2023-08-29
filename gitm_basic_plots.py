@@ -1,8 +1,8 @@
 """
-Script for handling basic plotting of GITM 3DALL outputs. 
+Script for handling basic plotting of GITM 3DALL outputs.
 
 - Can make keograms or maps or any variable in 3DALL
-- Ability to set whether to bandpass filter results and plot raw, fit, 
+- Ability to set whether to bandpass filter results and plot raw, fit,
     or % difference between raw & fit
 """
 
@@ -12,15 +12,12 @@ import datetime
 import gc
 from utility_programs.read_routines import GITM
 import os
-import time
-from multiprocessing import Pool
 
 import geopandas
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy import signal
 from tqdm.auto import tqdm
 
 from utility_programs.plot_help import UT_from_Storm_onset
@@ -200,11 +197,36 @@ def call_keos(
         numcol=None,
         namecol: str = "",
         save_or_show="show",
-        return_figs=False,
         figtype="all",
         lat_lim=90,
         outliers=False,
         vlims=None):
+    """Script called from Main which will call the keogram making function.
+
+    :param alt_idx: Index of alt level to plot
+    :type alt_idx: int
+    :param real_lon: Value of (geographic) longitude to plot
+    :type real_lon: float
+    :param numcol: Index of the data variable (column) to plot,
+        defaults to None
+    :type numcol: int, optional
+    :param namecol: Name of column to plot, defaults to ""
+    :type namecol: str, optional
+    :param save_or_show: Save or show plots?, defaults to "show"
+    :type save_or_show: str, optional
+    :param figtype: Type of figure to make? options are
+        ['diff', filt', 'raw'] corresponding to difference over filter,
+        filtered data, raw data', or all of the above. Defaults to "all"
+    :type figtype: str, optional
+    :param lat_lim: Limit the plotted latitudes, defaults to 90
+    :type lat_lim: int, optional
+    :param outliers: Remove outliers? Defaults to False
+    :type outliers: bool, optional
+    :param vlims: (Absolute value of) colorbar limits, defaults to None
+    :type vlims: float, optional
+    :raises ValueError: If no column is specified.
+    :raises ValueError: Invalid location requested
+    """
 
     if numcol is None and namecol != "":
         numcol = cols.index(namecol)
@@ -280,7 +302,8 @@ def call_keos(
             ylims=[-lat_lim, lat_lim],
             save_or_show=save_or_show,
             fname=fname,
-            extent=[min(hrs_since_storm_onset), max(hrs_since_storm_onset), -90, 90],)
+            extent=[min(hrs_since_storm_onset),
+                    max(hrs_since_storm_onset), -90, 90],)
         made_plot = True
 
     if figtype == "all" or "raw" in figtype:
@@ -305,7 +328,8 @@ def call_keos(
             cbar_name=color_label,
             save_or_show=save_or_show,
             fname=fname,
-            extent=[min(hrs_since_storm_onset), max(hrs_since_storm_onset), -90, 90],)
+            extent=[min(hrs_since_storm_onset),
+                    max(hrs_since_storm_onset), -90, 90],)
         made_plot = True
 
     if figtype == "all" or "diff" in figtype:
@@ -329,7 +353,8 @@ def call_keos(
             cbar_name=color_label,
             save_or_show=save_or_show,
             fname=fname,
-            extent=[min(hrs_since_storm_onset), max(hrs_since_storm_onset), -90, 90],)
+            extent=[min(hrs_since_storm_onset),
+                    max(hrs_since_storm_onset), -90, 90],)
         made_plot = True
 
     if not made_plot:
@@ -343,11 +368,39 @@ def call_maps(
         numcol=None,
         namecol=None,
         save_or_show="show",
-        return_figs=False,
         figtype="all",
         lat_lim=90,
         diffs=[1, 2, 3, 5, 10, 30, 50],
         outliers=False):
+    """Script called from Main which will call the map making function.
+
+    :param alt_idx: index of altitude to plot
+    :type alt_idx: int
+    :param dtime_real: Datetime to make the map at, defaults to None
+    :type dtime_real: datetime.datetime, optional
+    :param dtime_index: Index of datetime to plot (one of this or dtime_real
+        must be specified), defaults to None
+    :type dtime_index: int, optional
+    :param numcol: Index of data_var to plot, defaults to None
+    :type numcol: int, optional
+    :param namecol: Name of column to plot, defaults to None
+    :type namecol: str, optional
+    :param save_or_show: Save or show plots? Defaults to "show"
+    :type save_or_show: str, optional
+    :param figtype: What type of plot to make? Options are ['raw', 'filt',
+        'diff', 'all'], where raw is raw values, filt is the filtered data,
+        diff is the % over the filter, and all is all... Defaults to "all"
+    :type figtype: str, optional
+    :param lat_lim: Limit of the plottes latitudes, defaults to 90
+    :type lat_lim: int, optional
+    :param diffs: Colorbar limits. List means multiple plots will be made.
+        Defaults to [1, 2, 3, 5, 10, 30, 50]
+    :type diffs: list, optional
+    :param outliers: Set to True to remove outliers, defaults to False
+    :type outliers: bool, optional
+    :raises ValueError: No column specified.
+    :raises ValueError: No datetime to plot information proivded.
+    """
 
     # Make sure inputs are correct. either the index or actual value of the
     #    datetime and column to plot can be specified (or both).
@@ -372,7 +425,7 @@ def call_maps(
     vmin_fits = np.min(fits_gitm[:, numcol, :, :, alt_idx])
     vmax_fits = np.max(fits_gitm[:, numcol, :, :, alt_idx])
 
-    if type(diffs) != list:
+    if not isinstance(diffs, list):
 
         vmin_diffs = np.min(100 * (fits_gitm[:, numcol, :, :, alt_idx]
                                    - gitm_bins[:, numcol, :, :, alt_idx])
@@ -450,7 +503,7 @@ def call_maps(
             + " km at "
             + UT_from_Storm_onset(dtime_real, dtime_storm_start)
             + " from Storm Start")
-        if type(diffs) == list:
+        if isinstance(diffs, list):
             for v_lim in diffs:
                 fname = os.path.join(
                     out_path, 'maps',
@@ -518,10 +571,12 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '--plot_start_delta', type=int,
+        help='Hours before storm start to begin plotting',
         action='store', default=-1, required=False)
 
     parser.add_argument(
         '--plot_end_delta', type=int,
+        help='Hours after storm start to stop plotting',
         action='store', default=-1, required=False)
 
     parser.add_argument(
