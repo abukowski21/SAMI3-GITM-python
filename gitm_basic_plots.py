@@ -4,6 +4,13 @@ Script for handling basic plotting of GITM 3DALL outputs.
 - Can make keograms or maps or any variable in 3DALL
 - Ability to set whether to bandpass filter results and plot raw, fit,
     or % difference between raw & fit
+
+
+** THIS HAS NOT BEEN TESTED IN A WHILE **
+
+Expect some errors and report them.
+
+It is recommended to use basic_plots_from_netcdf.py instead.
 """
 
 
