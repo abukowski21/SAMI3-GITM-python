@@ -167,7 +167,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-r', '--run_name', type=str, default=None,
                         help='name of run to save outputs as. Defaults to'
-                        ' SAMI_REGRID or SAT_INTERP, depending if the output'
+                        ' SAMI-REGRID or SAT-INTERP, depending if the output'
                         ' is a grid or not')
 
     parser.add_argument('--save_weights', action='store_true',

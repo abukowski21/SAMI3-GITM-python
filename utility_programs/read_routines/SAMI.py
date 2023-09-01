@@ -821,7 +821,7 @@ def process_all_to_cdf(sami_data_path,
                                 os.path.join(
                                     out_dir,
                                     run_name +
-                                    '_SAMI_RAW.nc'),
+                                    '_SAMI-RAW.nc'),
                                 mode='a',
                                 engine='h5netcdf')
                         except FileNotFoundError:
@@ -829,7 +829,7 @@ def process_all_to_cdf(sami_data_path,
                                 os.path.join(
                                     out_dir,
                                     run_name +
-                                    '_SAMI_RAW.nc'))
+                                    '_SAMI-RAW.nc'))
                         did_one = True
                         did_var = True
 
@@ -913,7 +913,7 @@ def process_all_to_cdf(sami_data_path,
 
         else:
             ds.to_netcdf(os.path.join(out_dir,
-                                      run_name + '_SAMI_RAW.nc'))
+                                      run_name + '_SAMI-RAW.nc'))
 
 
 def auto_read(sami_dir,
@@ -922,7 +922,7 @@ def auto_read(sami_dir,
               split_by_var=False,
               whole_run=False,
               return_xarray=True,
-              filetype='SAMI_REGRID',
+              filetype='SAMI-REGRID',
               force_nparrays=False,
               dtime_sim_start=None,
               parallel=True,

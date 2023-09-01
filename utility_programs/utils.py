@@ -55,7 +55,7 @@ def make_ccmc_name(
     # Make sure modelname & filt_type is all caps
 
     if data_type is not None:
-        return '{}_{}_{}.nc'.format(modelname, data_type, ut_str)
+        return '{}-{}_{}.nc'.format(modelname, data_type, ut_str)
 
     else:
         return '{}_{}.nc'.format(modelname, ut_str)

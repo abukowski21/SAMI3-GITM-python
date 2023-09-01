@@ -313,8 +313,8 @@ def do_interpolations(
                 os.path.join(
                     out_path,
                     out_runname +
-                    'SAMI_REGRID.nc' if is_grid else
-                    out_runname + 'SAT_INTERP.nc'),
+                    'SAMI-REGRID.nc' if is_grid else
+                    out_runname + 'SAMI-INTERP.nc'),
                 engine=engine,
                 mode='w' if first else 'a')
             first = False
@@ -433,7 +433,7 @@ def do_interpolations(
                         len(altout)))
                     ds.to_netcdf(os.path.join(
                         out_path,
-                        '%sGITM_INTERP.nc' % (out_runname + '_' if
+                        '%sGITM-INTERP.nc' % (out_runname + '_' if
                                               out_runname != '' else '')),
                                  engine=engine,
                                  mode='w' if first else 'a',
@@ -480,7 +480,7 @@ def do_interpolations(
 
                     if show_progress:
                         pbar.set_description('writing Dataset...')
-                    fname = make_ccmc_name('GITM_REGRID',
+                    fname = make_ccmc_name('GITM-REGRID',
                                            times[t],
                                            out_runname if out_runname != ''
                                            else '')
