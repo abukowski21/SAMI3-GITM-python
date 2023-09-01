@@ -53,12 +53,12 @@ def read_bin_to_nparrays(gitm_dir,
     """
 
     try:
-        import read_from_aether as read_routines
+        import read_from_aether as ather_read
 
     except ModuleNotFoundError:
         import sys
-        sys.path.insert(0, 'utility_programs/read_routines')
-        import read_from_aether as read_routines
+        sys.path.insert(0, 'utility_programs/read_routines/')
+        import read_from_aether as ather_read
 
     flist = np.sort(glob.glob(os.path.join(gitm_dir, gitm_file_pattern)))
     if len(flist) == 0:
@@ -90,7 +90,7 @@ def read_bin_to_nparrays(gitm_dir,
         gitm_dtimes = gitm_dtimes[:end_idx]
         flist = flist[:end_idx]
 
-    f = read_routines.read_gitm_file(flist[0])
+    f = ather_read.read_gitm_file(flist[0])
     if '3D' in gitm_file_pattern:
         gitmgrid = {f["vars"][k].lower(): f[k][2:-2, 2:-2, 2:-2]
                     for k in [0, 1, 2]}
@@ -122,7 +122,7 @@ def read_bin_to_nparrays(gitm_dir,
     if progress_bar:
         pbar = tqdm(total=len(flist))
     for ifile, file_name in enumerate(flist):
-        f = read_routines.read_gitm_file(file_name)
+        f = ather_read.read_gitm_file(file_name)
 
         for num_var, real_var in enumerate(gitmvars):
             num_v_src = f["vars"].index(real_var)
@@ -310,14 +310,6 @@ def read_bin_to_xarray(filename,
         if drop_ghost_cells:
             ds = ds.drop_isel(lat=[0, 1, -2, -1],
                               lon=[0, 1, -1, -2], alt=[0, 1, -1, -2])
-
-    # if drop_ghost_cells:
-        # 2D files don't have alt ghost cells
-        # if nalts > 3:
-            # ds = ds.drop_isel(lat=[0, 1, -2, -1],
-            #                 lon=[0, 1, -1, -2], alt=[0, 1, -1, -2])
-        # else:
-            # ds = ds.drop_isel(lat=[0, 1, -2, -1], lon=[0, 1, -1, -2])
 
     if cols != 'all':
         ds = ds.get(cols)
@@ -678,8 +670,7 @@ def process_all_to_cdf(gitm_dir,
 
 
 def find_variable(gitm_dir, varname=None,
-                  varhelp=False, nc=True,
-                  just_checking=False):
+                  varhelp=False, nc=True,):
     """Help function. Finds a variable in a directory of GITM files.
             Return the filetype and/or all of the variables available.
 
@@ -707,7 +698,7 @@ def find_variable(gitm_dir, varname=None,
         raise ValueError('Must specify either varhelp or varname')
 
     if nc:
-        files = np.sort(glob.glob(os.path.join(gitm_dir, 'GITM*.nc')))
+        files = np.sort(glob.glob(os.path.join(gitm_dir, '*GITM*.nc')))
         if len(files) == 0:
             nc = False
             print('no netcdf files found, trying binary files')
@@ -758,7 +749,6 @@ def auto_read(gitm_dir,
               progress_bar=True,
               drop_ghost_cells=True,
               file_type=None,
-              return_vars=False,
               return_xarray=True,
               force_dict=False,
               parallel=True,
@@ -812,7 +802,7 @@ def auto_read(gitm_dir,
                 cols=cols)
         return data
 
-    files = np.sort(glob.glob(os.path.join(gitm_dir, 'GITM*.nc')))
+    files = np.sort(glob.glob(os.path.join(gitm_dir, '*GITM*.nc')))
     if len(files) == 0 and force_dict:
         if not force_dict:
             print("""No NetCDF files found, You should probably convert

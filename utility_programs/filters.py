@@ -1,61 +1,67 @@
 
-from scipy import signal
 import numpy as np
-import xarray as xr
+from scipy import signal
 
 
-def make_filter(lowcut=80, highcut=40, order=3):
-    """_summary_
+def make_fits(da,
+              freq=5,
+              lims=[40, 85],
+              order=1,
+              percent=True):
+    """Calculate bandpass filter for all data previously read in.
+    this is a wrapper for the scipy bandpass filter.
 
-    Args:
-        lowcut (int, optional): lowcut of the filter. Defaults to 100.
-        highcut (int, optional): highcut of the filter. Defaults to 30.
-        order (int, optional): Order of the filter (how steep the filter
-            cuts at the cutoff frequencies). Defaults to 2.
-
-    Returns:
-        scipy butterworth filter: the filter with settings defined by the user.
+    :param da: DataArray to be filtered
+    :type da: xarray DataArray
+    :param freq: Output frequency, units must be same as lims, defaults to 5
+    :type freq: int, optional
+    :param lims: Limits of bandpass filter, defaults to [40, 85]
+    :type lims: list, optional
+    :param order: Order of the filter, defaults to 1
+    :type order: int, optional
+    :param percent: Return DataArray as percent over background?
+        Set to False to return the fit. Defaults to True
+    :type percent: bool, optional
+    :return: Filtered data
+    :rtype: _xarray.DataArray
     """
-    # Define the cutoff frequencies
-    lowcut_f = 1 / (lowcut / 60)  # 100 minutes in units of sample^-1
-    highcut_f = 1 / (highcut / 60)  # 30 minutes in units of sample^-1
 
-    # Define the Butterworth filter
-    nyquist = 0.5 * 5  # 5 minutes is the sampling frequency
-    low = lowcut_f / nyquist
-    high = highcut_f / nyquist
-    sos = signal.butter(order, [low, high], btype="bandstop", output="sos")
-    return sos
+    # Define sampling frequency and limits in minutes
+    lower_limit = min(lims)
+    upper_limit = max(lims)
 
+    # Convert limits to corresponding indices
+    lower_index = int(lower_limit / freq)
+    upper_index = int(upper_limit / freq)
 
-def make_fits(gitm_bins, lowcut=80, highcut=40, order=3):
-    """
-    calculate bandpass filter for all data previously read in.
+    # Design the bandpass filter
+    nyquist_freq = 0.5 * freq
+    lower_cutoff = lower_index / nyquist_freq
+    upper_cutoff = upper_index / nyquist_freq
+    b, a = signal.butter(order, [1 / upper_cutoff, 1 / lower_cutoff],
+                         btype='band', analog=False)
 
-    inputs: nparray (or xarray.DataArray) of gitmdata
+    # Apply the filter to the data
+    filtd = signal.filtfilt(b, a, da, axis=0)
+    # filtd = xr.apply_ufunc(filtfilt, b, a, da, dask='allowed')
 
-    returns:
-    fits: np array indexed at fits[time][col][ilon][ilat][ialt]
+    if percent:
+        return (100 * (filtd) / da)
 
-
-    todo: you can thread this by splitting the alts into different threads.
-    then just append the fits_full later.
-
-    """
-    sos = make_filter(lowcut, highcut, order)
-    
-
-    
-    if type(gitm_bins) == xr.Dataset or type(gitm_bins) == xr.DataArray:
-        filtered_arr = xr.apply_ufunc(signal.sosfiltfilt, 
-                                      sos, gitm_bins,
-                                     dask='allowed')
     else:
-        filtered_arr = signal.sosfiltfilt(sos, gitm_bins, axis=0)
-    return filtered_arr
+        da.values = filtd
+        return da
 
 
 def remove_outliers(array):
+    """Remove outliers from an array by replacing them with the median value.
+
+    :param array: Data to be filtered
+    :type array: numpy array or xarray DataArray
+    :return: Filtered data
+    :rtype: numpy array or xarray DataArray
+    """
+
     arr2 = array.copy()
     # calculate mean, standard deviation, and median over all elements
     mean, std, median = np.mean(arr2), np.std(arr2), np.median(arr2)
@@ -69,10 +75,26 @@ def remove_outliers(array):
 
 
 def filter_xarray_DA_diff(da, dim='time', order=2, percent=False,
-                         label='lower'):
-    
+                          label='lower'):
+    """Calculate the difference of a DataArray along a given dimension.
+
+    :param da: DataArray to be filtered
+    :type da: xarray DataArray
+    :param dim: Dimension over which to calculate the diff, defaults to 'time'
+    :type dim: str, optional
+    :param order: Order of the diff, defaults to 2
+    :type order: int, optional
+    :param percent: Return the percent over diff (False),
+        or just return the fit (True), defaults to False
+    :type percent: bool, optional
+    :param label: Label values to the 'lower' or 'upper' bound,
+        defaults to 'lower'
+    :type label: str, optional
+    :return: Filtered data
+    :rtype: _xarray.DataArray
+    """
+
     if percent:
-        return 100*(da.diff(dim, order, label)/da)
+        return 100 * (da.diff(dim, order, label) / da)
     else:
         return da.diff(dim, order, label)
-

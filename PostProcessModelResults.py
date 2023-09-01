@@ -5,7 +5,7 @@ Process GITM & SAMI data to NetCDF format.
 - More functionality is available in the individual model modules.
 - This program will process every column into netCDF files by time.
 - SAMI is regridded according to the default values in RegridSami.main()
-  - This can be adjusted with a custom grid, or use the individual model's
+- This can be adjusted with a custom grid, or use the individual model's
     post-processing routines for more fine control.
 
 ## TODO:
@@ -17,7 +17,7 @@ import os
 import glob
 import subprocess
 
-from click import progressbar
+
 from utility_programs.read_routines import GITM, SAMI
 from utility_programs.utils import str_to_ut
 import RegridSami
@@ -110,6 +110,12 @@ def main(args):
 
     if psami:
 
+        if args.dtime_sim_start is None:
+            raise ValueError(
+                'You must specify a start time for the SAMI simulation '
+                'in order to processes SAMI outputs. Use --dtime_sim_start'
+                ' in the format YYYYMMDDHHMMSS (or YYYYMMDD)')
+
         if args.single_file:
             existing_sami_files = glob.glob(
                 os.path.join(
@@ -155,12 +161,6 @@ def main(args):
         if do_write_raw:
 
             print('Attempting to convert raw -> netCDF...')
-
-            if args.dtime_sim_start is None:
-                raise ValueError(
-                    'You must specify a start time for the SAMI simulation'
-                    ' in order to processes SAMI outputs. Use --dtime_sim_start'
-                    ' in the format YYYYMMDDHHMMSS (or YYYYMMDD)')
 
             SAMI.process_all_to_cdf(
                 sami_data_path=args.sami_dir,

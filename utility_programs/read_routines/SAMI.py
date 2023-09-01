@@ -407,7 +407,8 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
     if dtime_storm_start is not None:
         times, hrs_since_storm_start, (start_idx, end_idx) = make_times(
             nt, sami_data_path, dtime_sim_start, dtime_storm_start,
-            hrs_before_storm, hrs_after_storm, need_help, skip_time_check=skip_time_check)
+            hrs_before_storm, hrs_after_storm,
+            skip_time_check=skip_time_check)
     else:
         times = make_times(nt, sami_data_path, dtime_sim_start,
                            skip_time_check=skip_time_check)

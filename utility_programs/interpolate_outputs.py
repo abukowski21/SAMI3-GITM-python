@@ -28,6 +28,22 @@ from scipy.interpolate import LinearNDInterpolator
 
 
 def gps_to_ecef_custom(lon, lat, alt, degrees=True, alt_in_m=False):
+    """Convert GPS coordinates to ECEF coordinates.
+    Units are degrees and km unless specified otherwise.
+
+    :param lon: Longitude
+    :type lon: float or numpy.array
+    :param lat: Latitude
+    :type lat: float or numpy.array
+    :param alt: Altitude
+    :type alt: float or numpy.array
+    :param degrees: Is input Lat/Lon in degrees? Defaults to True
+    :type degrees: bool, optional
+    :param alt_in_m: Is input Alt in km? Defaults to False
+    :type alt_in_m: bool, optional
+    :return: ECEF coordinates
+    :rtype: numpy.array
+    """
     a = 6378137.0
     finv = 298.257223563
     f = 1 / finv
@@ -70,74 +86,83 @@ def do_interpolations(
     engine='h5netcdf',
     return_ds_too=False,
 ):
-    """Interpolate SAMI (GITM functionality not done yet) to either a
+    """Interpolate SAMI (GITM functionality not fully tested) to either a
         standard geographic grid or to user-defined points.
 
-    Args:
-        sami_data_math (string): path to sami data.
-        dtime_sim_start (string/datetime.datetime): Start time of simulation.
-            Required to read SAMI data. Can be str (YYYYMMDD) or a pre-computed
-            datetime object.
-        skip_time_check (bool): If True, skip the check to make sure the
-            SAMI times are self-consistent (not always true...).
-        out_lat_lon_alt (numpy.array): Coordinates to interpolate to.
-            Must have dimenstions 3xN, where N is number of points.
-            Will be converted to cartesian coordinates.
-            Lon and Lat in degrees, Alt in km above earth surface.
-        out_path (str): Path to save regridded to.
-            Default is same as MODEL_data_path.
-        out_runname (str): Descriptive name for output file. Saved as:
-            out_path/{out_runname + "SAMI_REGRID.nc"}.
-        out_times (list): List of times to interpolate to. Must be a list of
-            (python or pandas) datetime objects.
-        cols (str/list-like): Which variables to interpolate. Default is 'all'.
-            Can be any str from
-            utility_programs.read_routines.SAMI.sami_og_vars.
-        show_progress (bool): Show progressbars? Default: False
-            Requires tqdm.
-        gitm_data_path (string): path to gitm data.
-        gitm_output_each_var (bool): If True, output each variable to a
-            separate file. Requires looping through the GITM output files
-            multiple times. If False, gitm_output_each_time must be True.
-        gitm_output_each_time (bool): If True, output each time to a separate
-            file. Will run faster for all variables than gitm_output_each_var,
-            but will include variables the user does not care for.
-        save_delauney (bool): Option to save/read delauney weights from file.
-            It takes a while to compute them. Weight file is saved to the
-            sami_data_path path with a specification of the max_alt.
-            Setting to True allows the program to read weights as well as save
-            them.
-        max_alt (int): specify maximum altitude of data grid to feed in to
-            delauney calculations. Useful if you don't want to recalculate
-            weights and the interpoaltion is different from one already done.
-        aarons_mods (bool): Option to use modifications Aaron made to the interp
-            methodology. Off by default...
-            - Performs the interpolations at 2-4x output resolution, then coarsens
-                the dataset and reinterpolates. This effectively smooths
-                out the "weirdness" seen due to SAMI's grid while retaining the
-                features we're looking for.
-            - Takes a decent amounbt more time
-            - Does not work with satellite (user-specified outputs) yet.
-        sami_mintime (int): Minimum time to start interpolating SAMI data.
-            Default is 0.
-            Use this to skip the first few timesteps of SAMI data if you
-            notice there are issues with the memory usage.
-        engine (str): Which engine to use when writing netcdf files.
-            Default is 'h5netcdf' but can cause some issues on some systems and
-            some python environments. Set to None to use default xarray engine.
-        return_ds_too (bool): Set to True to also return the interpolated
-            dataset.
-            !! Does not support multiple variables.
-            !! ONLY works for SAMI (currently).
+    :param sami_data_path: path to sami data.
+    :type sami_data_path: str, optional
+    :param dtime_sim_start: Start time of simulation. Required to read SAMI
+        data. Can be str (YYYYMMDD) or a pre-computed datetime object.
+    :type dtime_sim_start: str or datetime, optional
+    :param skip_time_check: (bool) If True, skip the check to make sure the
+        SAMI times are self-consistent (not always true...).
+    :type skip_time_check: bool, optional
+    :param out_lat_lon_alt: (numpy.array) Coordinates to interpolate to. Must
+        have dimenstions 3xN, where N is number of points. Will be converted to
+        cartesian coordinates. Lon and Lat in degrees, Alt in km above earth
+        surface.
+    :type out_lat_lon_alt: numpy.array, optional
+    :param out_path: (str) Path to save regridded to. Default is same as
+        MODEL_data_path.
+    :type out_path: str or os.PathLike, optional
+    :param out_runname: (str) Descriptive name for output file. Saved as:
+        out_path/{out_runname + "SAMI_REGRID.nc"}.
+    :type out_runname: str, optional
+    :param sat_times: (list) List of times to interpolate to. Must be a list
+        of (python or pandas) datetime objects.
+    :type sat_times: list, optional
+    :param cols: (str/list-like) Which variables to interpolate. Default is
+        'all'. Can be any str from
+        utility_programs.read_routines.SAMI.sami_og_vars.
+    :type cols: str or list-like, optional
+    :param show_progress: (bool) Show progressbars? Default: False.
+        Requires tqdm.
+    :type show_progress: bool, optional
+    :param gitm_data_path: (string) path to gitm data.
+    :type gitm_data_path: str, optional
+    :param gitm_output_each_var: (bool) If True, output each variable to a
+        separate file. Requires looping through the GITM output files multiple
+        times. If False, gitm_output_each_time must be True.
+    :type gitm_output_each_var: bool, optional
+    :param gitm_output_each_time: (bool) If True, output each time to a
+        separate file. Will run faster for all variables than
+        gitm_output_each_var, but will include variables the user does not
+        care for.
+    :type gitm_output_each_time: bool, optional
+    :param save_delauney: (bool) Option to save/read delauney weights from
+        file. It takes a while to compute them. Weight file is saved to the
+        sami_data_path path with a specification of the max_alt. Setting to
+        True allows the program to read weights as well as save them.
+    :type save_delauney: bool, optional
+    :param max_alt: (int) specify maximum altitude of data grid to feed in to
+        delauney calculations. Useful if you don't want to recalculate weights
+        and the interpoaltion is different from one already done.
+    :type max_alt: int, optional
+    :param engine: (str) Which engine to use when writing netcdf files. Default
+        is 'h5netcdf' but can cause some issues on some systems and some python
+        environments. Set to None to use default xarray engine.
+    :type engine: str, optional
+    :param return_ds_too: (bool) Set to True to also return the interpolated
+        dataset. !! Does not support multiple variables. !! ONLY works for SAMI
+        (currently).
+    :type return_ds_too: bool, optional
 
-
-    Returns:
-        Nothing. Unless return_ds_too == True
-            - The interpolated data is written to a file.
+    :raises ValueError: Only one of sami_data_path or gitm_data_path can be
+        specified at a time.
+    :raises ValueError: Must specify sat_times if not using a grid
+    :raises NotImplementedError: Interpolating from NetCDF files not yet
+        supported
+    :raises ValueError: No GITM files found in gitm_data_path. Go run pGITM and
+        rerun this with the .bin files.
+    :raises ValueError: Invalid column requested.
+    :return: Interpolated data. Optional, only returned if return_ds_too=True.
+    :rtype: xarray.Dataset
     """
+
     if sami_data_path is not None and gitm_data_path is not None:
-        raise ValueError('Only one of sami_data_path or gitm_data_path can be'
-                         ' specified at a time.')
+        raise ValueError(
+            'Only one of sami_data_path or gitm_data_path can be specified'
+            ' at a time.')
 
     if out_path is None:
         if sami_data_path is not None:
@@ -173,9 +198,9 @@ def do_interpolations(
             raise ValueError('Must specify sat_times if not using a grid')
 
         if is_grid:
-            latout = out_lats[:, 0, 0]
-            lonout = out_lons[0, :, 0]
-            altout = out_alts[0, 0, :]
+            latout = np.unique(out_lats)
+            lonout = np.unique(out_lons)
+            altout = np.unique(out_alts)
 
     out_lon_lat_alt = gps_to_ecef_custom(
         out_lons.flatten(), out_lats.flatten(), out_alts.flatten()).T

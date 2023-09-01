@@ -1,50 +1,43 @@
 import argparse
-from utility_programs.utils import get_var_names, str_to_ut
-from utility_programs.filters import make_filter
-from scipy.signal import sosfiltfilt
 import glob
 import os
-import xarray as xr
+
 import cartopy.crs as ccrs
-from datetime import datetime
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
+from tqdm.auto import tqdm
+import pandas as pd
+
+from utility_programs.filters import make_fits
+from utility_programs.utils import get_var_names, str_to_ut
 
 
-def make_keogram():
-    pass
-
-
-def make_map():
-    pass
-
-
-def run_processing_options(ds,
-                           process_options,):
-    """Process Dataset for Plots:
-
-    Args:
-        ds (xarray.Dataset):
-            Dataset to be processed
-        process_options (str or list):
-            Options to be applied to the dataset.
-            Currently supported options:
-                'alt_int': integrate over altitude
-                'bandpass': apply bandpass filter
-                'transpose': transpose the dataset
-
-    Returns:
-        xarray.Dataset: Dataset with processing options applied
-
+def run_processing_options(ds, process_options):
     """
+    Process the given xarray.Dataset according to the specified options.
+
+    :param ds: The dataset to be processed.
+    :type ds: xarray.Dataset
+    :param process_options: The processing options to be applied to the
+        input dataset. Currently supported options:
+
+        'alt_int': integrate over altitude
+
+        'bandpass': apply bandpass filter
+
+        'transpose': transpose the dataset
+
+    :type process_options: str or list
+    :return: The processed dataset.
+    :rtype: xarray.Dataset
+    """
+
     if 'alt_int' in process_options:
         ds = ds.mean(dim='alt')
 
     if 'bandpass' in process_options:
-        sos = make_filter()
-        ds2 = xr.apply_ufunc(sosfiltfilt, sos, ds,
-                             kwargs={"axis": 0},)
-        ds = 100 * (ds - ds2) / ds
+        ds = make_fits(ds)
 
     if 'transpose' in process_options:
         ds = ds.transpose()
@@ -53,9 +46,8 @@ def run_processing_options(ds,
 
 
 def autoplot(
-        data_dir,
+        file_list,
         columns_to_plot,
-        model,
         output_dir=None,
         show_map=False,
         time_lims=[0, -1],
@@ -65,52 +57,71 @@ def autoplot(
         process_options=None,
         plot_arg_dict=None,
         concat_dim='time'):
+    """
+    Plot data from netCDF files.
 
-    # We will glob the directory for all files with the model name,
-    #   and parse for the specified times.
+    :param file_list: List of file paths to netCDF files.
+    :type file_list: list of str or str
+    :param columns_to_plot: Name(s) of the variable(s) to plot.
+    :type columns_to_plot: str or list of str
+    :param output_dir: Directory to save the plots. If not specified, plots
+        will not be saved to the same directory as file_list.
+    :type output_dir: str, optional
+    :param show_map: Whether to plot the data on a map. Default is False.
+    :type show_map: bool, optional
+    :param time_lims: Time limits to plot. Default is [0, -1], which plots all
+        available times.
+    :type time_lims: list of int, optional
+    :param cut_dict: Dictionary of cuts to apply to the data. Default is an
+        empty dictionary (no cuts). Format as {'lon': 240, 'alt':450}.
+    :type cut_dict: dict, optional
+    :param lim_dict: Dictionary of limits to apply to the data. Default is an
+        empty dictionary.
+    :type lim_dict: dict, optional
+    :param loop_var: Name of the variable to loop over. This will make plots
+        for all values of the variable (within the limits specified).
+        Default is 'time'.
+    :type loop_var: str, optional
+    :param process_options: Dictionary of processing options to apply to the
+        data. Default is None. See run_processing_options() for supported
+        options.
+    :type process_options: dict, optional
+    :param plot_arg_dict: Dictionary of arguments to pass to the plot function.
+        Default is None.
+    :type plot_arg_dict: dict, optional
+    :param concat_dim: Name of the dimension to concatenate the data along
+        when reading netCDF files with Dask. Optional. Only change this if you
+        are having trouble reading in files. Default is 'time'.
+    :type concat_dim: str, optional
+    :raises ValueError: If altitude is selected when using alt_int, or if
+        lon/lat cuts are used when making maps.
+    :return: None
+    :rtype: None
+    """
 
-    file_list = glob.glob(os.path.join(data_dir, model + '*.nc'))
+    # Check validity of cuts & args... :
+    if 'alt' in cut_dict:
+        if 'alt_int' in process_options:
+            raise ValueError('Cannot select altitude when using alt_int.')
+    if show_map:
+        if 'lon' in cut_dict.keys() or 'lat' in cut_dict.keys():
+            raise ValueError('Cannot make maps with lon/lat cuts.'
+                             ' Try running again without map flag on.')
+
     file_list = np.sort(file_list)
-
-    if len(file_list) == 0:
-        raise ValueError(
-            'No files found in %s' %
-            os.path.join(
-                data_dir,
-                model +
-                '*.nc'))
-    # trim file_list to only include files within time_lims
-    if time_lims[1] == -1:
-        time_lims[1] = len(file_list)
-
-    if time_lims[0] > 100000 or time_lims[1] > 100000:
-        # it's probably a datetime string
-        if time_lims[0] != 0:
-            dtime_lim_0 = str_to_ut(str(int(time_lims[0])))
-        if time_lims[1] != -1:
-            dtime_lim_1 = str_to_ut(str(int(time_lims[1])))
-
-        time_list = []
-        for fname in file_list:
-            t_str = fname.split('_')[-1].split('.')[0]
-            time_list.append(datetime.strptime(t_str, '%Y-%m-%dT%H-%M-%S'))
-        time_list = np.sort(np.array(time_list))
-
-        if time_lims[0] != 0:
-            time_lims[0] = np.argmin(np.abs(time_list - dtime_lim_0))
-        if time_lims[1] != -1:
-            time_lims[1] = np.argmin(np.abs(time_list - dtime_lim_1))
-    file_list = file_list[time_lims[0]:time_lims[1]]
 
     # Only grab data for the requested column(s)
     if isinstance(columns_to_plot, str):
         columns_to_plot = [columns_to_plot]
-    ds0 = xr.open_dataset(file_list[0])
     drops = []
-    for v in ds0.data_vars:
-        if v not in columns_to_plot:
-            drops.append(v)
-    del ds0  # save memory
+
+    if len(file_list) >= 0:  # only need to do this if we're not
+        # using single_file outputs...
+        ds0 = xr.open_dataset(file_list[0])
+        for v in ds0.data_vars:
+            if v not in columns_to_plot:
+                drops.append(v)
+        del ds0  # save memory
 
     # open & read the files, drop variables we don't want
     print('Reading in {} files...'.format(len(file_list)))
@@ -118,7 +129,7 @@ def autoplot(
     ds = xr.concat(ds, dim=concat_dim)
     print('Done reading files.')
 
-    # process the plotlims first to minimize memory usage & speed up
+    # process the plotlims now:
     if lim_dict is not None:
         if 'alt' in lim_dict:
             alt_lim = lim_dict.pop('alt')
@@ -130,27 +141,47 @@ def autoplot(
         if len(lim_dict) > 0:
             ds = ds.sel(lim_dict, method='nearest')
 
-    # look thru the process options:
-    if process_options is not None:
-        ds = run_processing_options(ds, process_options)
+    if time_lims[0] > 100000 or time_lims[1] > 100000:
+        # it's probably a datetime string
+
+        if time_lims[0] != 0:
+            dtime_lim_0 = str_to_ut(str(int(time_lims[0])))
+            ds = ds.where(ds.time > pd.Timestamp(dtime_lim_0), drop=True)
+            time_lims[0] = 0  # for isel-ing later
+        if time_lims[1] != -1:
+            dtime_lim_1 = str_to_ut(str(int(time_lims[1])))
+            ds = ds.where(ds.time < pd.Timestamp(dtime_lim_1), drop=True)
+            time_lims[1] = -1  # for isel-ing later
+
+    ds = ds.isel(time=slice(time_lims[0], time_lims[1]))
 
     # check if output dir exists:
     a = ''
-    for i in cut_dict.keys():
-        a += str(i) + '-' + str(int(cut_dict[i])) + '_'
-    a = a[:-1]
-    out_dir = os.path.join(output_dir, model, a)
+    if len(cut_dict) > 0:
+        for i in cut_dict.keys():
+            a += str(i) + '-' + str(int(cut_dict[i])) + '_'
+        a = a[:-1]
+    out_dir = os.path.join(output_dir, a)
     out_dir = out_dir.replace('//', '/')
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
         print('created directory: ', out_dir)
-
+    print('Saving plots as: ', os.path.join(out_dir, 'var_####.png'))
     # Now plot the data with the cuts specified.
 
     for var in columns_to_plot:
-        for nplot in range(ds[loop_var].shape[0]):
+
+        # look thru the process options:
+        if process_options is not None:
+            ds[var] = run_processing_options(ds[var], process_options)
+            # With Dask it shouldn't matter if we trim the ds before or after
+
+        for nplot in tqdm(range(ds[loop_var].shape[0]),
+                          desc='%s loop for %s plots: '
+                          % (loop_var, var)):
             out_fname = os.path.join(out_dir,
                                      var + '_' + str(nplot))
+
             if show_map:
                 p = ds[var].isel({loop_var: nplot}).sel(
                     cut_dict, method='nearest').plot(
@@ -260,10 +291,10 @@ if __name__ == '__main__':
                         "         150 and 750.\n "
                         )
 
-    parser.add_argument('--loop_var', type=str, nargs=1,
+    parser.add_argument('--loop_var', type=str, nargs='*', default='time',
                         help='Dimension to loop over when plotting.\n'
-                        ' Example: --loop_var time will make a single plot'
-                        ' for each time step.\n'
+                        ' Example: --loop_var time (default) will make a'
+                        ' single plot for each time step.\n'
                         '          --loop_var alt will make a single plot'
                         ' for each altitude.\n'
                         'Not required (will just make one plot).\n')
@@ -292,6 +323,16 @@ if __name__ == '__main__':
     # format plot_arguments. Cannot pass NoneType to plotting functions.
     if args.plot_args is not None:
         args.plot_args = dict(x.split('=') for x in args.plot_args)
+        for k in args.plot_args.keys():
+            # change str to int or float if possible
+            try:
+                args.plot_args[k] = int(args.plot_args[k])
+            except ValueError:
+                try:
+                    args.plot_args[k] = float(args.plot_args[k])
+                except ValueError:
+                    pass
+
     else:
         args.plot_args = {}
 
@@ -305,8 +346,8 @@ if __name__ == '__main__':
             plot_lims['lon'] = args.lon_cut
         else:
             raise ValueError('lon_cut must be either 1 or 2 values.'
-                             ' To run multple plots, interface with'
-                             ' another script.')
+                             ' If you mean to run multiple lons, set '
+                             'loop_var=lon')
 
     if args.lat_cut is not None:
         if len(args.lat_cut) == 1:
@@ -315,8 +356,8 @@ if __name__ == '__main__':
             plot_lims['lat'] = args.lat_cut
         else:
             raise ValueError('lat_cut must be either 1 or 2 values.'
-                             ' To run multple plots, interface with'
-                             ' another script.')
+                             ' If you mean to run multiple lats, set '
+                             'loop_var=lat')
 
     if args.alt_cut is not None:
         if len(args.alt_cut) == 1:
@@ -325,8 +366,8 @@ if __name__ == '__main__':
             plot_lims['alt'] = args.alt_cut
         else:
             raise ValueError('alt_cut must be either 1 or 2 values.'
-                             ' To run multple plots, interface with'
-                             ' another script.')
+                             ' If you mean to run multiple alts, set '
+                             'loop_var=alt')
 
     if not isinstance(args.loop_var, str):
         if len(args.loop_var) > 1:
@@ -338,7 +379,7 @@ if __name__ == '__main__':
 
     """
     This loop will look for the column requested in the data files,
-    and make the requested plots.
+    and then make the requested plots.
 
     - Files are listed out twice (here & in autoplot), this is so that
         autoplot can be run interactively and leaves the time stuff
@@ -363,12 +404,12 @@ if __name__ == '__main__':
                              ' when not using AltInt variable.')
         made_plots[col] = 0
         for model in models:
-            files = glob.glob(os.path.join(args.data_dir, model + '*.nc'))
+            files = glob.glob(
+                os.path.join(args.data_dir, '*' + model + '.nc'))
             ds0 = xr.open_dataset(files[0])
             if col in ds0:
-                autoplot(args.data_dir,
+                autoplot(files,
                          columns_to_plot=col,
-                         model=model,
                          output_dir=args.out_dir,
                          show_map=args.show_map,
                          time_lims=args.time_lims,

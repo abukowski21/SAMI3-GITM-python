@@ -5,15 +5,19 @@ Postprocess SAMI data to be read into xarrays.
     in the utility_programs folder (utility_programs/interpolate_outputs.py)
 - These functions can be called from the command line or from other scripts.
 
+* Sometimes the interpolations can get a little wonky, especially if the
+    grid is too coarse. If you see weird artifacts in the output, try
+    increasing the grid resolution, or runnnig the interpolations manually in
+    utility_programs/interpolate_outputs.py
+
 """
 
 
 import os
 import numpy as np
 import pandas as pd
-from test_interpolate_outputs import do_interpolations
-from utility_programs.utils import str_to_ut
 from utility_programs.interpolate_outputs import do_interpolations
+from utility_programs.utils import str_to_ut
 import argparse
 
 
@@ -32,69 +36,56 @@ def main(
         run_name=None,
         skip_time_check=False,
         progress_bar=True,):
-    """Interpolate SAMI3 outputs to a new grid.
+    """
+    Interpolate SAMI3 outputs to a new grid.
 
-    Args:
-        sami_data_path (str, path-like):
-            Path to SAMI3 output files.
-        out_path (str; path-like, optional):
-            Location to save output files. Defaults to "./"
-        save_weights (bool, optional):
-            Whether or not to save weight and index files. Defaults to True.
-        use_saved_weights (bool, optional):
-            Read in existing weight & index files (if they exist). Will not
-                error if files don't exist, just create them.
-                Defaults to True.
-        apply_weights (bool, optional):
-            Whether or not to apply weights. Otherwise weight files are made
-                and the program exits. Defaults to True.
-        cols (str or list-like, optional):
-            Columns to read data from. Can be string or list-like.
-                Defaults to 'all'.
-        dtime_sim_start (datetime.datetime, optional):
-            Datetime of simulation start. Required to read raw SAMI outputs.
-                Defaults to None.
-        out_coord_file (_type_, optional):
-            Output coordinates from a file instead of using the default grid.
-            Cannot be used with finerinterps.
-            Defaults to None (no coordinate file).
-            ** MUST HAVE "time, lat, lon, alt" COLUMNS **
-        lat_step (int, optional):
-            Integer step to use in output grid (deg). Defaults to 2.
-        lon_step (int, optional):
-            Integer step to use in output grid (deg). Defaults to 5.
-        alt_step (int, optional):
-            Integer step to use in output grid (in km). Defaults to 50.
-        minmax_alt (list, optional):
-            Min & Max altitude to output in km. Defaults to [100, 2200].
-        lat_finerinterps (int, optional):
-            Finer interpolation factor to use in latitude.
-            Will by coarsened to the desired output resolution before writing.
-            Defaults to 3.
-        lon_finerinterps (int, optional):
-            Finer interpolation factor to use in longitude.
-            Defaults to 3.
-        alt_finerinterps (int, optional):
-            Finer interpolation factor to use in altitude. Defaults to 2.
-        sami_mintime (int, optional):
-            Minimum time to read in SAMI data. Defaults to 0.
-            Use this to skip the first few hours of SAMI data and save
-            time & memory.
-        split_by_var (bool, optional):
-            Write each variable to a separate file. Defaults to False.
-        single_file (bool, optional):
-            Write all variables to a single file. Defaults to False.
-        split_by_time (bool, optional):
-            Write each time to a separate file. Defaults to True.
-        use_ccmc (bool, optional):
-            Whether or not to use CCMC naming conventions for outputs. Must be
-                used with split_by_time. Defaults to False.
-        numba (bool, optional):
-            Use numba to speed up applying weights. Defaults to False.
-
-    Raises:
-        ValueError: If out_coord_file does not have the reuired variables.
-        ValueError: If split_by_var and single_file are both True.
+    :param sami_data_path: Path to SAMI3 output files.
+    :type sami_data_path: str or os.pathLike
+    :param out_path: Location to save output files. Defaults to
+        sami_data_path.
+    :type out_path: str or os.pathLike, optional
+    :param save_weights: Whether or not to save Delauney Triangulation.
+        Defaults to True.
+    :type save_weights: bool, optional
+    :param cols: Columns to read data from. Can be string or list-like.
+        Defaults to 'all'.
+    :type cols: str or list-like, optional
+    :param dtime_sim_start: Datetime of simulation start. Required to read raw
+        SAMI outputs. Defaults to None.
+    :type dtime_sim_start: datetime
+    :param lat_step: Integer step to use in output grid (deg). Defaults to 2.
+    :type lat_step: int, optional
+    :param lon_step: Integer step to use in output grid (deg). Defaults to 4.
+    :type lon_step: int, optional
+    :param alt_step: Integer step to use in output grid (in km).
+        Defaults to 50.
+    :type alt_step: int, optional
+    :param minmax_alt: Min & Max altitude to output in km. Defaults to
+        [100, 2200].
+    :type minmax_alt: list, optional
+    :param out_coord_file: Output coordinates from a file instead of using the
+        default grid. Cannot be used with finerinterps. Defaults to None (no
+        coordinate file). ** MUST HAVE "time, lat, lon, alt" COLUMNS **
+        Use this to specify a user-defined grid or to interpolate to a set of
+        satellite coordinates.
+    :type out_coord_file: str or os.pathLike, optional
+    :param sami_mintime: Minimum time to read in SAMI data. Defaults to 0. Use
+        this to skip the first few hours of SAMI data and save time & memory.
+    :type sami_mintime: int, optional
+    :param run_name: Name of the run, used to name the output file.
+        run_name='test' will generate a file called 'test_SAMI_REGRID.nc'.
+        Defaults to None.
+    :type run_name: Optional[str]
+    :param skip_time_check: Skip checking if the time range is valid. SAMI can
+        sometimes output fake timesteps, or be configured to start outputting
+        data after several hours. This will skip checking that the times are
+        valid. Defaults to False.
+    :type skip_time_check: bool, optional
+    :param progress_bar: Show progress bar? Defaults to True.
+    :type progress_bar: bool, optional
+    :raises ValueError: If out_coord_file does not have the required variables.
+    :return: None
+    :rtype: None
     """
 
     if out_path is None:
@@ -208,20 +199,6 @@ if __name__ == '__main__':
         altstep = int(input('altitude step size in km (50):', default=50))
         minalt = int(input('minimum altitude in km (100):', default=100))
         maxalt = int(input('maximum altitude in km (2200):', default=2200))
-        # print('Now for the options to interpolate at a finer resolution'
-        #       ' and then coarsen afterwards. If you dont know what this'
-        #       ' means you can run with 1s and it will be faster. if you'
-        #       ' see weird artifacts in your outputs you can try '
-        #       ' adjusting this. Number given multiplies the step size')
-        # latfiner = int(input(
-        #     'interpolate a finer resolution in latitude? (1):',
-        #     default=1))
-        # lonfiner = int(input(
-        #     'interpolate a finer resolution in longitude? (1):',
-        #     default=1))
-        # altfiner = int(input(
-        #     'interpolate a finer resolution in altitude? (1):',
-        #     default=1))
 
         main(args.sami_data_path,
              out_path=args.out_path,
