@@ -71,7 +71,7 @@ def do_interpolations(
     skip_time_check=False,
     out_lat_lon_alt=None,
     out_path=None,
-    out_runname='',
+    out_runname=None,
     sat_times=None,
     cols='all',
     show_progress=False,
@@ -265,12 +265,13 @@ def do_interpolations(
         else:
             print('Interpolating SAMI data...')
 
-        if out_runname != '':
-            out_runname = out_runname + '_'
-
         first = True  # for choosing which mode to write
         numcol_for_pbar = 1
         for data_var in cols:
+
+            if out_runname is None:
+                out_runname = data_var
+
             data, times = SAMI.read_to_nparray(
                 sami_data_path, dtime_sim_start,
                 cols=data_var,
@@ -338,8 +339,8 @@ def do_interpolations(
                 os.path.join(
                     out_path,
                     out_runname +
-                    'SAMI-REGRID.nc' if is_grid else
-                    out_runname + 'SAMI-INTERP.nc'),
+                    '_SAMI-REGRID.nc' if is_grid else
+                    out_runname + '_SAMI-INTERP.nc'),
                 engine=engine,
                 mode='w' if first else 'a')
             first = False
