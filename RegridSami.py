@@ -2,13 +2,13 @@
 Postprocess SAMI data to be read into xarrays.
 
 - This is just an entrypoint to the interpolation functions
-    in the utility_programs folder (utility_programs/interpolate_outputs.py)
+in the utility_programs folder (utility_programs/interpolate_outputs.py)
 - These functions can be called from the command line or from other scripts.
 
 * Sometimes the interpolations can get a little wonky, especially if the
-    grid is too coarse. If you see weird artifacts in the output, try
-    increasing the grid resolution, or runnnig the interpolations manually in
-    utility_programs/interpolate_outputs.py
+grid is too coarse. If you see weird artifacts in the output, try
+increasing the grid resolution, or runnnig the interpolations manually in
+utility_programs/interpolate_outputs.py
 
 """
 
