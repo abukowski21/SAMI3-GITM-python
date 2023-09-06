@@ -9,7 +9,6 @@ dependencies:
   - tqdm
   - cartopy
   - numpy
-  - geopandas
   - dask
   - h5netcdf
   - ipykernel
