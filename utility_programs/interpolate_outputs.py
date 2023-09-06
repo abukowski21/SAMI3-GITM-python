@@ -5,7 +5,7 @@ Code to interpolate any model data to either a:
 
 
 It's easiest to interface with the  `interpolate` function,
-    or use the `main` function from the command line...
+or use the `main` function from the command line...
 
 Can read output coords from cdf/csv or by user-defined grid.
 > Default output grid is 5deg lon x 2deg lat x 50km alt
