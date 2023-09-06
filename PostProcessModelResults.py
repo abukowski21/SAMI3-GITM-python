@@ -6,7 +6,7 @@ Process GITM & SAMI data to NetCDF format.
 - This program will process every column into netCDF files by time.
 - SAMI is regridded according to the default values in RegridSami.main()
 - This can be adjusted with a custom grid, or use the individual model's
-    post-processing routines for more fine control.
+post-processing routines for more fine control.
 
 ## TODO:
 - Automatically process all model outputs from a given directory.
