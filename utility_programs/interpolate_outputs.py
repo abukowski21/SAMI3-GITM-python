@@ -87,7 +87,7 @@ def do_interpolations(
     return_ds_too=False,
 ):
     """Interpolate SAMI (GITM functionality not fully tested) to either a
-        standard geographic grid or to user-defined points.
+    standard geographic grid or to user-defined points.
 
     :param sami_data_path: path to sami data.
     :type sami_data_path: str, optional
