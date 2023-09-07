@@ -31,29 +31,36 @@ def main(args):
     if args.var_help:
         from utility_programs.read_routines.GITM import read_bin_to_nparrays
         import glob
-        var3d = read_bin_to_nparrays(glob.glob(
-            os.path.join(args.gitm_data_path, '3DALL*.bin'))[0], return_vars=True)['gitmvars']
-        var1d = read_bin_to_nparrays(glob.glob(
-            os.path.join(args.gitm_data_path, '2DANC*.bin'))[0], return_vars=True)['gitmvars']
-        found = False
+        var3d = read_bin_to_nparrays(args.gitm_data_path, '3D*.bin',
+                                     end_idx=1, return_vars=True)['gitmvars']
+        var2d = read_bin_to_nparrays(args.gitm_data_path, '2D*.bin', 
+                                     end_idx=1, return_vars=True)['gitmvars']
+        
         if args.polar_var is not None:
+            found = False
             if args.polar_var in var3d:
                 print(args.polar_var, ' was found as a 3D variable')
                 found = True
-            if args.polar_var in var1d:
-                print(args.polar_var, ' was found as a 1D variable')
+            if args.polar_var in var2d:
+                print(args.polar_var, ' was found as a 2D variable')
                 found = True
+            if not found:
+                print('Polar variable: %s not found in any GITM files'
+                     %args.polar_var)
         if args.map_var is not None:
+            found = False
             if args.map_var in var3d:
                 print(args.map_var, ' was found as a 3D variable')
                 found = True
-            if args.map_var in var1d:
-                print(args.map_var, ' was found as a 1D variable')
+            if args.map_var in var2d:
+                print(args.map_var, ' was found as a 2D variable')
                 found = True
-        if not found:
-            print('Variable not found in any GITM files')
-        print('avalibale variables are: \n 3D: \n', var3d,
-              '\n 1D: \n', var1d)
+            if not found:
+                print('Map variable: %s not found in any GITM files'
+                     %args.map_var)
+                
+        print('available variables are: \n 3D: \n', var3d,
+              '\n 2D: \n', var2d)
         return
 
     dtime_storm_start = datetime.datetime.strptime(
