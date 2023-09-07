@@ -29,12 +29,12 @@ def main(args):
 
     # let's make sure the user doesn't need help with vars:
     if args.var_help:
-        from aetherpy.io.read_routines import read_gitm_file
+        from utility_programs.read_routines.GITM import read_bin_to_nparrays
         import glob
-        var3d = read_gitm_file(glob.glob(
-            os.path.join(args.gitm_data_path, '3DALL*.bin'))[0])['vars']
-        var1d = read_gitm_file(glob.glob(
-            os.path.join(args.gitm_data_path, '2DANC*.bin'))[0])['vars']
+        var3d = read_bin_to_nparrays(glob.glob(
+            os.path.join(args.gitm_data_path, '3DALL*.bin'))[0], return_vars=True)['gitmvars']
+        var1d = read_bin_to_nparrays(glob.glob(
+            os.path.join(args.gitm_data_path, '2DANC*.bin'))[0], return_vars=True)['gitmvars']
         found = False
         if args.polar_var is not None:
             if args.polar_var in var3d:
