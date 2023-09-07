@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from utility_programs.read_routines import GITM, SAMI
 
+from cartopy import crs as ccrs
+import cartopy.feature as cfeature
+from cartopy.feature.nightshade import Nightshade
 from utility_programs import filters
 
 import argparse
@@ -20,9 +23,6 @@ from utility_programs.plot_help import UT_from_Storm_onset
 import time
 import os
 import datetime
-
-import geopandas
-world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
 
 
 def main(args):
@@ -381,17 +381,22 @@ def mapping(data_arr, lats, lons, map_var, title=None,
     """
 
     ax = ax or plt.gca()
-    world.plot(ax=ax, color="white", edgecolor="black", zorder=1)
+    projection = ccrs.PlateCarree()    
+    ax.coastlines()
+    ax.gridlines()
+    
     data = ax.imshow(
         data_arr.T,
         cmap="viridis",
-        aspect="auto",
         vmin=vmin,
         vmax=vmax,
         extent=[min(lons), max(lons), min(lats), max(lats)],
+        transform=projection,
         **kwargs)
     plt.colorbar(data, ax=ax, label=map_var)
 
+    if title:
+        ax.set_title(title)
     return ax
 
 
