@@ -1,9 +1,9 @@
 import os
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
-import geopandas
 import time
 from cartopy import crs as ccrs
+import cartopy.feature as cfeature
 from cartopy.feature.nightshade import Nightshade
 from utility_programs import utils
 import numpy as np
@@ -11,10 +11,6 @@ import pandas as pd
 from utility_programs.utils import ut_to_lt, add_lt_to_dataset
 from scipy.interpolate import LinearNDInterpolator, interp1d
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
-
-world = geopandas.read_file(geopandas.datasets.get_path("naturalearth_lowres"))
-# TODO: REMOVE geopandas and replace it with cartopy
-
 
 def make_a_keo(
         arr,
@@ -182,12 +178,21 @@ def draw_map(
                 raise ValueError("We cannot overwrite the file: " + str(fname))
 
     if ax is None and save_or_show != "return":
-        fig, ax = plt.subplots(figsize=(10, 5))
+        fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10, 5))
 
     elif ax is None and save_or_show == "return":
         raise ValueError("Cannot return figure if ax is not given.")
 
-    world.plot(ax=ax, color="white", edgecolor="black", zorder=1)
+    elif ax is not None:
+        fig = ax.figure
+
+    fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()})
+
+    # Create a world map background
+    ax.add_feature(cartopy.feature.BORDERS, linestyle='-', linewidth=0.5)
+    ax.add_feature(cartopy.feature.COASTLINE, linestyle='-', linewidth=0.5)
+    ax.set_extent(plot_extent, crs=ccrs.PlateCarree())
+
     data = ax.imshow(
         data_arr.T,
         cmap,
