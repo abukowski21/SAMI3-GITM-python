@@ -74,7 +74,7 @@ Good luck!
 - These scripts can handle both GITM and SAMI model outputs.
 - Modifications to existing functions should be fairly easy (adding more models, different types of plots, etc.)
 - Contact the author with any questions, suggestions, issues, etc.
-
+- A number of examples of analysis scripts & other misc. usage is available in REFERENCE-examplenotebooks & ACTIVE_ANALYSIS. These will likely need to be moved to the root directory of the repository (and have their paths changed) to run. They are primarily posted to just show the capabilities & usage of the codebase, not for users to run & build on... but nothing is preventing you from doing that (other than missing the source data).
 
 ## PULBICATIONS:
 
