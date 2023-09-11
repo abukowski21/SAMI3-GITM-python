@@ -81,6 +81,14 @@ Good luck!
 Source code for publications can be found in the src_PUBLICATIONS folder. A README in that filder will direct you where to look for the source scripts for each paper which has used this repository.
 
 
-> If you find any of the posted scripts useful and do indeed use them in a publication, contact the author and your publication will be added.
+
+## Contributing/Licensing
+
+
+Users are open to collaborate on this project. I do not intend for it to be closed-source or private ever. Feel free to edit all work posted to your heart's content.
+
+> I do ask that if any code does make publication easier for you, to please acknowledge this repository and contact me so your publication can be added to the src_PUBLICATIONS folder. 
+
+
 
 
