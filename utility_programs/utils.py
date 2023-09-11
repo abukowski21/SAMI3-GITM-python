@@ -189,6 +189,13 @@ def ut_to_lt(time_array, glon):
 def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
                       localtimes=None):  # int (for number of localtimes)
     # or list-like for converting those localtimes
+    """Add LocalTime column to Dataset.
+
+    :param ds: A dataset or dataarray with a time and lon dimension
+    :type ds: xarray.Dataset or xarray.Dataarray
+    :return: Dataset with local time added
+    :rtype: xarray.Dataset
+    """
 
     if localtimes is None:
         localtimes = len(ds.lon)
@@ -223,6 +230,16 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
 
 
 def hours_from_storm_onset_into_ds(ds, onset_ut):
+    """Calculate hours from an event and add to dataset.
+
+    :param ds: Dataset to add hours from storm onset to
+    :type ds: xarray.Dataset
+    :param onset_ut: Datetime object of storm/event
+    :type onset_ut: datetime.datetime
+    :raises ValueError: If multiple days are in the dataset
+    :return: Dataset with hours from storm onset added
+    :rtype: xarray.Dataset
+    """
     if ds.day[0] != ds.day[-1]:
         raise ValueError(' Does not yet support multiple days!')
     ds['HoursFromStormOnset'] = ((ds.time.dt.hour - (onset_ut.hour)) +
