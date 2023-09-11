@@ -160,15 +160,15 @@ def ut_to_lt(time_array, glon):
     glon = np.asarray(glon)
 
     # Get UT seconds of day
-    try: #if numpy timestamps
+    try:
         utsec = [(ut.hour * 3600.0 + ut.minute * 60.0 + ut.second
-              + ut.microsecond * 1.0e-6) / 3600.0 for ut in time_array]
-    except:
+                  + ut.microsecond * 1.0e-6) / 3600.0 for ut in time_array]
+    except ValueError:  # if datetime objects
         utsec = []
         for ut in time_array:
             ut = pd.Timestamp(ut)
             utsec.append((ut.hour * 3600.0 + ut.minute * 60.0 + ut.second
-                  + ut.microsecond * 1.0e-6) / 3600.0)
+                          + ut.microsecond * 1.0e-6) / 3600.0)
     # Determine if the calculation is paired or broadcasted
     if glon.shape == time_array.shape:
         lt = np.array([utime + glon[i] / 15.0 for i,

@@ -11,6 +11,7 @@ from utility_programs.utils import ut_to_lt, add_lt_to_dataset
 from scipy.interpolate import LinearNDInterpolator, interp1d
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 
+
 def make_a_keo(
         arr,
         title=None,
@@ -177,7 +178,8 @@ def draw_map(
                 raise ValueError("We cannot overwrite the file: " + str(fname))
 
     if ax is None and save_or_show != "return":
-        fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10, 5))
+        fig, ax = plt.subplots(
+            subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10, 5))
 
     elif ax is None and save_or_show == "return":
         raise ValueError("Cannot return figure if ax is not given.")
