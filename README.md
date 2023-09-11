@@ -87,7 +87,7 @@ Source code for publications can be found in the src_PUBLICATIONS folder. A READ
 
 Users are open to collaborate on this project. I do not intend for it to be closed-source or private ever. Feel free to edit all work posted to your heart's content.
 
-> I do ask that if any code does make publication easier for you, to please acknowledge this repository and contact me so your publication can be added to the src_PUBLICATIONS folder. 
+Officially, this code is licensed under the GNU General Public License v3.0 - meaning that if you take this source code and modify it, the modifications must be made public, and the original work cited, when sharing with others. What this means for you is that if you do use this for a publication, your modifications must be shared somehow. I would appreciate your contributions to be made into a Pull Request so the source can be (hopefully) improved and to be able to add your publication to src_PUBLICATIONS, though that is not necessary.
 
 
 
