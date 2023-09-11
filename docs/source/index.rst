@@ -6,6 +6,11 @@
 Welcome to SAMI3-GITM-Python's documentation!
 =============================================
 
+SAMI3-GITM-Python provides python scripts to allow easy manipulation of SAMI3 and GITM model outputs.
+
+This project will not run any models for you, only manipulate the outputs into a more user-friendly format.
+
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
@@ -13,6 +18,9 @@ Welcome to SAMI3-GITM-Python's documentation!
    intro
    installation
    usage
+   dataIO
    plots
    modules
 
+
+* :ref:`genindex`

@@ -34,6 +34,26 @@ utility_programs.interpolate_outputs
     :show-inheritance:
 
 
+Reading Data
+------------
+
+GITM
+^^^^
+
+.. automodule:: utility_programs.read_routines.GITM
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+SAMI3
+^^^^^
+
+.. automodule:: utility_programs.read_routines.SAMI
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 
 Plotting
 --------
