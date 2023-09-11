@@ -3,7 +3,6 @@ from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 import time
 from cartopy import crs as ccrs
-import cartopy.feature as cfeature
 from cartopy.feature.nightshade import Nightshade
 from utility_programs import utils
 import numpy as np
@@ -189,16 +188,13 @@ def draw_map(
     fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()})
 
     # Create a world map background
-    ax.add_feature(cartopy.feature.BORDERS, linestyle='-', linewidth=0.5)
-    ax.add_feature(cartopy.feature.COASTLINE, linestyle='-', linewidth=0.5)
-    ax.set_extent(plot_extent, crs=ccrs.PlateCarree())
+    ax.coastlines(zorder=3, color='black', alpha=1)
+    ax.gridlines(color='black', linestyle='--', alpha=0.6)
 
     data = ax.imshow(
         data_arr.T,
         cmap,
-        aspect="auto",
-        extent=plot_extent,
-        origin="lower",
+        transform=ccrs.PlateCarree(),
         zorder=10,
         alpha=0.8,
         vmin=cbarlims[0],
