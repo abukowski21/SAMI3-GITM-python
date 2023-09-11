@@ -3,7 +3,6 @@ Post-Processing
 
 
 
-
 .. note:: 
     These steps will assume you have installed the package and have the required python packages installed. You can check your installed conda environments with:
     ``conda info --envs``
@@ -15,7 +14,7 @@ GITM Outputs
 ============
 
 
-GITM natively writes files out at each time-step, for each worker. These are in the ``run/UA/data`` directory and are stored as ``*.header`` and ``*.b0000`` files (one header for each time-step and one .b#### file for each worker, at each time-step). These are not meant to be interfaced with by the user. To run any of these scripts, you need to process them with ``pGITM``. This is located in your ``run/`` directory. 
+GITM natively writes files out at each time-step, for each worker. These are in the ``run/UA/data`` directory and are stored as ``*.header`` and ``*.b####`` files (one header for each time-step and one .b#### file for each worker, at each time-step). These are not meant to be interfaced with by the user. To run any of these scripts, you need to process them with ``pGITM``. This is located in your ``run/`` directory. 
 
 To create a file for each time-step, combining the output ``3DALL``, ``2DANC``, etc. files, you will run:
 
