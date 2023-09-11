@@ -5,24 +5,28 @@ API REFERENCE
 Processing Model Results
 ------------------------
 
-To postprocess model results:
+To post-process model results, use PostProcessModelResults.py. The help information can be accessed by running:
 
-.. automodule:: PostProcessModelResults
-    :members:
-    :undoc-members:
+``python PostProcessMOdelResults.py --help``
 
 
-More functionality can be unlocked specifically through running RegridSami
+More functionality can be unlocked specifically through running RegridSami...
+
+RegridSami
+^^^^^^^^^^
 
 .. automodule:: RegridSami
     :members:
     :undoc-members:
 
 
-Under the hood, all interpolations use `LinearNDInterpolator <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.LinearNDInterpolator.html>`_ to perform the interpolation. This is a wrapper around `Qhull <http://www.qhull.org/>`_.
+Under the hood, all interpolations are performed with `LinearNDInterpolator <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.LinearNDInterpolator.html>`_. This is a wrapper around `Qhull <http://www.qhull.org/>`_.
 
 
 For more information (and to unlock even more functionality), use the utility_programs.interpolate_outputs module:
+
+utility_programs.interpolate_outputs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: utility_programs.interpolate_outputs
     :members:

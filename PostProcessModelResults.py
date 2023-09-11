@@ -8,8 +8,7 @@ Process GITM & SAMI data to NetCDF format.
 - This can be adjusted with a custom grid, or use the individual model's
 post-processing routines for more fine control.
 
-## TODO:
-- Automatically process all model outputs from a given directory.
+
 
 """
 
