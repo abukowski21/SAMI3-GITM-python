@@ -30,7 +30,7 @@ def make_ccmc_name(
         data_type=None):
     """Make a CCMC-formatted filename.
     Returns a string of the form:
-        modelname_datatype_YYYY-MM-DDThh-mm-ss.nc
+    modelname_datatype_YYYY-MM-DDThh-mm-ss.nc
 
     Parameters
     ----------
