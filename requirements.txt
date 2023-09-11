@@ -1,0 +1,8 @@
+scipy
+xarray
+tqdm
+cartopy
+numpy
+dask
+h5netcdf
+matplotlib

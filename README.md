@@ -1,46 +1,94 @@
+[![Documentation Status](https://readthedocs.org/projects/sami3-gitm-python/badge/?version=latest)](https://sami3-gitm-python.readthedocs.io/en/latest/?badge=latest)
+    
+
 # SAMI3-GITM-python
 
-Here is all the current work being done. See the main branch for info on what needs to be done.
+This repository contains many scripts to deal with both SAMI3 and GITM outputs. Primarily, they are converted to NetCDF format and the remaining analysis is left to the user. However, many examples of analyses and other processing options are available. 
 
 
-## Please feel free to make any changes you would like!!
+Please contact the author or fill out a GitHub issue if you notice any problems. 
 
 
-Scripts are available for both SAMI3 and GITM data analysis. 
-SAMI3 data needs to be post-processed before it can be manipulated with these programs. 
-> (See utility_programs for information.)
-
-SAMI3 data can be processed further using InterpSAMI3toGrid.ipynb, allowing it to be plot 
-with grographic coordinate systems.
+Further documentation is available at https://sami3-gitm-python.readthedocs.io/en/latest/
 
 ---
 
-## USAGE:
+## Installation
 
-Clone, get on this branch. Best practice is to leave this in the home folder that is backed up. Then link your GITM and SAMI directories:
+Git clone, get on this branch. 
 
-From inside this directory, create links to GITM and SAMI data directories:
+```
+git clone git@github.com:abukowski21/SAMI3-GITM-python.git
+cd SAMI3-GITM-python/
+git switch -c develop origin/develop
+```
 
-`ln -sfn [path-to-gitm-data] gitm_data`
+> Older versions of Git may require different commands... If the above doesn't work, try `git checkout develop`
 
-`ln -sfn [path-to-sami-data] sami_dir`
 
-I like to put the plots into the same directory ad the model outputs. For now, since only GITM plots work:
+To ensure compatibility, an Anaconda environment is available. Install it with:
 
-`mkdir gitm_data/out_plots_gitm` (or whatever you want)
+`conda env create -f python-env.yml && conda activate SAMI3-GITM`
 
-`ln -sfn gitm_data/out_plots_gitm out_plots_gitm` (make sure that first directory is pointing to what you made before)
+> To create the environment with another name, edit the first line of `python-env.yml`, or use the `-n` flag.
+> Anaconda installation information can be found at [this link](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
 
-Then you can call some gitm plots. For help:
 
-`python gitm_basic_plots.py -h`
+For users that do not have Anaconda, the required dependencies can also be installed with `pip`. While supported, this is not necessarily encouraged. Nonetheless, to set up the correct python environment with pip, run:
 
-This will show you all of the available arguments and settings and what not.
+`python -m pip install -r requirements.txt`
 
-To make some beautiful maps and keograps (assuming you set the directories like I have):
 
-`python gitm_basic_plots.py -gitm_data_path gitm_data 201105211340 -k -m --cols Rho [e-] --plot_start_delta=3 --plot_end_delta=8 --save_or_show=show -lat_lim 65`
+## USAGE
 
-`python sami-fieldline-plots.py 2011052112 20110520 ~/scratch/GITM-simstorm-run1/sami-gitm-coupled -out_path . --plot_start_delta 2 --plot_end_delta 6 --cols "edens" --interpolate --plot_type diff --fpeak`
+Data can be read directly from binary format and plotted, though there are scripts to postprocess
+these data into netCDF format. Users can also interpolate SAMI3 model outputs to a "regular" grid
+in geographic coordinates.
 
-These takes a litle while, though progress bars will be displayed.
+To post-process model outputs into NetCDF format: `python PostProcessModelResults.py [args]`
+
+To generate plots with these postp-rocessed outputs: `python basic_plots_from_netcdf.py [args]`
+
+Run any script with the `-h` flag to see the available arguments.
+
+### EXAMPLE:
+
+Here is an example of a workflow to look at SAMI outputs. Here we will just create the regridded data & then plot out the values at all times on a map.
+
+```
+python PostProcessModelResults.py -sami /path/to/sami_data/ -out /path/to/outputs/ --dtime_sim_start 20110521 --sami_type regrid
+
+python basic_plots_from_netcdf.py /path/to/outputs/ -col edens -out_dir /path/to/save/plots/ -m --alt_cut 650 --loop_var time
+
+```
+
+A ton of extra functionality is available. Run the scripts with the `-h` or `--help` flags to see available arguments, or check the documentation to read more.
+
+
+Good luck!
+
+
+## Notes:
+
+- All routines (including those in `utility_programs`) can be called in other scripts for further analysis (in a Jupyter Notebook, for example)
+- These scripts can handle both GITM and SAMI model outputs.
+- Modifications to existing functions should be fairly easy (adding more models, different types of plots, etc.)
+- Contact the author with any questions, suggestions, issues, etc.
+- A number of examples of analysis scripts & other misc. usage is available in REFERENCE-examplenotebooks & ACTIVE_ANALYSIS. These will likely need to be moved to the root directory of the repository (and have their paths changed) to run. They are primarily posted to just show the capabilities & usage of the code-base, not for users to run & build on... but nothing is preventing you from doing that (other than missing the source data).
+
+## PULBICATIONS:
+
+Source code for publications can be found in the src_PUBLICATIONS folder. A README in that folder will direct you where to look for the source scripts for each paper which has used this repository.
+
+
+
+## Contributing/Licensing
+
+
+Users are open to collaborate on this project. I do not intend for it to be closed-source or private ever. Feel free to edit all work posted to your heart's content.
+
+Officially, this code is licensed under the GNU General Public License v3.0 - meaning that if you take this source code and modify it, the modifications must be made public, and the original work cited, when sharing with others. What this means for you is that if you do use this for a publication, your modifications must be shared somehow. I would appreciate your contributions to be made into a Pull Request so the source can be (hopefully) improved and to be able to add your publication to src_PUBLICATIONS, though that is not necessary.
+
+
+
+
