@@ -12,7 +12,7 @@ To postprocess model results:
     :undoc-members:
 
 
-More functionality can be unlocked specifically through rinning RegridSami
+More functionality can be unlocked specifically through running RegridSami
 
 .. automodule:: RegridSami
     :members:
@@ -52,7 +52,7 @@ Utilities
 
 A number of useful utilities are available. 
 
-These are not very well orginized, but they are all available in the utility_programs module:
+These are not very well organized, but they are all available in the utility_programs module:
 
 .. automodule:: utility_programs.filters
     :members:

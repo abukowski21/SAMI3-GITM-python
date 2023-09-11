@@ -17,7 +17,7 @@ Again, these scripts do not interface with the models at all. They will only rea
 
 Some basic plotting scripts have been provided, though more complicated plotting is left to the user. 
 
-This package has no plans be ported to a user-installable python package. If you wish to use anything in this project in your own python scripts, add the package to your `$PATH` (see usage for more info).
+This package has no plans be ported to an install-able python package. If you wish to use anything in this project in your own python scripts, add the package to your `$PATH` (see usage for more info).
 
 
 I've done my best to capture as many use-cases as possible. Please fill out an `Issue <https://github.com/abukowski21/SAMI3-GITM-python/issues>`_ if you notice any problems.

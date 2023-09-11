@@ -19,7 +19,7 @@ Enter the directory:
 
 ``cd SAMI3-GITM-python``
 
-Create a new conda[1] environment accoring to the requirements specified by this project:
+Create a new conda[1] environment according to the requirements specified by this project:
 
 ``conda env create -f python-env.yml && conda activate SAMI3-GITM``
 

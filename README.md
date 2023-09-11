@@ -45,9 +45,9 @@ Data can be read directly from binary format and plotted, though there are scrip
 these data into netCDF format. Users can also interpolate SAMI3 model outputs to a "regular" grid
 in geographic coordinates.
 
-To postprocess model outputs into NetCDF format: `python PostProcessModelResults.py [args]`
+To post-process model outputs into NetCDF format: `python PostProcessModelResults.py [args]`
 
-To generate plots with these postprocessed outputs: `python basic_plots_from_netcdf.py [args]`
+To generate plots with these postp-rocessed outputs: `python basic_plots_from_netcdf.py [args]`
 
 Run any script with the `-h` flag to see the available arguments.
 
@@ -74,11 +74,11 @@ Good luck!
 - These scripts can handle both GITM and SAMI model outputs.
 - Modifications to existing functions should be fairly easy (adding more models, different types of plots, etc.)
 - Contact the author with any questions, suggestions, issues, etc.
-- A number of examples of analysis scripts & other misc. usage is available in REFERENCE-examplenotebooks & ACTIVE_ANALYSIS. These will likely need to be moved to the root directory of the repository (and have their paths changed) to run. They are primarily posted to just show the capabilities & usage of the codebase, not for users to run & build on... but nothing is preventing you from doing that (other than missing the source data).
+- A number of examples of analysis scripts & other misc. usage is available in REFERENCE-examplenotebooks & ACTIVE_ANALYSIS. These will likely need to be moved to the root directory of the repository (and have their paths changed) to run. They are primarily posted to just show the capabilities & usage of the code-base, not for users to run & build on... but nothing is preventing you from doing that (other than missing the source data).
 
 ## PULBICATIONS:
 
-Source code for publications can be found in the src_PUBLICATIONS folder. A README in that filder will direct you where to look for the source scripts for each paper which has used this repository.
+Source code for publications can be found in the src_PUBLICATIONS folder. A README in that folder will direct you where to look for the source scripts for each paper which has used this repository.
 
 
 

@@ -15,9 +15,9 @@ GITM Outputs
 ============
 
 
-GITM natively writes files out at each timestep, for each worker. These are un the ``run/UA/data`` directory and are stored as ``*.header`` and ``*.b0000`` files (one header for each time-step and one .b#### file for each worker, at each time-step). These are not meant to be interfaced with by the user. To run any of these scripts, you need to process them into the user-interfacable files with ``pGITM``. This is located in your ``run/`` directory. 
+GITM natively writes files out at each time-step, for each worker. These are in the ``run/UA/data`` directory and are stored as ``*.header`` and ``*.b0000`` files (one header for each time-step and one .b#### file for each worker, at each time-step). These are not meant to be interfaced with by the user. To run any of these scripts, you need to process them with ``pGITM``. This is located in your ``run/`` directory. 
 
-To create a file for each timestep, combining the output ``3DALL``, ``2DANC``, etc. files, you will run:
+To create a file for each time-step, combining the output ``3DALL``, ``2DANC``, etc. files, you will run:
 
 .. code-block:: bash
 
@@ -28,7 +28,7 @@ A progress bar will be displayed. You can turn this off with the ``--no_progress
 .. note::
     By default, GITM's "Ghost Cells" are dropped. You can include them with the ``-g`` or ``ghost_cells`` flag.
 
-After things are done processing, a NetCDF file will be created for each timestep. For longer runs, often it is easier to have a single file for the entire run. This speeds up file reads and with Dask_ we do not have to worry about memory usage. To create a single file for the entire run:
+After things are done processing, a NetCDF file will be created for each time-step. For longer runs, often it is easier to have a single file for the entire run. This speeds up file reads and with Dask_ we do not have to worry about memory usage. To create a single file for the entire run:
 
 .. _Dask: https://docs.xarray.dev/en/stable/user-guide/dask.html
 
@@ -37,7 +37,7 @@ After things are done processing, a NetCDF file will be created for each timeste
     python PostProcessModelResults.py -gitm /path/to/gitm/run/UA/data/ -out /path/to/output/directory/ -single_file RUN_NAME
 
 
-``_GITM.nc`` will be appended to RUN_NAME. So if you want the optput file to be saved as ``/Users/me/Documents/GITM_RUNS/test_GITM.nc``, you would say ``[...] -out /Users/me/Documents/GITM_RUNS/ -single_file test``
+``_GITM.nc`` will be appended to RUN_NAME. So if you want the output file to be saved as ``/Users/me/Documents/GITM_RUNS/test_GITM.nc``, you would say ``[...] -out /Users/me/Documents/GITM_RUNS/ -single_file test``
 
 .. note::
     Writing GITM outputs to a single file is incredibly memory and I/O intense. To solve this, temporary files are written to a temp directory (in the out_dir) folder. You can change this to another location if you would like with the ``tmp_dir`` flag.
@@ -50,9 +50,9 @@ SAMI3 Outputs
 =============
 
 
-SAMI3 natively writes one file for each variable. Longer model runs do not result in more files, but rather longer files. These files are indiced with ``(nz, nf, nlt, nt)`` accorrding to the user settings, where ``nz`` is the index of the grid point (along the field line), ``nf`` is the index of the field line (along the longitude), ``nlt`` is the number of magnetic longitues, and ``nt`` is the time step.
+SAMI3 natively writes one file for each variable. Longer model runs do not result in more files, but rather longer files. These files are indexed with ``(nz, nf, nlt, nt)`` according to the user settings, where ``nz`` is the index of the grid point (along the field line), ``nf`` is the index of the field line (along the longitude), ``nlt`` is the number of magnetic longitudes, and ``nt`` is the time step.
 
-We automatically read the user-specified resoltion of the model run but **do not** read in the start time of the simulation. This must be supplied by the user. SAMI3 files have two processing options.
+We automatically read the user-specified resolution of the model run but **do not** read in the start time of the simulation. This must be supplied by the user. SAMI3 files have two processing options.
 
 .. note::
     By default, both `raw` and `regrid` files are written when a user runs PostProcessModelResults.py. 
@@ -82,7 +82,7 @@ To keep things approachable and streamlined, PostProcessModelResults.py does not
 
     python RegridSami.py /path/to/sami3/run/ --out_path /path/to/output/directory/ --dtime_sim_start 20110521 --run_name RUN_NAME --custom_grid
 
-There is also the option to "fly a satellite through" the model outputs, interpolating the model outputs to the satellite location. The simulated satellite measurements are calculated at **every** time that we have model data for. Thus, each variable in the output data (in NetCDF format) is indexed with ``(sat_step, sami_time)``. The exception for this is ``(glat, glon, alt, sat_time)``, which are only indexed with ``sat_step``. To simulate satellite measurements, ensure "lat, lon, alt" are columns in (and in deg/km units) a csv file and run:
+There is also the option to "fly a satellite through" the model outputs, interpolating the model outputs to the satellite location. The simulated satellite measurements are calculated at **every** time that we have model data for. Thus, each variable in the output data (in NetCDF format) is indexed with ``(sat_step, sami_time)``. The exception for this is ``(glat, glon, alt, sat_time)``, which are only indexed with ``sat_step``. To simulate satellite measurements, ensure "lat, lon, alt" are columns in (and in deg/km units) a .csv file and run:
 
 .. code-block:: bash
 
@@ -112,5 +112,3 @@ To get help on any function, you can use the ``help()`` function or ``?`` in Jup
 .. code-block:: python
 
     help(RegridSami.main)
-
-An API doc should be updated and posted here soon.
