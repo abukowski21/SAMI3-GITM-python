@@ -13,7 +13,6 @@ from matplotlib.gridspec import GridSpec
 from utility_programs.read_routines import GITM, SAMI
 
 from cartopy import crs as ccrs
-import cartopy.feature as cfeature
 from cartopy.feature.nightshade import Nightshade
 from utility_programs import filters
 
@@ -25,91 +24,81 @@ import os
 import datetime
 
 
+def var_help(args):
+    var3d = GITM.read_bin_to_nparrays(args.gitm_data_path, '3D*.bin',
+                                 end_idx=1, return_vars=True)['gitmvars']
+    var2d = GITM.read_bin_to_nparrays(args.gitm_data_path, '2D*.bin', 
+                                 end_idx=1, return_vars=True)['gitmvars']
+
+    if args.polar_var is not None:
+        found = False
+        if args.polar_var in var3d:
+            print(args.polar_var, ' was found as a 3D variable')
+            found = True
+        if args.polar_var in var2d:
+            print(args.polar_var, ' was found as a 2D variable')
+            found = True
+        if not found:
+            print('Polar variable: %s not found in any GITM files'
+                 %args.polar_var)
+    if args.map_var is not None:
+        found = False
+        if args.map_var in var3d:
+            print(args.map_var, ' was found as a 3D variable')
+            found = True
+        if args.map_var in var2d:
+            print(args.map_var, ' was found as a 2D variable')
+            found = True
+        if not found:
+            print('Map variable: %s not found in any GITM files'
+                 %args.map_var)
+
+    print('available variables are: \n 3D: \n', var3d,
+          '\n 2D: \n', var2d)
+    return
+
+
+        
 def main(args):
 
     # let's make sure the user doesn't need help with vars:
     if args.var_help:
-        from utility_programs.read_routines.GITM import read_bin_to_nparrays
-        import glob
-        var3d = read_bin_to_nparrays(args.gitm_data_path, '3D*.bin',
-                                     end_idx=1, return_vars=True)['gitmvars']
-        var2d = read_bin_to_nparrays(args.gitm_data_path, '2D*.bin', 
-                                     end_idx=1, return_vars=True)['gitmvars']
-        
-        if args.polar_var is not None:
-            found = False
-            if args.polar_var in var3d:
-                print(args.polar_var, ' was found as a 3D variable')
-                found = True
-            if args.polar_var in var2d:
-                print(args.polar_var, ' was found as a 2D variable')
-                found = True
-            if not found:
-                print('Polar variable: %s not found in any GITM files'
-                     %args.polar_var)
-        if args.map_var is not None:
-            found = False
-            if args.map_var in var3d:
-                print(args.map_var, ' was found as a 3D variable')
-                found = True
-            if args.map_var in var2d:
-                print(args.map_var, ' was found as a 2D variable')
-                found = True
-            if not found:
-                print('Map variable: %s not found in any GITM files'
-                     %args.map_var)
-                
-        print('available variables are: \n 3D: \n', var3d,
-              '\n 2D: \n', var2d)
+        var_help(args)
         return
 
-    dtime_storm_start = datetime.datetime.strptime(
-        args.dtime_storm_start.ljust(14, '0'), '%Y%m%d%H%M%S')
 
     # Read in files, if cut alt, use 3DALL. make sure all vars are there
     # If not, read in 2DANC.
-    need_2d = True
-    need_3d = False
-    if args.alt_cut is not None and args.sami_path is None:
-        need_2d = False
-        times3, gitm_grid3, gitm_f3, gitm_vars3 = GITM.read_gitm_into_nparrays(
-            args.gitm_data_path, dtime_storm_start,
-            gitm_file_pattern='3DALL*.bin',
-            t_start_idx=args.plot_start_delta,
-            t_end_idx=args.plot_end_delta, return_vars=True)
+    found_map = False
+    found_polar = False
+    
+    times3, gitm_grid3, gitm_f3, gitm_vars3 = GITM.read_bin_to_nparrays(
+            gitm_dir=args.gitm_data_path,
+            start_idx=args.time_idx,
+            end_idx=args.time_idx+1,
+            return_vars=True)
+    if args.polar_var in gitm_vars3:
+        found_polar = True
+    if args.map_var in gitm_vars3:
+        found_map = True
+    
+    if not found_map or not found_polar:
+        times2, gitm_grid2, gitm_f2, gitm_vars2 = GITM.read_bin_to_nparrays(
+            gitm_dir=args.gitm_data_path,
+            start_idx=args.time_idx,
+            end_idx=args.time_idx+1,
+            return_vars=True)
 
-        if args.polar_var not in gitm_vars3:
-            need_2d = True
-            polar_in_3d = False
-        else:
-            need_3d = True
-            polar_in_3d = True
-        if args.map_var not in gitm_vars3:
-            need_2d = True
-            map_in_3d = False
-        else:
-            need_3d = True
-            map_in_3d = True
-
-    if need_2d:
-        times2, gitm_grid2, gitm_f2, gitm_vars2 = GITM.read_gitm_into_nparrays(
-            args.gitm_data_path, dtime_storm_start,
-            gitm_file_pattern='2DANC*.bin',
-            t_start_idx=args.plot_start_delta,
-            t_end_idx=args.plot_end_delta, return_vars=True)
-
-        if args.polar_var not in gitm_vars2:
-            print('Polar variable %s not found in 3D or 2D files'
-                  % args.polar_var, gitm_vars3, gitm_vars2)
+        if args.polar_var in gitm_vars2:
+            found_polar = True
+        if args.map_var in gitm_vars2:
+            found_map = True
+            
+    if not found_map or not found_polar:
+        if args.sami_path is None:
+            print(found_map, found_polar, args.sami_path)
+            var_help(args)
             return
-        else:
-            polar_in_3d = False
-        if args.map_var not in gitm_vars2 and args.sami_path is None:
-            print('Map variable %s not found in 3D or 2D files'
-                  % args.map_var, gitm_vars3, gitm_vars2)
-            return
-        else:
-            map_in_3d = False
 
     # alt cuts?
     if args.alt_cut is not None and need_3d is False and \
@@ -387,10 +376,7 @@ def mapping(data_arr, lats, lons, map_var, title=None,
     matplotlib.axes.Axes
     """
 
-    ax = ax or plt.gca()
-    projection = ccrs.PlateCarree()    
-    ax.coastlines()
-    ax.gridlines()
+    ax = ax or plt.gca(projection=ccrs.PlateCarree())
     
     data = ax.imshow(
         data_arr.T,
@@ -398,8 +384,12 @@ def mapping(data_arr, lats, lons, map_var, title=None,
         vmin=vmin,
         vmax=vmax,
         extent=[min(lons), max(lons), min(lats), max(lats)],
-        transform=projection,
+        transform=ccrs.PlateCarree(),
         **kwargs)
+    
+    ax.coastlines(zorder=3, color='black', alpha=1)
+    ax.gridlines(color='black', linestyle='--',
+                                  alpha=0.6, )
     plt.colorbar(data, ax=ax, label=map_var)
 
     if title:
@@ -413,8 +403,8 @@ if __name__ == "__main__":
         description="Make plots of gitm vars with polar dials!")
 
     parser.add_argument(
-        '-dtime_storm_start',
-        help='Datetime of storm start. Format YYYYMMDDHHmmss',
+        '-time_idx', type=int,
+        help='Index of timestamp to plot',
         action='store')
 
     parser.add_argument(
@@ -446,18 +436,12 @@ if __name__ == "__main__":
         '--out_path', type=str,
         help='path to where plots are saved', default='./', action='store')
 
-    parser.add_argument(
-        '--plot_start_delta', type=int,
-        action='store', default=0, required=False)
-
-    parser.add_argument(
-        '--plot_end_delta', type=int,
-        action='store', default=-1, required=False)
 
     parser.add_argument(
         '--save_or_show', type=str,
         action='store', default='save', required=False,
-        help='Save or show plots. Default: save')
+        help='Save or show plots. Default: save'
+        ' (To run woth "show", you need to run locally, or enable X11 forwarding.)')
 
     parser.add_argument(
         '--figtype_polar', type=str, action='store', default='raw',
