@@ -34,22 +34,53 @@ To ensure compatibility, an Anaconda environment is available. Install it with:
 > Anaconda installation information can be found at [this link](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
 
 
+For users that do not have Anaconda, the required dependencies can also be installed with `pip`. While supported, this is not necessarily encouraged. Nonetheless, to set up the correct python environment with pip, run:
+
+`python -m pip install -r requirements.txt`
+
+
 ## USAGE
 
 Data can be read directly from binary format and plotted, though there are scripts to postprocess
-these data into netCDF format. This will also interpolate SAMI3 model outputs to a "regular" grid
+these data into netCDF format. Users can also interpolate SAMI3 model outputs to a "regular" grid
 in geographic coordinates.
 
-To postprocess model outputs: `python PostProcessModelResults.py [args]`
+To postprocess model outputs into NetCDF format: `python PostProcessModelResults.py [args]`
 
-To generate plots with these postprocessed outputs: `python gitm_basic_plots.py -gitm_data_path gitm_data 201105211340 -k -m --cols Rho [e-] --plot_start_delta=3 --plot_end_delta=8 --save_or_show=show -lat_lim 65`
+To generate plots with these postprocessed outputs: `python basic_plots_from_netcdf.py [args]`
 
-`python sami-fieldline-plots.py 2011052112 20110520 ~/scratch/GITM-simstorm-run1/sami-gitm-coupled -out_path . --plot_start_delta 2 --plot_end_delta 6 --cols "edens" --interpolate --plot_type diff --fpeak`
+Run any script with the `-h` flag to see the available arguments.
+
+### EXAMPLE:
+
+Here is an example of a workflow to look at SAMI outputs. Here we will just create the regridded data & then plot out the values at all times on a map.
+
+```
+python PostProcessModelResults.py -sami /path/to/sami_data/ -out /path/to/outputs/ --dtime_sim_start 20110521 --sami_type regrid
+
+python basic_plots_from_netcdf.py /path/to/outputs/ -col edens -out_dir /path/to/save/plots/ -m --alt_cut 650 --loop_var time
+
+```
+
+A ton of extra functionality is available. Run the scripts with the `-h` or `--help` flags to see available arguments, or check the documentation to read more.
+
+
+Good luck!
 
 
 ## Notes:
-- Run any python script with the `-h` flag to see available arguments
+
 - All routines (including those in `utility_programs`) can be called in other scripts for further analysis (in a Jupyter Notebook, for example)
 - These scripts can handle both GITM and SAMI model outputs.
 - Modifications to existing functions should be fairly easy (adding more models, different types of plots, etc.)
 - Contact the author with any questions, suggestions, issues, etc.
+
+
+## PULBICATIONS:
+
+Source code for publications can be found in the src_PUBLICATIONS folder. A README in that filder will direct you where to look for the source scripts for each paper which has used this repository.
+
+
+> If you find any of the posted scripts useful and do indeed use them in a publication, contact the author and your publication will be added.
+
+
