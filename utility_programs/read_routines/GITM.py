@@ -61,7 +61,15 @@ def read_bin_to_nparrays(gitm_dir,
     except ModuleNotFoundError:
         import sys
         sys.path.insert(0, 'utility_programs/read_routines/')
-        import read_from_aether as ather_read
+        # This does not work when rendering 'docs/source/plotting.ipynb',
+        # or any of the notebooks in refs folder,so we need to
+        # take those into account with:
+        try:
+            import read_from_aether as ather_read
+        except ModuleNotFoundError:
+            sys.path.insert(0, '../utility_programs/read_routines')
+            sys.path.insert(0, '../../utility_programs/read_routines')
+            import read_from_aether as ather_read
 
     flist = np.sort(glob.glob(os.path.join(gitm_dir, gitm_file_pattern)))
     if len(flist) == 0:
