@@ -15,10 +15,11 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 def make_a_keo(
         arr,
         title=None,
-        cbarlims=None,
+        cbarlims=[None, None],
         cbar_name=None,
         y_label="Latitude (deg)",
-        x_label="Hours since storm onset",
+        x_label="Index of Time-step (relative to plot start)",
+        p_extent=None,
         save_or_show="save",
         cmap='viridis',
         fname=None,
@@ -32,14 +33,17 @@ def make_a_keo(
     :type arr: xarray DataArray
     :param title: Title of plot, defaults to None
     :type title: str, optional
-    :param cbarlims: Absolute value of colorbar limits, defaults to None
-    :type cbarlims: int or float, optional
+    :param cbarlims: Colorbar limits, Defaults to [None, None] (automatic)
+    :type cbarlims: list, optional
     :param cbar_name: Label for colorbar, defaults to None
     :type cbar_name: srt, optional
     :param y_label: Y-axis label, defaults to "Latitude (deg)"
     :type y_label: str, optional
-    :param x_label: Label for x-axis, defaults to "Hours since storm onset"
+    :param x_label: Label for x-axis, defaults to 
+        "Index of Time-step (relative to plot start)"
     :type x_label: str, optional
+    :param y_label: Plot extent. Set to 0 for auto.
+    :type y_label: list-like, optional
     :param save_or_show: Save, show, or return plots? Defaults to "save"
     :type save_or_show: str, optional
     :param cmap: Colormap to use to plot, defaults to 'viridis'
@@ -66,6 +70,11 @@ def make_a_keo(
     if save_or_show != 'return':
         fig, ax = plt.subplots(figsize=(10, 7))
 
+    if p_extent is None:
+        p_extent = [0, len(arr.T) if type(arr) is np.ndarray
+                    else len(arr.time.values),
+                    -90, 90]
+
     data = ax.imshow(
         arr.T,
         cmap,
@@ -75,6 +84,7 @@ def make_a_keo(
         vmax=cbarlims[1],
         interpolation="bicubic",
         interpolation_stage="rgba",
+        extent=p_extent,
         **kwargs)
 
     if save_or_show != "return":
@@ -121,7 +131,7 @@ def make_a_keo(
 
 def draw_map(
         data_arr,
-        cbarlims,
+        cbarlims=[None, None],
         title=None,
         ylims=None,
         cbar_label=None,
@@ -131,7 +141,6 @@ def draw_map(
         cmap='viridis',
         ax=None,
         fname=None,
-        plot_extent=[-180, 180, -90, 90],
         OVERWRITE=False,
         **kwargs):
     """Draw a map of the data array.
@@ -187,8 +196,6 @@ def draw_map(
     elif ax is not None:
         fig = ax.figure
 
-    fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()})
-
     # Create a world map background
     ax.coastlines(zorder=3, color='black', alpha=1)
     ax.gridlines(color='black', linestyle='--', alpha=0.6)
@@ -196,27 +203,23 @@ def draw_map(
     data = ax.imshow(
         data_arr.T,
         cmap,
-        transform=ccrs.PlateCarree(),
         zorder=10,
         alpha=0.8,
+        extent=[-180,180,-90,90],
         vmin=cbarlims[0],
         vmax=cbarlims[1],
         interpolation="bicubic",
         interpolation_stage="rgba",
         **kwargs)
-
-    if save_or_show != "return":
-        plt.title(title)
-        plt.xlabel(x_label)
-        plt.ylabel(y_label)
+ 
 
     if ylims is not None:
         plt.ylim(ylims)
 
     if not cbar_label and save_or_show != "return":
-        fig.colorbar(data)
+        plt.colorbar(data)
     elif save_or_show != "return":
-        fig.colorbar(data, label=cbar_label)
+        plt.colorbar(data, label=cbar_label)
 
     if save_or_show == "return":
         return data
@@ -421,7 +424,7 @@ def panel_plot(da,
                do_map=False,
                col_wrap=4,
                suptitle=None,
-               vlims=2,
+               vlims=None,
                cmap='bwr',
                out_fname=None,
                isel_plotvals=False,
@@ -447,7 +450,7 @@ def panel_plot(da,
     :type col_wrap: int, optional
     :param suptitle: Title of plot, defaults to None
     :type suptitle: str, optional
-    :param vlims: Absolute value of colorbar limits, defaults to 2
+    :param vlims: Absolute value of colorbar limits, defaults to None (auto).
     :type vlims: int, optional
     :param cmap: Which matplotlib colormap to use, defaults to 'bwr'
     :type cmap: str, optional
@@ -468,7 +471,7 @@ def panel_plot(da,
         add_cbar = False
     else:
         add_cbar = True
-
+    
     if do_map:
         if isel_plotvals:
             p = da.isel({wrap_col: plot_vals}).plot(
@@ -772,7 +775,8 @@ def loop_panels(da,
     :type da: xarray DataArray
     :param ncols: Number of columns to plot
     :type ncols: int
-    :param start_time: Start time of plot
+    :param start_time: Start time of plot to be converted to pd.Timestamp...
+        Format as 'YYYY-MM-DD HH:MM:SS'; '2011-05-20' is acceptable (00:00 UT)
     :type start_time: str
     :param time_delta: Time between each plot, defaults to '1 hour'
     :type time_delta: str, optional
