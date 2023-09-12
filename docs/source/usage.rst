@@ -111,3 +111,7 @@ To get help on any function, you can use the ``help()`` function or ``?`` in Jup
 .. code-block:: python
 
     help(RegridSami.main)
+
+
+.. note:: 
+    For more examples and walkthroughs on usage, see the :ref:`plotting` or :ref:`rw_data` section. There are also more examples in the REFERENCE-examplenotebooks section.
