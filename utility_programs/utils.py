@@ -30,7 +30,7 @@ def make_ccmc_name(
         data_type=None):
     """Make a CCMC-formatted filename.
     Returns a string of the form:
-        modelname_datatype_YYYY-MM-DDThh-mm-ss.nc
+    modelname_datatype_YYYY-MM-DDThh-mm-ss.nc
 
     Parameters
     ----------
@@ -160,15 +160,15 @@ def ut_to_lt(time_array, glon):
     glon = np.asarray(glon)
 
     # Get UT seconds of day
-    try: #if numpy timestamps
+    try:
         utsec = [(ut.hour * 3600.0 + ut.minute * 60.0 + ut.second
-              + ut.microsecond * 1.0e-6) / 3600.0 for ut in time_array]
-    except:
+                  + ut.microsecond * 1.0e-6) / 3600.0 for ut in time_array]
+    except ValueError:  # if datetime objects
         utsec = []
         for ut in time_array:
             ut = pd.Timestamp(ut)
             utsec.append((ut.hour * 3600.0 + ut.minute * 60.0 + ut.second
-                  + ut.microsecond * 1.0e-6) / 3600.0)
+                          + ut.microsecond * 1.0e-6) / 3600.0)
     # Determine if the calculation is paired or broadcasted
     if glon.shape == time_array.shape:
         lt = np.array([utime + glon[i] / 15.0 for i,
@@ -189,6 +189,13 @@ def ut_to_lt(time_array, glon):
 def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
                       localtimes=None):  # int (for number of localtimes)
     # or list-like for converting those localtimes
+    """Add LocalTime column to Dataset.
+
+    :param ds: A dataset or dataarray with a time and lon dimension
+    :type ds: xarray.Dataset or xarray.Dataarray
+    :return: Dataset with local time added
+    :rtype: xarray.Dataset
+    """
 
     if localtimes is None:
         localtimes = len(ds.lon)
@@ -223,6 +230,16 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
 
 
 def hours_from_storm_onset_into_ds(ds, onset_ut):
+    """Calculate hours from an event and add to dataset.
+
+    :param ds: Dataset to add hours from storm onset to
+    :type ds: xarray.Dataset
+    :param onset_ut: Datetime object of storm/event
+    :type onset_ut: datetime.datetime
+    :raises ValueError: If multiple days are in the dataset
+    :return: Dataset with hours from storm onset added
+    :rtype: xarray.Dataset
+    """
     if ds.day[0] != ds.day[-1]:
         raise ValueError(' Does not yet support multiple days!')
     ds['HoursFromStormOnset'] = ((ds.time.dt.hour - (onset_ut.hour)) +

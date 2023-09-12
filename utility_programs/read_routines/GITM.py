@@ -42,13 +42,16 @@ def read_bin_to_nparrays(gitm_dir,
         ValueError: If GITM files don't exist or are in a weird format.
 
     Returns:
-        dict: dictionary of numpy arrays
-            keys:
-                gitmdtimes: times of gitm outputs
-                gitmbins: gitm data
-                gitmgrid: dictionary of grid variables
-                gitmvars (optional: only returned if return_vars):
-                    list of variables
+        dict: dictionary of numpy arrays with keys:
+
+            gitmdtimes:
+                times of gitm outputs
+            gitmbins:
+                gitm data
+            gitmgrid:
+                dictionary of grid variables
+            gitmvars (optionaln only returned if return_vars):
+                list of variables
 
     """
 
@@ -467,10 +470,10 @@ def process_all_to_cdf(gitm_dir,
             Defaults to True.
         drop_before (datetime, optional): Similar to start_dtime.
             When to start processing files. Will delete files before this time.
-                Defaults to None.
+            Defaults to None.
         drop_after (datetime, optional): Similar to start_dtime.
             When to start processing files. Will delete files before this time.
-                Defaults to None.
+            Defaults to None.
         skip_existing (bool, optional): Skip existing netCDF files?
             Defaults to False. This will slow down the program significantly.
         file_types (str or list-like, optional): Which file types to process.
@@ -485,8 +488,9 @@ def process_all_to_cdf(gitm_dir,
             Defaults to None. '_GITM.nc' will be appended to this.
         tmp_dir (str, optional): Temporary directory to write files to.
             Only used if single_file. Defaults to None.
-            * Some systems have a local temp directory that's much faster
-            than the standard output_directory.
+            *Some systems have a local temp directory that's much faster
+            than the standard output_directory.*
+
     """
 
     if not drop_ghost_cells:
@@ -671,8 +675,9 @@ def process_all_to_cdf(gitm_dir,
 
 def find_variable(gitm_dir, varname=None,
                   varhelp=False, nc=True,):
-    """Help function. Finds a variable in a directory of GITM files.
-            Return the filetype and/or all of the variables available.
+    """
+    Help function. Finds a variable in a directory of GITM files.
+        Return the filetype and/or all of the variables available.
 
 
     Args:
@@ -754,38 +759,49 @@ def auto_read(gitm_dir,
               parallel=True,
               engine='h5netcdf',
               use_dask=False):
-    """Automatically reads in a directory of GITM files.
+    """
+    Automatically reads in a directory of GITM files.
 
-    Args:
-        gitm_dir (str: path-like): Directory of GITM files.
-        single_file (bool, optional): Whether to read in a single file.
-            Defaults to False.
-        start_dtime (datetime, optional): Start time of the data you want.
-            Defaults to None.
-        start_idx (int, optional): Start index of the data you want.
-            Defaults to None.
-        end_dtime (datetime, optional): End time of the data you want.
-            Defaults to None.
-        end_idx (int, optional): End index of the data you want.
-            Defaults to None.
-        cols (list-like or str, optional): List of columns you want to read in.
-            Defaults to 'all'.
-        progress_bar (bool, optional): Whether to show a progress bar.
-            Defaults to True. Requires tqdm.
-        drop_ghost_cells (bool, optional): Whether to drop ghost cells.
-            Defaults to True.
-        file_type (str, optional): File type of the data you want to read in.
-            Defaults to None.
-        return_vars (bool, optional): Whether to return the variables.
-            Defaults to False.
-        return_xarray (bool, optional): Whether to return an xarray.
-            Defaults to True.
-        force_dict (bool, optional): Whether to force a dictionary return.
-            Defaults to False.
-        parallel (bool, optional): Whether to read in files in parallel.
-            Defaults to True. This will use Dask, which can get hairy.
-            If you're having issues, try setting this to False.
-            Needs dask and dask.distributed (TODO: and debugging!)
+    :param gitm_dir: Directory of GITM files.
+    :type gitm_dir: str
+    :param single_file: Whether to read in a single file. Defaults to False.
+    :type single_file: bool, optional
+    :param start_dtime: Start time of the data you want. Defaults to None.
+    :type start_dtime: datetime, optional
+    :param start_idx: Start index of the data you want. Defaults to None.
+    :type start_idx: int, optional
+    :param end_dtime: End time of the data you want. Defaults to None.
+    :type end_dtime: datetime, optional
+    :param end_idx: End index of the data you want. Defaults to None.
+    :type end_idx: int, optional
+    :param cols: List of columns you want to read in. Defaults to 'all'.
+    :type cols: list-like or str, optional
+    :param progress_bar: Whether to show a progress bar. Defaults to True.
+        Requires tqdm.
+    :type progress_bar: bool, optional
+    :param drop_ghost_cells: Whether to drop ghost cells. Defaults to True.
+    :type drop_ghost_cells: bool, optional
+    :param file_type: File type of the data you want to read in.
+        Defaults to None.
+    :type file_type: str, optional
+    :param return_xarray: Whether to return an xarray. Defaults to True.
+    :type return_xarray: bool, optional
+    :param force_dict: Whether to force a dictionary return.
+        Defaults to False.
+    :type force_dict: bool, optional
+    :param parallel: Whether to read in files in parallel. Defaults to True.
+        This will use Dask, which can get hairy.
+        If you're having issues, try setting this to False.
+        Needs dask and dask.distributed
+    :type parallel: bool, optional
+    :param engine: The engine to use for reading in the data.
+        Defaults to 'h5netcdf'.
+    :type engine: str, optional
+    :param use_dask: Whether to use Dask for reading in the data.
+        Defaults to False.
+    :type use_dask: bool, optional
+    :return: The data read in from the GITM files.
+    :rtype: xarray.Dataset or dict
 
     """
 

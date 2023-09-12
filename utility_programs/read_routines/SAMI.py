@@ -43,8 +43,10 @@ sami_og_vars = {
 
 
 def get_grid_elems_from_parammod(sami_data_path):
-    """Go into sami data directory and get the grid elements
-            from the parameter_mod.f90 file.
+    """
+
+    Go into sami data directory and get the grid elements
+        from the parameter_mod.f90 file.
 
     Args:
         sami_data_path (str): data path for sami outputs
@@ -131,8 +133,10 @@ def get_grid_elems_from_parammod(sami_data_path):
 
 
 def get_postprocessed_grid(sami_data_path):
-    """Go into sami data directory and get the grid elements
-            from the parameter_mod.f90 file.
+    """
+
+    Go into sami data directory and get the grid elements
+        from the parameter_mod.f90 file.
 
     Args:
         sami_data_path (str): data path for sami outputs
@@ -185,26 +189,24 @@ def make_times(nt, sami_data_path, dtime_sim_start,
                dtime_storm_start=None,
                hrs_before_storm=None, hrs_after_storm=None,
                need_help=False, skip_time_check=False):
-    """Make a list of datetime objects for each time step from
-            the time.dat file.
+    """
+    Make a list of datetime objects for each time step from the time.dat file.
 
     Args:
-        nt (int):
-            Number of time steps (from get_grid_elems_from_parammod)
-        sami_data_path (str):
-            Path to sami data
-        dtime_storm_start (datetime.datetime):
-            Datetime of the start of the storm
-        hrs_before_storm (int, optional):
-            Hours from the onset of the storm to begin processing.
+        nt (int): Number of time steps (from get_grid_elems_from_parammod)
+        sami_data_path (str): Path to sami data
+        dtime_storm_start (datetime.datetime): Datetime of the start
+            of the storm
+        hrs_before_storm (int, optional):Hours from the onset
+            of the storm (or any event, really) to begin processing.
             Set to -1 to run for the whole entire simulation.
             Defaults to None.
         hrs_after_storm (int, optional): Hours from the end of the
             storm to stop processing.
             Set to -1 to run for the whole entire simulation.
             Defaults to None.
-        help (bool, optional):
-            If help is set to true, we will print the time list.
+        help (bool, optional): If help is set to true,
+            we will print the time list.
             (useful when getting acquainted with the run)
 
     Raises:
@@ -212,16 +214,18 @@ def make_times(nt, sami_data_path, dtime_sim_start,
         ValueError: You only set one of hrs_before_storm or hrs_after_storm.
 
     Returns:
-        times (list):
-            List of datetime objects for each time step
+        (tuple) tuple containing:
 
-        Optional: (if dtime_storm_start is given)
-        hrs_since_storm_start (list):
-            List of (float) hours since the storm start
-        start_idx (int, optional):
-            Start index for the times list, calculated from hrs_before_storm
-        end_idx (int, optional):
-            End index for the times list, calculated from hrs_after_storm
+            times (list):
+                List of datetime objects for each time step
+            hrs_since_storm_start (list):
+                List of (float) hours since the storm start
+            start_idx (int):
+                Start index for the times list,
+                    calculated from hrs_before_storm (ONLY if hrs_before_storm)
+            end_idx (int):
+                End index for the times list,
+                    calculated from hrs_after_storm (ONLY if hrs_after_storm)
 
     """
 
@@ -460,6 +464,16 @@ def read_sami_dene_tec_MAG_GRID(sami_data_path,
                                 reshape=True):
     """ Read in TEC (and interpolated dene) data!
 
+    :param sami_data_path: path to SAMI data
+    :type sami_data_path: str
+    :param dtime_sim_start: datetime of the start of the simulation
+    :type dtime_sim_start: datetime.datetime
+    :param reshape: reshape the data to the correct shape, defaults to True.
+        Otherwise, the data will be returned as a 1D array.
+    :type reshape: bool, optional
+    :return: SAMI data, times
+    :rtype: dict, np.array
+
     """
     # TODO: Add in all of the data files. This is just a placeholder.
     # TODO: remove hard-coding shapes.
@@ -527,9 +541,10 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
                        start_dtime=None, end_dtime=None,
                        start_idx=None, end_idx=None,
                        progress_bar=False, skip_time_check=False):
-    """Read in (raw) SAMI data and return an xarray dataset.
+    """
+    Read in (raw) SAMI data and return an xarray dataset.
         ! This only works on raw, pre-processed SAMI data !
-            (not TEC or anything like that)
+        (not TEC or anything like that)
 
     Args:
         sami_data_path (str- path-like): Directory of SAMI files.
@@ -939,11 +954,13 @@ def auto_read(sami_dir,
               engine='h5netcdf',
               skip_time_check=False,
               ):
-    """Automatically reads in SAMI data and returns it in a format of your
-    choice.
-        - Preference is to read/return xarray datasets, but can
-            read and return numpy arrays.
-        - Prefer whole files, fall back on time, variable, split.
+    """
+
+    Automatically reads in SAMI data and returns it in a format of your choice.
+
+    - Preference is to read/return xarray datasets, but can read
+        and return numpy arrays.
+    - Prefer whole files, fall back on time, variable, split.
 
 
     Args:

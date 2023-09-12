@@ -1,9 +1,8 @@
 Installation
 ============
 
-Quickstart
-**********
-
+Instructions
+************
 
 This package is based on GitHub and Conda [1]_. To begin, go to a clean folder on your computer where you want to do the install.
 
@@ -11,7 +10,7 @@ First clone the package:
 
 ``git clone git@github.com:abukowski21/SAMI3-GITM-python.git``
 
-Checkout the correct branch:
+Checkout the develop branch:
 
 ``git checkout -b develop``
 
@@ -26,7 +25,7 @@ Create a new conda[1] environment according to the requirements specified by thi
 .. note::
     Conda is not required, but it makes things easier. If you do not want to use conda, you can install the packages with pip or manually. To use pip:
 
-    ``pip install -r docs/requirements.txt``
+    ``pip install -r requirements.txt``
 
     This usage is not supported, so you may run into dependency issues doing this.
 
@@ -38,9 +37,27 @@ Create a new conda[1] environment according to the requirements specified by thi
 .. _Environment: https://conda.io/projects/conda/en/latest/user-guide/install/index.html
 
 
-Known Issues
-************
+.. _postinstall:
+
+Post-Installation
+-----------------
+
+To run the scripts provided with this package, make sure you are in the correct directory and call them from the command line.
+
+To call any of the scripts in you own code, you will need to add the package to your ``$PATH``. This can be done by adding the following to the top of your code:
+
+.. code-block:: python
+    
+    import sys
+    sys.path.append('/path/to/SAMI3-GITM-python')
+
+
+For more information on how to use the provided code, continue reading! 
+
+
+Issues
+******
 
 - Older GitHub versions may require a slightly different command to access the correct branch.
-- If you do not have ``conda`` installed and don't want to install it, you can install the required packages with ``pip``. For help on this, contact the author as the documentation has not been built yet.
+- If you do not have ``conda`` installed and don't want to install it, you can install the required packages with ``pip``. 
 - If you encounter more problems, please either fill out a GitHub issue or contact the author directly.
