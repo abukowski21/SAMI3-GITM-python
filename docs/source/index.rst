@@ -19,7 +19,7 @@ This project will not run any models for you, only manipulate the outputs into a
    installation
    usage
    dataIO
-   plots
+   plotting
    pubs
    modules
 
