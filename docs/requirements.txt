@@ -8,4 +8,4 @@ matplotlib
 cartopy
 dask
 tqdm
-nbsphinx
+myst-nb
