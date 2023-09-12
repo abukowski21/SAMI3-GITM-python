@@ -3,7 +3,7 @@ import glob
 import os
 
 import numpy as np
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from struct import unpack
 import xarray as xr
 from utility_programs.utils import make_ccmc_name
