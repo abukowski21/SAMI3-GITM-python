@@ -11,6 +11,7 @@ import os
 import numpy as np
 import pandas as pd
 from utility_programs.utils import make_ccmc_name
+from tqdm import tqdm
 
 global sami_og_vars
 sami_og_vars = {
@@ -426,7 +427,6 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
         return
 
     if pbar:
-        from tqdm.auto import tqdm
         progress = tqdm(total=len(cols) * ntimes, desc='reading SAMI data')
 
     sami_data['data'] = {}
@@ -632,7 +632,6 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
     dimnames = ('time', 'nlt', 'nf', 'nz')
 
     if progress_bar:
-        from tqdm.auto import tqdm
         pbar1 = tqdm(total=len(sami_og_vars), desc='Reading SAMI binaries')
 
     if cols != 'all':
@@ -726,8 +725,6 @@ def process_all_to_cdf(sami_data_path,
     if whole_run and run_name is None:
         raise ValueError('You must set the run name if outputting'
                          ' to a single file')
-    if progress_bar:
-        from tqdm.auto import tqdm
 
     if low_mem:
         if cols != 'all':

@@ -14,7 +14,7 @@ Can read output coords from cdf/csv or by user-defined grid.
 
 import xarray as xr
 
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import numpy as np
 
 import os

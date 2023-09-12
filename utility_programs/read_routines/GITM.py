@@ -426,7 +426,6 @@ def read_multiple_bins_to_xarray(file_list,
         file_list = file_list[time_mask]
 
     if pbar:
-        from tqdm.auto import tqdm
         progress = tqdm(total=len(file_list))
 
     ds = []

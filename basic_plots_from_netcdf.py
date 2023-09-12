@@ -6,7 +6,7 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import pandas as pd
 
 from utility_programs.filters import make_fits
