@@ -8,3 +8,4 @@ matplotlib
 cartopy
 dask
 tqdm
+nbsphinx
