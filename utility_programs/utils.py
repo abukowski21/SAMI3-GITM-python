@@ -186,23 +186,39 @@ def ut_to_lt(time_array, glon):
     return lt
 
 
-def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
-                      localtimes=None):  # int (for number of localtimes)
-    # or list-like for converting those localtimes
-    """Add LocalTime column to Dataset.
+def add_lt_to_dataset(ds, 
+                      localtimes=[2,6,10,14,18,22],
+                      pbar=False):  
+    """Add localtime as a coordinate to an existing dataset/dataarray
 
-    :param ds: A dataset or dataarray with a time and lon dimension
-    :type ds: xarray.Dataset or xarray.Dataarray
-    :return: Dataset with local time added
-    :rtype: xarray.Dataset
+    Parameters
+    ----------
+    ds : xarray.dataset or xarray.dataarray
+        xarray object to add the column to. Can be dataset (takes longer) 
+        or dataarray. Datasets are weird, probably don't use those. But it will
+        work, just take a long time.
+    localtimes : array-like or int
+        Localtimes to be returned! If int, this is the number of 
+        localtimes. They will be evenly spaced from 0-24.
+        If list-like, these are the actual localtimes to return. Be careful 
+        adding too many of these. Since we do some interpolating, the more 
+        localtimes you want, the longer this will take. Optional to show a 
+        progress bar is it's taking a long time.
+    pbar : bool
+        Set this to true to show a progress bar. 
+
+    Returns
+    -------
+    ds : xarray.(dataset/dataarray)
+        Same exact format as the input dataset, but with a new coordinate of 
+        'localtime''
+    
     """
 
-    if localtimes is None:
-        localtimes = len(ds.lon)
 
     if isinstance(localtimes, int):
         # Make linspace of localtimes, 0-24, then chop at the ends.
-        localtimes = np.linspace(0, 24, localtimes + 1,
+        localtimes = np.linspace(0, 24 + (24/localtimes), localtimes +1,
                                  endpoint=False)[:-1]
     else:
         localtimes = np.asarray(localtimes)
@@ -216,17 +232,20 @@ def add_lt_to_dataset(ds,  # xarray.Dataset or xarray.Dataarray
 
     lt_dss = []
 
-    for t in localtimes:
-        ltds = []
+    # debug
+    if pbar:
+        from tqdm import tqdm
+        pbar = tqdm(total=ds.time.size)
 
-        lons_to_iter = np.argmin(np.abs(ds.localtime.values - t), axis=1)
+    ltdss = []
 
-        for do_lon in lons_to_iter:
-            b = ds.isel(lon=do_lon).swap_dims(time='localtime')
-            ltds.append(b.interp(localtime=t, method='cubic'))
+    for itime in range(ds.time.size):
+        timeds = ds.isel(time=itime).swap_dims(lon='localtime')
+        ltdss.append(timeds.interp(localtime=localtimes, method='cubic'))
+        if pbar:
+            pbar.update()
 
-        lt_dss.append(xr.concat(ltds, dim=ds.time))
-    return xr.concat(lt_dss, dim='localtime')
+    return xr.concat(ltdss, dim='time')
 
 
 def hours_from_storm_onset_into_ds(ds, onset_ut):
@@ -246,3 +265,4 @@ def hours_from_storm_onset_into_ds(ds, onset_ut):
                                  (ds.time.dt.minute - (onset_ut.minute)) / 60)
 
     return ds
+
