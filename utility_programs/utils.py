@@ -163,7 +163,7 @@ def ut_to_lt(time_array, glon):
     try:
         utsec = [(ut.hour * 3600.0 + ut.minute * 60.0 + ut.second
                   + ut.microsecond * 1.0e-6) / 3600.0 for ut in time_array]
-    except ValueError:  # if datetime objects
+    except AttributeError:  # if datetime objects
         utsec = []
         for ut in time_array:
             ut = pd.Timestamp(ut)
@@ -195,8 +195,7 @@ def add_lt_to_dataset(ds,
     ----------
     ds : xarray.dataset or xarray.dataarray
         xarray object to add the column to. Can be dataset (takes longer) 
-        or dataarray. Datasets are weird, probably don't use those. But it will
-        work, just take a long time.
+        or dataarray. ** MUST HAVE `time` AS A DIMENSION**.
     localtimes : array-like or int
         Localtimes to be returned! If int, this is the number of 
         localtimes. They will be evenly spaced from 0-24.
@@ -227,9 +226,8 @@ def add_lt_to_dataset(ds,
 
     elif 'localtime' not in ds.coords:
         ds['localtime'] = (('time', 'lon'),
-                           ut_to_lt([pd.Timestamp(i) for i in ds.time.values],
-                                    ds.lon))
-
+                            ut_to_lt([pd.Timestamp(i) for i in ds.time.values],
+                                     ds.lon))
     lt_dss = []
 
     # debug
