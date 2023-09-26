@@ -163,7 +163,7 @@ def do_interpolations(
         raise ValueError(
             'Only one of sami_data_path or gitm_data_path can be specified'
             ' at a time.')
-        
+
     if out_path is None:
         if sami_data_path is not None:
             out_path = sami_data_path
@@ -174,8 +174,8 @@ def do_interpolations(
     if out_lat_lon_alt is None:
         if aarons_mods:
             print('doing aarons mods. this will take a long time. '
-                  'Hyperthreading this is not yet supported, '
-                  'so you may want to process data variables separately.')
+                  'You may also want to consider setting a sami_mintime '
+                  'to limit the memory usage...')
             latout = np.arange(-90, 90, 0.5)
             lonout = np.arange(0, 360, 1)
             if sami_data_path is not None:
@@ -285,19 +285,19 @@ def do_interpolations(
                                      % (data_var, numcol_for_pbar, len(cols)))
 
             if is_grid:  # holds interpolated grid
-                ds = xr.Dataset(coords={
+                ds=xr.Dataset(coords={
                     'time': (['time'], times[sami_mintime:]),
                     'alt': (['alt'], altout),
                     'lat': (['lat'], latout),
                     'lon': (['lon'], lonout)})
-                ds[data_var] = (('time', 'lon', 'lat', 'alt'),
+                ds[data_var]=(('time', 'lon', 'lat', 'alt'),
                                 np.zeros([len(times) - sami_mintime,
                                           len(lonout),
                                           len(latout),
                                           len(altout)]))
             # If we have a list of points that aren't a grid, do it this way
             else:
-                ds = xr.Dataset(
+                ds=xr.Dataset(
                     coords={
                         'sami_time': (['sami_time'], times),
                         'glat': (['sat_step'], out_lats),
@@ -305,21 +305,21 @@ def do_interpolations(
                         'alt': (['sat_step'], out_alts),
                         'sat_time': (['sat_step'], [
                             pd.Timestamp(i) for i in sat_times])})
-                ds[data_var] = (('sami_time', 'sat_step'),
+                ds[data_var]=(('sami_time', 'sat_step'),
                                 np.zeros([len(times), len(sat_times)]))
 
             for t in range(len(times) - sami_mintime):
-                interp = LinearNDInterpolator(
+                interp=LinearNDInterpolator(
                     tri,
                     data['data'][data_var][:, :, :, t + sami_mintime][mask]
                     .flatten())
                 if is_grid:
-                    ds[data_var][t] = interp(out_lon_lat_alt).reshape(
+                    ds[data_var][t]=interp(out_lon_lat_alt).reshape(
                         len(lonout),
                         len(latout),
                         len(altout))
                 else:
-                    ds[data_var][t] = interp(out_lon_lat_alt)
+                    ds[data_var][t]=interp(out_lon_lat_alt)
 
                 if show_progress:
                     pbar.update()
@@ -327,13 +327,13 @@ def do_interpolations(
                 pbar.set_description('writing Dataset...')
 
             if aarons_mods:
-                ds2 = ds.coarsen(lat=4, alt=2, lon=4,
+                ds2=ds.coarsen(lat=4, alt=2, lon=4,
                                  boundary='pad').mean()
                 del ds
-                ds = ds2
+                ds=ds2
                 del ds2
 
-                ds = ds.interp(
+                ds=ds.interp(
                     lon=np.linspace(0, 360, 90),
                     lat=np.linspace(-90, 90, 90),
                     alt=np.arange(altout[1], altout[-2], 50))
@@ -346,14 +346,14 @@ def do_interpolations(
                     out_runname + '_SAMI-INTERP.nc'),
                 engine=engine,
                 mode='w' if first else 'a')
-            first = False
+            first=False
             numcol_for_pbar += 1
             if return_ds_too:
                 return ds
             del ds, data  # clean up memory
 
     if gitm_data_path is not None:
-        doraw = False
+        doraw=False
         if len(glob.glob(os.path.join(gitm_data_path, '*.bin'))) == 0:
             if len(glob.glob(os.path.join(gitm_data_path, '*.nc'))) != 0:
                 raise NotImplementedError('NetCDF files not yet supported')
@@ -363,18 +363,18 @@ def do_interpolations(
                 'Go run pGITM and rerun this with the .bin'
                 ' files.')
         else:
-            doraw = True
+            doraw=True
 
         if doraw:
             if cols == 'all':
-                cols = ['all']
+                cols=['all']
             elif isinstance(cols, str):
-                cols = [cols]
+                cols=[cols]
             else:
-                cols = np.asarray(cols)
+                cols=np.asarray(cols)
 
             # Double check varnames are correct.
-            f0 = GITM.read_bin_to_nparrays(
+            f0=GITM.read_bin_to_nparrays(
                 gitm_dir=gitm_data_path,
                 start_idx=0,
                 end_idx=1,
@@ -386,7 +386,7 @@ def do_interpolations(
                             '{} not found in GITM files'.format(varname),
                             '\nData variables are: \n{}'.format(f0.keys()))
             else:
-                cols = f0['gitmvars']
+                cols=f0['gitmvars']
 
             # make/load Delauney triangulation
             if os.path.exists(os.path.join(gitm_data_path,
@@ -396,22 +396,22 @@ def do_interpolations(
                     with open(os.path.join(
                             gitm_data_path, 'delauney.pkl'),
                             'rb') as f:
-                        tri = pickle.load(f)
+                        tri=pickle.load(f)
                 else:
                     print(
                         'Found existing triangulation file. Recalculating...',
                         '\n(Specify save_delauney=True to reuse)')
-                    tri = Delaunay(in_cart)
+                    tri=Delaunay(in_cart)
             else:
                 print('Calculating Delauney Triangulation..')
 
-                in_lat = f0['gitmgrid']['latitude'].flatten()
-                in_lon = f0['gitmgrid']['longitude'].flatten()
-                in_alt = f0['gitmgrid']['altitude'].flatten()
+                in_lat=f0['gitmgrid']['latitude'].flatten()
+                in_lon=f0['gitmgrid']['longitude'].flatten()
+                in_alt=f0['gitmgrid']['altitude'].flatten()
 
-                in_cart = gps_to_ecef_custom(in_lon, in_lat, in_alt).T
+                in_cart=gps_to_ecef_custom(in_lon, in_lat, in_alt).T
 
-                tri = Delaunay(in_cart)
+                tri=Delaunay(in_cart)
                 if save_delauney:
                     print('Saving')
                     with open(os.path.join(gitm_data_path,
@@ -419,29 +419,29 @@ def do_interpolations(
                         pickle.dump(tri, f)
 
             # Now start grabbing model outputs...
-            files = glob.glob(os.path.join(gitm_data_path, '*.bin'))
-            times = GITM.gitm_times_from_filelist(files)
-            numfiles = len(files)
+            files=glob.glob(os.path.join(gitm_data_path, '*.bin'))
+            times=GITM.gitm_times_from_filelist(files)
+            numfiles=len(files)
 
             if gitm_output_each_var:
                 if show_progress:
-                    pbar = tqdm(total=len(cols) * numfiles)
-                first = True
-                numcol_for_pbar = 1
+                    pbar=tqdm(total=len(cols) * numfiles)
+                first=True
+                numcol_for_pbar=1
                 for varname in cols:
                     if show_progress:
                         pbar.set_description('Reading in GITM data')
-                    darr = GITM.read_bin_to_nparrays(
+                    darr=GITM.read_bin_to_nparrays(
                         gitm_dir=gitm_data_path,
                         cols=[varname],
                         progress_bar=False)
-                    interpd = []
+                    interpd=[]
                     if show_progress:
                         pbar.set_description(
                             'interpolating %s (%i/%i)' %
                             (varname, numcol_for_pbar, len(cols)))
                     for t in range(numfiles):
-                        interp = LinearNDInterpolator(
+                        interp=LinearNDInterpolator(
                             tri,
                             darr['gitmbins'][t, 0, :, :].T.flatten())
                         interpd.append(interp(out_lon_lat_alt.T))
@@ -449,12 +449,12 @@ def do_interpolations(
                             pbar.update()
                     if show_progress:
                         pbar.set_description('writing Dataset...')
-                    ds = xr.Dataset(coords={
+                    ds=xr.Dataset(coords={
                         'time': (['time'], times),
                         'alt': (['alt'], altout),
                         'lon': (['lat'], lonout),
                         'lat': (['lon'], latout)},)
-                    ds[varname] = (('time', 'lon', 'lat', 'alt'),
+                    ds[varname]=(('time', 'lon', 'lat', 'alt'),
                                    np.array(interpd).reshape(
                         len(times),
                         len(lonout),
@@ -467,7 +467,7 @@ def do_interpolations(
                                  engine=engine,
                                  mode='w' if first else 'a',
                                  encoding={'time': {'dtype': float}})
-                    first = False
+                    first=False
                     numcol_for_pbar += 1
                     del ds, interpd, darr  # clean up memory
 
@@ -475,15 +475,15 @@ def do_interpolations(
                 for t in range(numfiles):
                     if show_progress:
                         pbar.set_description('Reading in GITM data')
-                    darr = GITM.read_bin_to_nparrays(
+                    darr=GITM.read_bin_to_nparrays(
                         gitm_dir=gitm_data_path,
                         cols=cols,
                         start_idx=t,
                         end_idx=t + 1,
                         return_vars=True,
                         progress_bar=False)
-                    interpd = []
-                    ds = xr.Dataset(coords={
+                    interpd=[]
+                    ds=xr.Dataset(coords={
                         'time': (['time'], [times[t]]),
                         'alt': (['alt'], altout),
                         'lon': (['lon'], lonout),
@@ -492,11 +492,11 @@ def do_interpolations(
                         # print(darr['gitmbins'][t, varnum, :, :].shape,
                         #       darr['gitmbins'][
                         #           t, varnum, :, :].T.flatten().shape)
-                        interp = LinearNDInterpolator(
+                        interp=LinearNDInterpolator(
                             tri,
                             darr['gitmbins'][0, varnum, :, :].T.flatten())
 
-                        ds[varname] = (
+                        ds[varname]=(
                             ('time', 'lon', 'lat', 'alt'), np.array(
                                 interp(out_lon_lat_alt.T)).reshape(
                                     1,  # single time value
@@ -509,7 +509,7 @@ def do_interpolations(
 
                     if show_progress:
                         pbar.set_description('writing Dataset...')
-                    fname = make_ccmc_name('GITM-REGRID',
+                    fname=make_ccmc_name('GITM-REGRID',
                                            times[t],
                                            out_runname if out_runname != ''
                                            else '')
