@@ -35,7 +35,8 @@ def main(
         sami_mintime=0,
         run_name=None,
         skip_time_check=False,
-        progress_bar=True,):
+        progress_bar=True,
+        aarons_mod=False):
     """
     Interpolate SAMI3 outputs to a new grid.
 
@@ -95,7 +96,7 @@ def main(
         print('making outpath:  %s' % out_path)
         os.makedirs(out_path)
 
-    if out_coord_file is None:
+    if out_coord_file is None and not aarons_mod:
         latout = np.arange(-90, 90, lat_step)
         lonout = np.arange(0, 360, lon_step)
         altout = np.arange(minmax_alt[0], minmax_alt[1] + 1, alt_step, )
@@ -118,7 +119,24 @@ def main(
                           sami_mintime=sami_mintime,
                           skip_time_check=skip_time_check,
                           show_progress=progress_bar,
+                          aarons_mods=aarons_mod,
                           )
+        
+    elif out_coord_file is None and aarons_mod:
+        # only difference here is we let the program make the grid.
+        do_interpolations(sami_data_path=sami_data_path,
+                          dtime_sim_start=dtime_sim_start,
+                          out_path=out_path,
+                          save_delauney=save_weights,
+                          out_runname=run_name,
+                          cols=cols,
+                          is_grid=True,
+                          sami_mintime=sami_mintime,
+                          skip_time_check=skip_time_check,
+                          show_progress=progress_bar,
+                          aarons_mods=aarons_mod,
+                          )
+    
     else:
         # read in the file
         # try:
@@ -139,6 +157,7 @@ def main(
             show_progress=progress_bar,
             is_grid=False,
             out_runname=run_name if run_name is not None else 'custom',
+            aarons_mods=aarons_mod,
         )
 
 
@@ -183,6 +202,15 @@ if __name__ == '__main__':
                         ' Input coordinates must be in a CSV file with columns'
                         ' [lat, lon, alt] (in degrees and km.)')
 
+    parser.add_argument('--aarons_mod', action='store_true',
+                        help='Interpolating SAMI data is hard. Through a lot of '
+                        'testing, I found that you can interpolate to 2x '
+                        'resolution and then coarsen the results and things look '
+                        'normal. If you notice bad stuff in the regridded files, '
+                        'use this option. \n'
+                        'This will take a lot memory and time than default runs, '
+                        'so be careful!')
+
     args = parser.parse_args()
 
     if args.dtime_sim_start is None:
@@ -210,7 +238,8 @@ if __name__ == '__main__':
              lon_step=lonstep,
              alt_step=altstep,
              minmax_alt=[minalt, maxalt],
-             skip_time_check=args.skip_time_check)
+             skip_time_check=args.skip_time_check,
+             aarons_mod=args.aarons_mod)
 
     elif args.input_coord_file is None:
 
@@ -220,7 +249,8 @@ if __name__ == '__main__':
              cols=args.cols,
              run_name=args.run_name,
              dtime_sim_start=dtime_sim_start,
-             skip_time_check=args.skip_time_check)
+             skip_time_check=args.skip_time_check,
+             aarons_mod=args.aarons_mod)
 
     else:
 
@@ -231,4 +261,5 @@ if __name__ == '__main__':
              run_name=args.run_name,
              dtime_sim_start=dtime_sim_start,
              out_coord_file=args.input_coord_file,
-             skip_time_check=args.skip_time_check)
+             skip_time_check=args.skip_time_check,
+             aarons_mod=args.aarons_mod)

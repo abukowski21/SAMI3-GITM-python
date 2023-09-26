@@ -163,7 +163,7 @@ def do_interpolations(
         raise ValueError(
             'Only one of sami_data_path or gitm_data_path can be specified'
             ' at a time.')
-
+        
     if out_path is None:
         if sami_data_path is not None:
             out_path = sami_data_path
@@ -173,6 +173,9 @@ def do_interpolations(
     # outputs...
     if out_lat_lon_alt is None:
         if aarons_mods:
+            print('doing aarons mods. this will take a long time. '
+                  'Hyperthreading this is not yet supported, '
+                  'so you may want to process data variables separately.')
             latout = np.arange(-90, 90, 0.5)
             lonout = np.arange(0, 360, 1)
             if sami_data_path is not None:
@@ -324,7 +327,7 @@ def do_interpolations(
                 pbar.set_description('writing Dataset...')
 
             if aarons_mods:
-                ds2 = ds.coarsen(lat=4, alt=2, lon=8,
+                ds2 = ds.coarsen(lat=4, alt=2, lon=4,
                                  boundary='pad').mean()
                 del ds
                 ds = ds2
