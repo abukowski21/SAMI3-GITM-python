@@ -191,6 +191,13 @@ if __name__ == '__main__':
                         help='Skip verifying accuracy of times. Useful when'
                         ' SAMI has been configured to skip some outputs '
                         '(hrpr != 0)')
+    
+    parser.add_argument('--sami_mintime', type=int, default=0,
+                       help='Set this to help with memory management (especially '
+                       'when using aarons_mod). Setting this to 5, for example, '
+                       'will skip the first 5 output times of the SAMI run. '
+                       'This is relevant even without aarons_mod as the first 12-24 '
+                       'hours of SAMI outputs are not to be trusted.')
 
     parser.add_argument('--custom_grid', action='store_true', default=False,
                         help='Launches interactive script to set custom grid.'
@@ -239,6 +246,7 @@ if __name__ == '__main__':
              alt_step=altstep,
              minmax_alt=[minalt, maxalt],
              skip_time_check=args.skip_time_check,
+             sami_mintime=args.sami_mintime,
              aarons_mod=args.aarons_mod)
 
     elif args.input_coord_file is None:
@@ -249,6 +257,7 @@ if __name__ == '__main__':
              cols=args.cols,
              run_name=args.run_name,
              dtime_sim_start=dtime_sim_start,
+             sami_mintime=args.sami_mintime,
              skip_time_check=args.skip_time_check,
              aarons_mod=args.aarons_mod)
 
@@ -261,5 +270,6 @@ if __name__ == '__main__':
              run_name=args.run_name,
              dtime_sim_start=dtime_sim_start,
              out_coord_file=args.input_coord_file,
+             sami_mintime=args.sami_mintime,
              skip_time_check=args.skip_time_check,
              aarons_mod=args.aarons_mod)
