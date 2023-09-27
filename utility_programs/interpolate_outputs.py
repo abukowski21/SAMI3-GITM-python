@@ -283,8 +283,7 @@ def do_interpolations(
                     'alt': (['alt'], altout),
                     'lat': (['lat'], latout),
                     'lon': (['lon'], lonout)})
-                print('These warnings are OK! just means '
-                      'the computer is thinking ;)')
+                print('These warnings are OK! The computer is just thinking ')
 
             # If we have a list of points that aren't a grid, the index variable
             #   is a little different
@@ -327,8 +326,8 @@ def do_interpolations(
                                                     interp2(out_pts2)]),
                                                 axis=0)
 
-                if show_progress:
-                    pbar.update()
+                    if show_progress:
+                        pbar.update()
             if show_progress:
                 pbar.set_description('writing Dataset...')
 
