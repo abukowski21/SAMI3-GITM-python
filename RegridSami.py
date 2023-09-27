@@ -199,7 +199,8 @@ if __name__ == '__main__':
                         'to do a lot of calculations. By default this will use '
                         '16 workers, but you can change it if you want. '
                         "(higher workers = faster, to a point... "
-                        "It seems like the number concurrent procs can be limited"
+                        "The number concurrent procs can be limited for "
+                        "*reasons*. Email me if this is an issue & we'll chat"
                         # '16 workers => 1.3 GB of RAM/10 time-steps of SAMI '
                         # 'at 80/72/256 resolution)'
                         )
