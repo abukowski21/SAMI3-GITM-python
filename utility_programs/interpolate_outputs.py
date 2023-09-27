@@ -26,14 +26,25 @@ import pickle
 from scipy.spatial import Delaunay
 from scipy.interpolate import LinearNDInterpolator
 from multiprocessing import Pool
+from itertools import repeat
 
-def interpolate_var(tri1, tri2, outpts1, outpts2, indata, ntime):
+def interpolate_var(tri1, tri2, outpts1, outpts2, 
+                    indata, ntime, out_shape, mask):
     """
-    This is a refactor of the SAMI interps to see if we can thread it.
+    This is a refactor of the SAMI interps so that we can thread it.
 
     """
+    np.seterr(all="ignore")
 
-    return
+    interp1=LinearNDInterpolator(
+                        tri1,
+                        indata.T[mask]
+                        .flatten())
+    tmp1=interp1(outpts1).reshape(out_shape)
+    interp2=LinearNDInterpolator(tri2, indata.T[mask].flatten())
+    return np.nanmean([tmp1, interp2(outpts2).reshape(out_shape)],
+                    axis=0)
+
 
 def do_interpolations(
     sami_data_path=None,
@@ -54,6 +65,7 @@ def do_interpolations(
     max_alt=None,
     engine='h5netcdf',
     return_ds_too=False,
+    num_workers=16,
 ):
     """Interpolate SAMI (GITM functionality not fully tested) to either a
     standard geographic grid or to user-defined points.
@@ -84,7 +96,7 @@ def do_interpolations(
         'all'. Can be any str from
         utility_programs.read_routines.SAMI.sami_og_vars.
     :type cols: str or list-like, optional
-    :param show_progress: (bool) Show progressbars? Default: False.
+    :param show_progress: (bool) Show progress bars? Default: False.
         Requires tqdm.
     :type show_progress: bool, optional
     :param gitm_data_path: (string) path to gitm data.
@@ -105,7 +117,7 @@ def do_interpolations(
     :type save_delauney: bool, optional
     :param max_alt: (int) specify maximum altitude of data grid to feed in to
         delauney calculations. Useful if you don't want to recalculate weights
-        and the interpoaltion is different from one already done.
+        and the interpolation is different from one already done.
     :type max_alt: int, optional
     :param engine: (str) Which engine to use when writing netcdf files. Default
         is 'h5netcdf' but can cause some issues on some systems and some python
@@ -138,8 +150,6 @@ def do_interpolations(
             out_path = sami_data_path
         else:
             out_path = gitm_data_path
-
-    np.seterr(all="ignore")
 
     # outputs...
     if out_lat_lon_alt is None:
@@ -251,6 +261,8 @@ def do_interpolations(
 
         first = True  # for choosing which mode to write
         numcol_for_pbar = 1
+        out_shape = [len(lonout),len(latout), len(altout)]
+
         for data_var in cols:
 
             if out_runname is None:
@@ -271,12 +283,11 @@ def do_interpolations(
                     'alt': (['alt'], altout),
                     'lat': (['lat'], latout),
                     'lon': (['lon'], lonout)})
-                ds[data_var]=(('time', 'lon', 'lat', 'alt'),
-                                np.zeros([len(times) - sami_mintime,
-                                          len(lonout),
-                                          len(latout),
-                                          len(altout)]))
-            # If we have a list of points that aren't a grid, do it this way
+                print('These warnings are OK! just means '
+                      'the computer is thinking ;)')
+
+            # If we have a list of points that aren't a grid, the index variable
+            #   is a little different
             else:
                 ds=xr.Dataset(
                     coords={
@@ -289,26 +300,28 @@ def do_interpolations(
                 ds[data_var]=(('sami_time', 'sat_step'),
                                 np.zeros([len(times), len(sat_times)]))
 
-            for t in range(len(times) - sami_mintime):
-                interp1=LinearNDInterpolator(
-                    tri1,
-                    data['data'][data_var][:, :, :, t + sami_mintime][mask]
-                    .flatten())
-                interp2=LinearNDInterpolator(
-                    tri2,
-                    data['data'][data_var][:, :, :, t + sami_mintime][mask]
-                    .flatten())
-                if is_grid:
-                    tmp1=interp1(out_pts1).reshape(len(lonout),
-                                                  len(latout),
-                                                  len(altout))
-                    ds[data_var][t]=np.nanmean([
-                                    tmp1, 
-                                    interp2(out_pts2).reshape(len(lonout),
-                                                             len(latout),
-                                                             len(altout))],
-                                    axis=0)
-                else:
+            if is_grid:
+                with Pool(num_workers) as pool:
+                    ds[data_var]=(('time', 'lon', 'lat', 'alt'),
+                                  pool.starmap(interpolate_var,
+                                               zip(repeat(tri1), repeat(tri2),
+                                               repeat(out_pts1), repeat(out_pts2),
+                                               data['data'][data_var].T,
+                                               range(len(times)-sami_mintime),
+                                               repeat(out_shape),
+                                               repeat(mask))))
+                    if show_progress:
+                        pbar.update(len(times)-sami_mintime)
+            else:
+                for t in range(len(times) - sami_mintime):
+                    interp1=LinearNDInterpolator(
+                        tri1,
+                        data['data'][data_var][:, :, :, t + sami_mintime][mask]
+                        .flatten())
+                    interp2=LinearNDInterpolator(
+                        tri2,
+                        data['data'][data_var][:, :, :, t + sami_mintime][mask]
+                        .flatten())
                     ds[data_var][t]=np.nanmean(np.array([
                                                     interp1(out_pts1),
                                                     interp2(out_pts2)]),

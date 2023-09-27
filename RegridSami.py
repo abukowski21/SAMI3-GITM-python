@@ -35,7 +35,8 @@ def main(
         sami_mintime=0,
         run_name=None,
         skip_time_check=False,
-        progress_bar=True):
+        progress_bar=True,
+        num_workers=16):
     """
     Interpolate SAMI3 outputs to a new grid.
 
@@ -118,6 +119,7 @@ def main(
                           sami_mintime=sami_mintime,
                           skip_time_check=skip_time_check,
                           show_progress=progress_bar,
+                          num_workers=num_workers,
                           )
         
     else:
@@ -140,6 +142,7 @@ def main(
             show_progress=progress_bar,
             is_grid=False,
             out_runname=run_name if run_name is not None else 'custom',
+            num_workers=num_workers,
         )
 
 
@@ -191,6 +194,16 @@ if __name__ == '__main__':
                         ' Input coordinates must be in a CSV file with columns'
                         ' [lat, lon, alt] (in degrees and km.)')
 
+    parser.add_argument('--num_workers', type=int, default=16,
+                        help='When doing a regrid of the SAMI data, we need '
+                        'to do a lot of calculations. By default this will use '
+                        '16 workers, but you can change it if you want. '
+                        "(higher workers = faster, to a point... "
+                        "It seems like the number concurrent procs can be limited"
+                        # '16 workers => 1.3 GB of RAM/10 time-steps of SAMI '
+                        # 'at 80/72/256 resolution)'
+                        )
+
     # parser.add_argument('--aarons_mod', action='store_true',
     #                     help='Interpolating SAMI data is hard. Through a lot of '
     #                     'testing, I found that you can interpolate to 2x '
@@ -228,7 +241,8 @@ if __name__ == '__main__':
              alt_step=altstep,
              minmax_alt=[minalt, maxalt],
              skip_time_check=args.skip_time_check,
-             sami_mintime=args.sami_mintime,)
+             sami_mintime=args.sami_mintime,
+             num_workers=args.num_workers)
 
     elif args.input_coord_file is None:
 
@@ -239,7 +253,8 @@ if __name__ == '__main__':
              run_name=args.run_name,
              dtime_sim_start=dtime_sim_start,
              sami_mintime=args.sami_mintime,
-             skip_time_check=args.skip_time_check,)
+             skip_time_check=args.skip_time_check,
+             num_workers=args.num_workers)
 
     else:
 
@@ -251,4 +266,5 @@ if __name__ == '__main__':
              dtime_sim_start=dtime_sim_start,
              out_coord_file=args.input_coord_file,
              sami_mintime=args.sami_mintime,
-             skip_time_check=args.skip_time_check,)
+             skip_time_check=args.skip_time_check,
+             num_workers=args.num_workers)
