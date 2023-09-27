@@ -650,7 +650,8 @@ def process_all_to_cdf(gitm_dir,
 
         if progress_bar:
             pbar.update()
-    pbar.close()
+    if progress_bar:
+        pbar.close()
 
     if single_file:
         # read in all written files(with dask).
