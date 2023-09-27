@@ -25,45 +25,15 @@ import glob
 import pickle
 from scipy.spatial import Delaunay
 from scipy.interpolate import LinearNDInterpolator
+from multiprocessing import Pool
 
-
-def gps_to_ecef_custom(lon, lat, alt, degrees=True, alt_in_m=False):
-    """Convert GPS coordinates to ECEF coordinates.
-    Units are degrees and km unless specified otherwise.
-
-    :param lon: Longitude
-    :type lon: float or numpy.array
-    :param lat: Latitude
-    :type lat: float or numpy.array
-    :param alt: Altitude
-    :type alt: float or numpy.array
-    :param degrees: Is input Lat/Lon in degrees? Defaults to True
-    :type degrees: bool, optional
-    :param alt_in_m: Is input Alt in km? Defaults to False
-    :type alt_in_m: bool, optional
-    :return: ECEF coordinates
-    :rtype: numpy.array
+def interpolate_var(tri1, tri2, outpts1, outpts2, indata, ntime):
     """
-    a = 6378137.0
-    finv = 298.257223563
-    f = 1 / finv
-    e2 = 1 - (1 - f) * (1 - f)
+    This is a refactor of the SAMI interps to see if we can thread it.
 
-    if not alt_in_m:
-        alt = np.asarray(alt) * 1000
+    """
 
-    if degrees:
-        lat = np.deg2rad(lat)
-        lon = np.deg2rad(lon)
-
-    v = a / np.sqrt(1 - e2 * np.sin(lat) * np.sin(lat))
-
-    x = (v + alt) * np.cos(lat) * np.cos(lon)
-    y = (v + alt) * np.cos(lat) * np.sin(lon)
-    z = (v * (1 - e2) + alt) * np.sin(lat)
-
-    return np.array([x, y, z])
-
+    return
 
 def do_interpolations(
     sami_data_path=None,
@@ -79,7 +49,6 @@ def do_interpolations(
     gitm_output_each_var=True,
     gitm_output_each_time=False,
     is_grid=False,
-    aarons_mods=False,
     sami_mintime=0,
     save_delauney=False,
     max_alt=None,
@@ -170,25 +139,16 @@ def do_interpolations(
         else:
             out_path = gitm_data_path
 
+    np.seterr(all="ignore")
+
     # outputs...
     if out_lat_lon_alt is None:
-        if aarons_mods:
-            print('doing aarons mods. this will take a long time. '
-                  'You may also want to consider setting a sami_mintime '
-                  'to limit the memory usage...')
-            latout = np.arange(-90, 90, 0.5)
-            lonout = np.arange(0, 360, 1)
-            if sami_data_path is not None:
-                altout = np.arange(150, 2200, 25)
-            else:
-                altout = np.arange(120, 670, 25)
+        latout = np.arange(-90, 90, 1)
+        lonout = np.arange(0, 360, 2)
+        if sami_data_path is not None:
+            altout = np.arange(100, 2600, 25)
         else:
-            latout = np.arange(-90, 90, 2)
-            lonout = np.arange(0, 360, 4)
-            if sami_data_path is not None:
-                altout = np.arange(200, 2200, 25)
-            else:
-                altout = np.arange(120, 670, 25)
+            altout = np.arange(100, 725, 25)
 
         out_lats, out_lons, out_alts = np.meshgrid(latout, lonout, altout)
 
@@ -205,8 +165,14 @@ def do_interpolations(
             lonout = np.unique(out_lons)
             altout = np.unique(out_alts)
 
-    out_lon_lat_alt = gps_to_ecef_custom(
-        out_lons.flatten(), out_lats.flatten(), out_alts.flatten()).T
+    out_pts1 = np.array([out_lons.flatten(),
+                                out_lats.flatten(),
+                                out_alts.flatten()]).T
+    out_pts2 = np.array([np.where(out_lons.flatten() > 180, 
+                                     out_lons.flatten() - 360,
+                                     out_lons.flatten()),
+                         out_lats.flatten(),
+                         out_alts.flatten()]).T
 
     # deal with sami first
     if sami_data_path is not None:
@@ -219,7 +185,7 @@ def do_interpolations(
 
         # specify max alt to build delauney at
         if max_alt is None:
-            max_alt = 2500
+            max_alt = 3000
 
         mask = np.where(grid['alt'] < max_alt)
         grid2 = {}
@@ -227,31 +193,46 @@ def do_interpolations(
             grid2[k] = grid[k][mask].flatten()
         del grid
 
-        in_cart = gps_to_ecef_custom(grid2['glon'],
-                                     grid2['glat'],
-                                     grid2['alt']).T
+        in_pts1 = np.array([grid2['glon'],
+                             grid2['glat'],
+                             grid2['alt']]).T
+        in_pts2 = np.array([np.where(grid2['glon'] > 180, 
+                                     grid2['glon'] - 360,
+                                     grid2['glon']),
+                            grid2['glat'],
+                            grid2['alt']]).T
 
         if os.path.exists(os.path.join(sami_data_path,
-                                       'delauney_max-%i.pkl' % max_alt)):
+                                       'delauney_max-%i-1.pkl' % max_alt)):
             if save_delauney:
                 print('attempting to reuse existing triangulation file')
                 with open(os.path.join(
-                        sami_data_path, 'delauney_max-%i.pkl' % max_alt),
+                        sami_data_path, 'delauney_max-%i-1.pkl' % max_alt),
                         'rb') as f:
-                    tri = pickle.load(f)
+                    tri1 = pickle.load(f)
+                with open(os.path.join(
+                        sami_data_path, 'delauney_max-%i-2.pkl' % max_alt),
+                        'rb') as f:
+                    tri2 = pickle.load(f)
             else:
                 print('Found existing triangulation file. Recalculating...',
                       '\n(Specify save_delauney=True to reuse)')
-                tri = Delaunay(in_cart)
+                tri1 = Delaunay(in_pts1)
+                tri2 = Delaunay(in_pts2)
         else:
             print('Calculating Delauney Triangulation..')
-            tri = Delaunay(in_cart)
+            tri1 = Delaunay(in_pts1)
+            tri2 = Delaunay(in_pts2)
             if save_delauney:
                 print('Saving')
                 with open(os.path.join(sami_data_path,
-                                       'delauney_max-%i.pkl' % max_alt),
+                                       'delauney_max-%i-1.pkl' % max_alt),
                           'wb') as f:
-                    pickle.dump(tri, f)
+                    pickle.dump(tri1, f)
+                with open(os.path.join(sami_data_path,
+                                       'delauney_max-%i-2.pkl' % max_alt),
+                          'wb') as f:
+                    pickle.dump(tri2, f)
 
         # format 'cols' variable
         if cols == 'all':
@@ -309,34 +290,34 @@ def do_interpolations(
                                 np.zeros([len(times), len(sat_times)]))
 
             for t in range(len(times) - sami_mintime):
-                interp=LinearNDInterpolator(
-                    tri,
+                interp1=LinearNDInterpolator(
+                    tri1,
+                    data['data'][data_var][:, :, :, t + sami_mintime][mask]
+                    .flatten())
+                interp2=LinearNDInterpolator(
+                    tri2,
                     data['data'][data_var][:, :, :, t + sami_mintime][mask]
                     .flatten())
                 if is_grid:
-                    ds[data_var][t]=interp(out_lon_lat_alt).reshape(
-                        len(lonout),
-                        len(latout),
-                        len(altout))
+                    tmp1=interp1(out_pts1).reshape(len(lonout),
+                                                  len(latout),
+                                                  len(altout))
+                    ds[data_var][t]=np.nanmean([
+                                    tmp1, 
+                                    interp2(out_pts2).reshape(len(lonout),
+                                                             len(latout),
+                                                             len(altout))],
+                                    axis=0)
                 else:
-                    ds[data_var][t]=interp(out_lon_lat_alt)
+                    ds[data_var][t]=np.nanmean(np.array([
+                                                    interp1(out_pts1),
+                                                    interp2(out_pts2)]),
+                                                axis=0)
 
                 if show_progress:
                     pbar.update()
             if show_progress:
                 pbar.set_description('writing Dataset...')
-
-            if aarons_mods:
-                ds2=ds.coarsen(lat=4, alt=2, lon=4,
-                                 boundary='pad').mean()
-                del ds
-                ds=ds2
-                del ds2
-
-                ds=ds.interp(
-                    lon=np.linspace(0, 360, 90),
-                    lat=np.linspace(-90, 90, 90),
-                    alt=np.arange(altout[1], altout[-2], 50))
 
             ds.to_netcdf(
                 os.path.join(
@@ -354,6 +335,8 @@ def do_interpolations(
 
     if gitm_data_path is not None:
         doraw=False
+        do_recalculate_delauney=False
+
         if len(glob.glob(os.path.join(gitm_data_path, '*.bin'))) == 0:
             if len(glob.glob(os.path.join(gitm_data_path, '*.nc'))) != 0:
                 raise NotImplementedError('NetCDF files not yet supported')
@@ -390,33 +373,47 @@ def do_interpolations(
 
             # make/load Delauney triangulation
             if os.path.exists(os.path.join(gitm_data_path,
-                                           'delauney.pkl')):
+                                           'delauney-1.pkl')):
                 if save_delauney:
                     print('attempting to reuse existing triangulation file')
                     with open(os.path.join(
-                            gitm_data_path, 'delauney.pkl'),
+                            gitm_data_path, 'delauney-1.pkl'),
                             'rb') as f:
-                        tri=pickle.load(f)
+                        tri1=pickle.load(f)
+                    with open(os.path.join(
+                            gitm_data_path, 'delauney-2.pkl'),
+                            'rb') as f:
+                        tri2=pickle.load(f)
                 else:
                     print(
                         'Found existing triangulation file. Recalculating...',
                         '\n(Specify save_delauney=True to reuse)')
-                    tri=Delaunay(in_cart)
+                    do_recalculate_delauney=True
+                    
             else:
+                do_recalculate_delauney=True
+
+            if do_recalculate_delauney:
                 print('Calculating Delauney Triangulation..')
 
                 in_lat=f0['gitmgrid']['latitude'].flatten()
                 in_lon=f0['gitmgrid']['longitude'].flatten()
                 in_alt=f0['gitmgrid']['altitude'].flatten()
 
-                in_cart=gps_to_ecef_custom(in_lon, in_lat, in_alt).T
+                in_pts1=np.array([in_lon, in_lat, in_alt]).T
+                in_pts2=np.array([np.where(in_lon>180,in_lon-360, in_lon),
+                                 in_lat, in_alt]).T
 
-                tri=Delaunay(in_cart)
+                tri1=Delaunay(in_pts1)
+                tri2 = Delaunay(in_pts2)
                 if save_delauney:
                     print('Saving')
                     with open(os.path.join(gitm_data_path,
-                                           'delauney.pkl'), 'wb') as f:
-                        pickle.dump(tri, f)
+                                           'delauney-1.pkl'), 'wb') as f:
+                        pickle.dump(tri1, f)
+                    with open(os.path.join(gitm_data_path,
+                                           'delauney-2.pkl'), 'wb') as f:
+                        pickle.dump(tri2, f)
 
             # Now start grabbing model outputs...
             files=glob.glob(os.path.join(gitm_data_path, '*.bin'))
@@ -441,10 +438,16 @@ def do_interpolations(
                             'interpolating %s (%i/%i)' %
                             (varname, numcol_for_pbar, len(cols)))
                     for t in range(numfiles):
-                        interp=LinearNDInterpolator(
-                            tri,
+                        interp1=LinearNDInterpolator(
+                            tri1,
                             darr['gitmbins'][t, 0, :, :].T.flatten())
-                        interpd.append(interp(out_lon_lat_alt.T))
+                        interp2=LinearNDInterpolator(
+                            tri2,
+                            darr['gitmbins'][t, 0, :, :].T.flatten())
+                        interpd.append(np.nanmean(np.array([
+                                                           interp1(out_pts1).T,
+                                                           interp2(out_pts2).T],
+                                                           axis=0)))
                         if show_progress:
                             pbar.update()
                     if show_progress:
@@ -455,11 +458,10 @@ def do_interpolations(
                         'lon': (['lat'], lonout),
                         'lat': (['lon'], latout)},)
                     ds[varname]=(('time', 'lon', 'lat', 'alt'),
-                                   np.array(interpd).reshape(
-                        len(times),
-                        len(lonout),
-                        len(latout),
-                        len(altout)))
+                                   np.array(interpd).reshape(len(times),
+                                                             len(lonout),
+                                                             len(latout),
+                                                             len(altout)))
                     ds.to_netcdf(os.path.join(
                         out_path,
                         '%sGITM-INTERP.nc' % (out_runname + '_' if
@@ -492,17 +494,27 @@ def do_interpolations(
                         # print(darr['gitmbins'][t, varnum, :, :].shape,
                         #       darr['gitmbins'][
                         #           t, varnum, :, :].T.flatten().shape)
-                        interp=LinearNDInterpolator(
+                        interp1=LinearNDInterpolator(
                             tri,
+                            darr['gitmbins'][0, varnum, :, :].T.flatten())
+                        interp2 = LinearNDInterpolator(
+                            tri2,
                             darr['gitmbins'][0, varnum, :, :].T.flatten())
 
                         ds[varname]=(
-                            ('time', 'lon', 'lat', 'alt'), np.array(
-                                interp(out_lon_lat_alt.T)).reshape(
+                            ('time', 'lon', 'lat', 'alt'), 
+                            np.nanmean(np.array([
+                                interp1(out_lon_lat_alt.T).reshape(
                                     1,  # single time value
                                     len(lonout),
                                     len(latout),
-                                    len(altout)))
+                                    len(altout)),
+                                interp2(out_pts2.T).reshape(1,  
+                                # single time value
+                                    len(lonout),
+                                    len(latout),
+                                    len(altout))]),
+                                axis=0))
 
                         if show_progress:
                             pbar.update()
