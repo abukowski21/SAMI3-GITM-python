@@ -326,8 +326,8 @@ def do_interpolations(
                                                     interp2(out_pts2)]),
                                                 axis=0)
 
-                if show_progress:
-                    pbar.update()
+                    if show_progress:
+                        pbar.update()
             if show_progress:
                 pbar.set_description('writing Dataset...')
 
