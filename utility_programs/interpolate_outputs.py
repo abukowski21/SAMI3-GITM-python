@@ -170,7 +170,7 @@ def do_interpolations(
         if sat_times is None and not is_grid:
             raise ValueError('Must specify sat_times if not using a grid')
 
-        if is_grid:
+        if not is_grid:
             latout = np.unique(out_lats)
             lonout = np.unique(out_lons)
             altout = np.unique(out_alts)
