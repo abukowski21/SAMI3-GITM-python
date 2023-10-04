@@ -13,5 +13,5 @@ I've done my best to capture as many use-cases as possible. Please fill out an `
 
 
 
-A huge thank you goes out to the developers of `SAMI3 <10.5281/zenodo.7895859>`_ and `GITM <https://github.com/GITMCode/GITM/>`_. Without their hard work, this project would not be possible. 
+A huge thank you goes out to the developers of SAMI3 and GITM. Without their hard work, this project would not be possible. SAMI3 can be found `here <https://zenodo.org/record/7895859>`_ and is originally published in `this paper <https://doi.org/10.1029/2008GL033509>`_. Here is the link to `GITM <https://github.com/GITMCode/GITM/>`_ which was originally published in `this paper <https://doi.org/10.1016/j.jastp.2006.01.008>`_.
 
