@@ -286,6 +286,7 @@ def fig5(ds,
          storm_start,
          lon,
          numplots=6,
+         max_alt=1000,
          ):
 
     fig, axs = plt.subplots(3, 2, figsize=(13, 10),
@@ -301,7 +302,7 @@ def fig5(ds,
     while t < numplots:
         im = ds.sel(time=times[t], method='nearest').interp(
             lat=np.arange(-90, 90, 1),
-            alt=np.arange(150, 1500, 20)).plot(x='lat',
+            alt=np.arange(150, max_alt+150, 20)).plot(x='lat',
                                                vmin=-vlims,
                                                vmax=vlims,
                                                ax=axes[t],
@@ -315,7 +316,7 @@ def fig5(ds,
 
         axes[t].set_ylabel('')
         axes[t].set_xlabel('')
-        axes[t].set_ylim(100, 1000)
+        axes[t].set_ylim(100, max_alt)
         t += 1
 
     fig.supxlabel('Latitude (Degrees North)', fontsize='x-large')
