@@ -1,0 +1,17 @@
+name: SAMI3-GITM
+channels:
+  - conda-forge
+  - r
+dependencies:
+  - python==3.10.11
+  - scipy
+  - xarray
+  - tqdm
+  - cartopy
+  - numpy
+  - dask
+  - h5netcdf
+  - ipykernel
+  - ipywidgets
+  - matplotlib
+
