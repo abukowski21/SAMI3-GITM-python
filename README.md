@@ -1,4 +1,6 @@
 [![Documentation Status](https://readthedocs.org/projects/sami3-gitm-python/badge/?version=latest)](https://sami3-gitm-python.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/592826562.svg)](https://zenodo.org/badge/latestdoi/592826562)
+
 
 
 # SAMI3-GITM-python
