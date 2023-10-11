@@ -33,7 +33,6 @@ To ensure compatibility, an Anaconda environment is available. Install it with:
 > To create the environment with another name, edit the first line of `python-env.yml`, or use the `-n` flag.
 > Anaconda installation information can be found at [this link](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file)
 
-
 For users that do not have Anaconda, the required dependencies can also be installed with `pip`. While supported, this is not necessarily encouraged. Nonetheless, to set up the correct python environment with pip, run:
 
 `python -m pip install -r requirements.txt`
@@ -47,7 +46,7 @@ in geographic coordinates.
 
 To post-process model outputs into NetCDF format: `python PostProcessModelResults.py [args]`
 
-To generate plots with these postp-rocessed outputs: `python basic_plots_from_netcdf.py [args]`
+To generate plots with these post-processed outputs: `python basic_plots_from_netcdf.py [args]`
 
 Run any script with the `-h` flag to see the available arguments.
 
@@ -76,7 +75,7 @@ Good luck!
 - Contact the author with any questions, suggestions, issues, etc.
 - A number of examples of analysis scripts & other misc. usage is available in REFERENCE-examplenotebooks & ACTIVE_ANALYSIS. These will likely need to be moved to the root directory of the repository (and have their paths changed) to run. They are primarily posted to just show the capabilities & usage of the code-base, not for users to run & build on... but nothing is preventing you from doing that (other than missing the source data).
 
-## PULBICATIONS:
+## PUBLICATIONS:
 
 Source code for publications can be found in the src_PUBLICATIONS folder. A README in that folder will direct you where to look for the source scripts for each paper which has used this repository.
 
