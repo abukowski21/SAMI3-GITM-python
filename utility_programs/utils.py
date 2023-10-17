@@ -3,6 +3,8 @@ import numpy as np
 from datetime import datetime
 import pandas as pd
 import xarray as xr
+import glob
+import os
 
 
 def str_to_ut(in_str):
@@ -62,16 +64,49 @@ def make_ccmc_name(
 
 
 def get_var_names(dir, models):
-    """Print out a list of variable names.
-
-    Args:
-        dir (str: path-like): directory of outputs
-        models (str/list): name of model.
     """
+    Print out a list of variable names.
 
-    import xarray as xr
-    import os
-    from glob import glob
+    Parameters
+    ----------
+    dir : str
+        Directory of outputs.
+    models : str or list
+        Name of model.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    This function prints out a list of variable names for a given model or list of models. It does this by searching for
+    netCDF files in the specified directory that match the model name(s), opening the first file found, and printing out
+    the names of the data variables in the file.
+
+    Examples
+    --------
+    >>> get_var_names('/path/to/outputs', 'model1')
+    model1
+    <xarray.Dataset>
+    Dimensions:  (time: 10, x: 100, y: 100)
+    Coordinates:
+      * time     (time) datetime64[ns] 2000-01-01 2000-02-01 ... 2000-10-01
+      * x        (x) float64 0.0 1.0 2.0 3.0 4.0 ... 96.0 97.0 98.0 99.0 100.0
+      * y        (y) float64 0.0 1.0 2.0 3.0 4.0 ... 96.0 97.0 98.0 99.0 100.0
+    Data variables:
+        var1    (time, y, x) float64 ...
+        var2    (time, y, x) float64 ...
+        var3    (time, y, x) float64 ...
+        var4    (time, y, x) float64 ...
+        var5    (time, y, x) float64 ...
+        var6    (time, y, x) float64 ...
+        var7    (time, y, x) float64 ...
+        var8    (time, y, x) float64 ...
+        var9    (time, y, x) float64 ...
+        var10   (time, y, x) float64 ...
+
+    """
 
     if isinstance(models, str):
         models = [models]
@@ -85,27 +120,35 @@ def get_var_names(dir, models):
         ds.close()
 
 
-def autoread(file_list,
-             columns_to_return=None,
-             concat_dim='time',
-             ):
-    """Automatically read in a list of files and concatenate them.
-
-    Args:
-        file_list (str or list of paths): List of files to read in.
-        columns_to_return (str or list, optional):
-            Columns (data_vars) to return. Defaults to None.
-        concat_dim (str, optional): concat along this dimension.
-                No reason to ever change. Defaults to 'time'.
-
-    Raises:
-        ValueError: Column not found in files.
-
-    Returns:
-        xarray.Dataset: Dataset holding requested variable(s).
+def autoread(file_list, columns_to_return=None, concat_dim='time'):
     """
+    Automatically read in a list of files and concatenate them.
 
-    import xarray as xr
+    Parameters
+    ----------
+    file_list : str or list of paths
+        List of files to read in.
+    columns_to_return : str or list, optional
+        Columns (data_vars) to return. Defaults to None.
+    concat_dim : str, optional
+        Concatenate along this dimension. No reason to ever change. Defaults to 'time'.
+
+    Raises
+    ------
+    ValueError
+        Column not found in files.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset holding requested variable(s).
+
+
+    Notes
+    -----
+    This is not well supported. Best to use xarray.open_mfdataset() instead.
+
+    """
 
     if isinstance(file_list, str):
         file_list = [file_list]
@@ -117,15 +160,13 @@ def autoread(file_list,
             drops.append(v)
 
     if len(drops) == len(ds0.data_vars):
-        raise ValueError('No variables to return!\n '
-                         'You gave: {}\n'
-                         'and available variables are: {}'
-                         .format(columns_to_return, ds0.data_vars))
+        raise ValueError(
+            "No variables to return!\nYou gave: %s\nand available"
+            "variables are: %s " % (str(columns_to_return, str(ds0.data_vars))))
 
     ds = []
     for filename in file_list:
-        ds.append(xr.open_dataset(filename,
-                                  drop_variables=drops))
+        ds.append(xr.open_dataset(filename, drop_variables=drops))
 
     ds = xr.concat(ds, dim=concat_dim)
     return ds
@@ -186,9 +227,9 @@ def ut_to_lt(time_array, glon):
     return lt
 
 
-def add_lt_to_dataset(ds, 
-                      localtimes=[2,6,10,14,18,22],
-                      pbar=False):  
+def add_lt_to_dataset(ds,
+                      localtimes=[2, 6, 10, 14, 18, 22],
+                      pbar=False):
     """Add localtime as a coordinate to an existing dataset/dataarray
 
     Parameters
@@ -211,13 +252,12 @@ def add_lt_to_dataset(ds,
     ds : xarray.(dataset/dataarray)
         Same exact format as the input dataset, but with a new coordinate of 
         'localtime''
-    
-    """
 
+    """
 
     if isinstance(localtimes, int):
         # Make linspace of localtimes, 0-24, then chop at the ends.
-        localtimes = np.linspace(0, 24 + (24/localtimes), localtimes +1,
+        localtimes = np.linspace(0, 24 + (24/localtimes), localtimes + 1,
                                  endpoint=False)[:-1]
     else:
         localtimes = np.asarray(localtimes)
@@ -226,8 +266,8 @@ def add_lt_to_dataset(ds,
 
     elif 'localtime' not in ds.coords:
         ds['localtime'] = (('time', 'lon'),
-                            ut_to_lt([pd.Timestamp(i) for i in ds.time.values],
-                                     ds.lon))
+                           ut_to_lt([pd.Timestamp(i) for i in ds.time.values],
+                                    ds.lon))
     lt_dss = []
 
     # debug
@@ -247,20 +287,30 @@ def add_lt_to_dataset(ds,
 
 
 def hours_from_storm_onset_into_ds(ds, onset_ut):
-    """Calculate hours from an event and add to dataset.
-
-    :param ds: Dataset to add hours from storm onset to
-    :type ds: xarray.Dataset
-    :param onset_ut: Datetime object of storm/event
-    :type onset_ut: datetime.datetime
-    :raises ValueError: If multiple days are in the dataset
-    :return: Dataset with hours from storm onset added
-    :rtype: xarray.Dataset
     """
+    Calculate hours from an event and add to dataset.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset to add hours from storm onset to
+    onset_ut : datetime.datetime
+        Datetime object of storm/event
+
+    Raises
+    ------
+    ValueError
+        If multiple days are in the dataset
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with hours from storm onset added
+    """
+
     if ds.day[0] != ds.day[-1]:
         raise ValueError(' Does not yet support multiple days!')
     ds['HoursFromStormOnset'] = ((ds.time.dt.hour - (onset_ut.hour)) +
                                  (ds.time.dt.minute - (onset_ut.minute)) / 60)
 
     return ds
-

@@ -8,7 +8,8 @@ Process GITM & SAMI data to NetCDF format.
 - This can be adjusted with a custom grid, or use the individual model's
 post-processing routines for more fine control.
 
-
+This program is designed to be run from the command line, but can be imported
+and used as a module, though is not recommended.
 
 """
 

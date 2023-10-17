@@ -68,77 +68,89 @@ def do_interpolations(
     return_ds_too=False,
     num_workers=16,
 ):
-    """Interpolate SAMI (GITM functionality not fully tested) to either a
+    """
+    Interpolate SAMI (GITM functionality not fully tested) to either a
     standard geographic grid or to user-defined points.
 
-    :param sami_data_path: path to sami data.
-    :type sami_data_path: str, optional
-    :param dtime_sim_start: Start time of simulation. Required to read SAMI
-        data. Can be str (YYYYMMDD) or a pre-computed datetime object.
-    :type dtime_sim_start: str or datetime, optional
-    :param skip_time_check: (bool) If True, skip the check to make sure the
-        SAMI times are self-consistent (not always true...).
-    :type skip_time_check: bool, optional
-    :param out_lat_lon_alt: (numpy.array) Coordinates to interpolate to. Must
-        have dimenstions 3xN, where N is number of points. Will be converted to
-        cartesian coordinates. Lon and Lat in degrees, Alt in km above earth
-        surface.
-    :type out_lat_lon_alt: numpy.array, optional
-    :param out_path: (str) Path to save regridded to. Default is same as
-        MODEL_data_path.
-    :type out_path: str or os.PathLike, optional
-    :param out_runname: (str) Descriptive name for output file. Saved as:
+    Parameters
+    ----------
+    sami_data_path : str, optional
+        Path to sami data.
+    dtime_sim_start : str or datetime, optional
+        Start time of simulation. Required to read SAMI data. Can be str
+        (YYYYMMDD) or a pre-computed datetime object.
+    skip_time_check : bool, optional
+        If True, skip the check to make sure the SAMI times are self-consistent
+        (not always true...).
+    out_lat_lon_alt : numpy.array, optional
+        Coordinates to interpolate to. Must have dimenstions 3xN, where N is
+        number of points. Will be converted to cartesian coordinates. Lon and
+        Lat in degrees, Alt in km above earth surface.
+    out_path : str or os.PathLike, optional
+        Path to save regridded to. Default is same as MODEL_data_path.
+    out_runname : str, optional
+        Descriptive name for output file. Saved as:
         out_path/{out_runname + "SAMI_REGRID.nc"}.
-    :type out_runname: str, optional
-    :param sat_times: (list) List of times to interpolate to. Must be a list
-        of (python or pandas) datetime objects.
-    :type sat_times: list, optional
-    :param cols: (str/list-like) Which variables to interpolate. Default is
-        'all'. Can be any str from
+    sat_times : list, optional
+        List of times to interpolate to. Must be a list of (python or pandas)
+        datetime objects.
+    cols : str or list-like, optional
+        Which variables to interpolate. Default is 'all'. Can be any str from
         utility_programs.read_routines.SAMI.sami_og_vars.
-    :type cols: str or list-like, optional
-    :param show_progress: (bool) Show progress bars? Default: False.
-        Requires tqdm.
-    :type show_progress: bool, optional
-    :param gitm_data_path: (string) path to gitm data.
-    :type gitm_data_path: str, optional
-    :param gitm_output_each_var: (bool) If True, output each variable to a
-        separate file. Requires looping through the GITM output files multiple
-        times. If False, gitm_output_each_time must be True.
-    :type gitm_output_each_var: bool, optional
-    :param gitm_output_each_time: (bool) If True, output each time to a
-        separate file. Will run faster for all variables than
-        gitm_output_each_var, but will include variables the user does not
-        care for.
-    :type gitm_output_each_time: bool, optional
-    :param save_delauney: (bool) Option to save/read delauney weights from
-        file. It takes a while to compute them. Weight file is saved to the
-        sami_data_path path with a specification of the max_alt. Setting to
-        True allows the program to read weights as well as save them.
-    :type save_delauney: bool, optional
-    :param max_alt: (int) specify maximum altitude of data grid to feed in to
-        delauney calculations. Useful if you don't want to recalculate weights
-        and the interpolation is different from one already done.
-    :type max_alt: int, optional
-    :param engine: (str) Which engine to use when writing netcdf files. Default
-        is 'h5netcdf' but can cause some issues on some systems and some python
-        environments. Set to None to use default xarray engine.
-    :type engine: str, optional
-    :param return_ds_too: (bool) Set to True to also return the interpolated
-        dataset. !! Does not support multiple variables. !! ONLY works for SAMI
-        (currently).
-    :type return_ds_too: bool, optional
+    show_progress : bool, optional
+        Show progress bars? Default: False. Requires tqdm.
+    gitm_data_path : str, optional
+        Path to gitm data.
+    gitm_output_each_var : bool, optional
+        If True, output each variable to a separate file. Requires looping
+        through the GITM output files multiple times. If False,
+        gitm_output_each_time must be True.
+    gitm_output_each_time : bool, optional
+        If True, output each time to a separate file. Will run faster for all
+        variables than gitm_output_each_var, but will include variables the
+        user does not care for.
+    is_grid : bool, optional
+        Whether to interpolate to a standard geographic grid or to user-defined
+        points.
+    sami_mintime : int, optional
+        Minimum time to interpolate SAMI data to. Default is 0.
+    save_delauney : bool, optional
+        Option to save/read delauney weights from file. It takes a while to
+        compute them. Weight file is saved to the sami_data_path path with a
+        specification of the max_alt. Setting to True allows the program to
+        read weights as well as save them.
+    max_alt : int, optional
+        Specify maximum altitude of data grid to feed in to delauney
+        calculations. Useful if you don't want to recalculate weights and the
+        interpolation is different from one already done.
+    engine : str, optional
+        Which engine to use when writing netcdf files. Default is 'h5netcdf'
+        but can cause some issues on some systems and some python environments.
+        Set to None to use default xarray engine.
+    return_ds_too : bool, optional
+        Set to True to also return the interpolated dataset. !! Does not
+        support multiple variables. !! ONLY works for SAMI (currently).
+    num_workers : int, optional
+        Number of workers to use for parallel processing. Default is 16.
 
-    :raises ValueError: Only one of sami_data_path or gitm_data_path can be
-        specified at a time.
-    :raises ValueError: Must specify sat_times if not using a grid
-    :raises NotImplementedError: Interpolating from NetCDF files not yet
-        supported
-    :raises ValueError: No GITM files found in gitm_data_path. Go run pGITM and
-        rerun this with the .bin files.
-    :raises ValueError: Invalid column requested.
-    :return: Interpolated data. Optional, only returned if return_ds_too=True.
-    :rtype: xarray.Dataset
+    Raises
+    ------
+    ValueError
+        Only one of sami_data_path or gitm_data_path can be specified at a time.
+    ValueError
+        Must specify sat_times if not using a grid
+    NotImplementedError
+        Interpolating from NetCDF files not yet supported
+    ValueError
+        No GITM files found in gitm_data_path. Go run pGITM and rerun this with
+        the .bin files.
+    ValueError
+        Invalid column requested.
+
+    Returns
+    -------
+    xarray.Dataset
+        Interpolated data. Optional, only returned if return_ds_too=True.
     """
 
     if sami_data_path is not None and gitm_data_path is not None:
@@ -508,7 +520,7 @@ def do_interpolations(
                         #       darr['gitmbins'][
                         #           t, varnum, :, :].T.flatten().shape)
                         interp1=LinearNDInterpolator(
-                            tri,
+                            tri1,
                             darr['gitmbins'][0, varnum, :, :].T.flatten())
                         interp2 = LinearNDInterpolator(
                             tri2,
@@ -517,7 +529,7 @@ def do_interpolations(
                         ds[varname]=(
                             ('time', 'lon', 'lat', 'alt'), 
                             np.nanmean(np.array([
-                                interp1(out_lon_lat_alt.T).reshape(
+                                interp1(out_pts1.T).reshape(
                                     1,  # single time value
                                     len(lonout),
                                     len(latout),

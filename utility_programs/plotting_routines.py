@@ -12,56 +12,64 @@ from scipy.interpolate import LinearNDInterpolator, interp1d
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 
 
-def make_a_keo(
-        arr,
-        title=None,
-        cbarlims=[None, None],
-        cbar_name=None,
-        y_label="Latitude (deg)",
-        x_label="Index of Time-step (relative to plot start)",
-        p_extent=None,
-        save_or_show="save",
-        cmap='viridis',
-        fname=None,
-        ax=None,
-        ylims=None,
-        OVERWRITE=False,
-        **kwargs):
-    """Generate a keogram plot from a data array.
+def make_a_keo(arr,
+               title=None,
+               cbarlims=[None, None],
+               cbar_name=None,
+               y_label="Latitude (deg)",
+               x_label="Index of Time-step (relative to plot start)",
+               p_extent=None,
+               save_or_show="save", cmap='viridis',
+               fname=None,
+               ax=None,
+               ylims=None,
+               OVERWRITE=False,
+               **kwargs):
+    """
+    Generate a keogram plot from a data array.
 
-    :param arr: Data array to be plotted
-    :type arr: xarray DataArray
-    :param title: Title of plot, defaults to None
-    :type title: str, optional
-    :param cbarlims: Colorbar limits, Defaults to [None, None] (automatic)
-    :type cbarlims: list, optional
-    :param cbar_name: Label for colorbar, defaults to None
-    :type cbar_name: srt, optional
-    :param y_label: Y-axis label, defaults to "Latitude (deg)"
-    :type y_label: str, optional
-    :param x_label: Label for x-axis, defaults to 
-        "Index of Time-step (relative to plot start)"
-    :type x_label: str, optional
-    :param y_label: Plot extent. Set to 0 for auto.
-    :type y_label: list-like, optional
-    :param save_or_show: Save, show, or return plots? Defaults to "save"
-    :type save_or_show: str, optional
-    :param cmap: Colormap to use to plot, defaults to 'viridis'
-    :type cmap: str, optional
-    :param fname: Filename to save plot to, defaults to None
-    :type fname: str, optional
-    :param ax: If plotting on an existing axis, specify it here,
-        defaults to None
-    :type ax: Matplotlib axes, optional
-    :param ylims: Limits of y axis, defaults to None
-    :type ylims: int, optional
-    :param OVERWRITE: Overwrite existing plot, defaults to False
-    :type OVERWRITE: bool, optional
-    :raises ValueError: If fname exists and OVERWRITE is False
-    :raises ValueError: If save_or_show is not "save", "show", or "return"
-    :raises ValueError: If fname is not given when save_or_show is "save"
-    :return: Data from imshow
-    :rtype: Matplotlib imshow object
+    Parameters
+    ----------
+    arr : xarray DataArray
+        Data array to be plotted
+    title : str, optional
+        Title of plot, defaults to None
+    cbarlims : list, optional
+        Colorbar limits, Defaults to [None, None] (automatic)
+    cbar_name : str, optional
+        Label for colorbar, defaults to None
+    y_label : str, optional
+        Y-axis label, defaults to "Latitude (deg)"
+    x_label : str, optional
+        Label for x-axis, defaults to "Index of Time-step (relative to plot start)"
+    p_extent : list-like, optional
+        Plot extent. Set to 0 for auto.
+    save_or_show : str, optional
+        Save, show, or return plots? Defaults to "save"
+    cmap : str, optional
+        Colormap to use to plot, defaults to 'viridis'
+    fname : str, optional
+        Filename to save plot to, defaults to None
+    ax : Matplotlib axes, optional
+        If plotting on an existing axis, specify it here, defaults to None
+    ylims : int, optional
+        Limits of y axis, defaults to None
+    OVERWRITE : bool, optional
+        Overwrite existing plot, defaults to False
+
+    Raises
+    ------
+    ValueError
+        If fname exists and OVERWRITE is False
+    ValueError
+        If save_or_show is not "save", "show", or "return"
+    ValueError
+        If fname is not given when save_or_show is "save"
+
+    Returns
+    -------
+    Matplotlib imshow object
+        Data from imshow
     """
     if fname is not None and os.path.exists(fname) and save_or_show == "save":
         if not OVERWRITE:
@@ -129,56 +137,61 @@ def make_a_keo(
         )
 
 
-def draw_map(
-        data_arr,
-        cbarlims=[None, None],
-        title=None,
-        ylims=None,
-        cbar_label=None,
-        y_label="Latitude (deg)",
-        x_label="Longitude (deg)",
-        save_or_show="save",
-        cmap='viridis',
-        ax=None,
-        fname=None,
-        OVERWRITE=False,
-        **kwargs):
-    """Draw a map of the data array.
+def draw_map(data_arr,
+             cbarlims=[None, None],
+             title=None, ylims=None,
+             cbar_label=None,
+             y_label="Latitude (deg)",
+             x_label="Longitude (deg)",
+             save_or_show="save",
+             cmap='viridis',
+             ax=None,
+             fname=None,
+             OVERWRITE=False,
+             **kwargs):
+    """
+    Draw a map of the data array.
 
-    :param data_arr: Data array to be plotted
-    :type data_arr: xarray DataArray
-    :param cbarlims: Colorbar limits as [vmin, vmax], defaults to None
-        (automatic limits)
-    :type cbarlims: list, optional
-    :param title: Title to draw, defaults to None
-    :type title: str, optional
-    :param ylims: Limits of y-axis [ymin, ymax], defaults to None
-    :type ylims: list, optional
-    :param cbar_label: Label of colorbar, defaults to None
-    :type cbar_label: str, optional
-    :param y_label: Label of y-axis, defaults to "Latitude (deg)"
-    :type y_label: str, optional
-    :param x_label: Label of x-axis, defaults to "Longitude (deg)"
-    :type x_label: str, optional
-    :param save_or_show: Save or show plots? Defaults to "save"
-    :type save_or_show: str, optional
-    :param cmap: Which matplotlib colormap to use, defaults to 'viridis'
-    :type cmap: str, optional
-    :param ax: If plotting on an existing axis, specify it here,
-        defaults to None
-    :type ax: Matplotlib axes, optional
-    :param fname: Filename when saving, defaults to None
-    :type fname: str, optional
-    :param plot_extent: Plot limits, not compatible with ylims,
-        defaults to [-180, 180, -90, 90]
-    :type plot_extent: list, optional
-    :param OVERWRITE: Overwrite existing files when saving, defaults to False
-    :type OVERWRITE: bool, optional
-    :raises ValueError: If fname exists and OVERWRITE is False
-    :raises ValueError: If save_or_show is not "save", "show", or "return"
-    :raises ValueError: If fname is not given when save_or_show is "save"
-    :return: Data from imshow
-    :rtype: Matplotlib imshow object
+    Parameters
+    ----------
+    data_arr : xarray DataArray
+        Data array to be plotted
+    cbarlims : list, optional
+        Colorbar limits as [vmin, vmax], defaults to None (automatic limits)
+    title : str, optional
+        Title to draw, defaults to None
+    ylims : list, optional
+        Limits of y-axis [ymin, ymax], defaults to None
+    cbar_label : str, optional
+        Label of colorbar, defaults to None
+    y_label : str, optional
+        Label of y-axis, defaults to "Latitude (deg)"
+    x_label : str, optional
+        Label of x-axis, defaults to "Longitude (deg)"
+    save_or_show : str, optional
+        Save or show plots? Defaults to "save"
+    cmap : str, optional
+        Which matplotlib colormap to use, defaults to 'viridis'
+    ax : Matplotlib axes, optional
+        If plotting on an existing axis, specify it here, defaults to None
+    fname : str, optional
+        Filename when saving, defaults to None
+    OVERWRITE : bool, optional
+        Overwrite existing files when saving, defaults to False
+
+    Raises
+    ------
+    ValueError
+        If fname exists and OVERWRITE is False
+    ValueError
+        If save_or_show is not "save", "show", or "return"
+    ValueError
+        If fname is not given when save_or_show is "save"
+
+    Returns
+    -------
+    Matplotlib imshow object
+        Data from imshow
     """
 
     if save_or_show == "save":
@@ -187,8 +200,8 @@ def draw_map(
                 raise ValueError("We cannot overwrite the file: " + str(fname))
 
     if ax is None and save_or_show != "return":
-        fig, ax = plt.subplots(
-            subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10, 5))
+        fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()},
+                               figsize=(10, 5))
 
     elif ax is None and save_or_show == "return":
         raise ValueError("Cannot return figure if ax is not given.")
@@ -200,18 +213,10 @@ def draw_map(
     ax.coastlines(zorder=3, color='black', alpha=1)
     ax.gridlines(color='black', linestyle='--', alpha=0.6)
 
-    data = ax.imshow(
-        data_arr.T,
-        cmap,
-        zorder=10,
-        alpha=0.8,
-        extent=[-180,180,-90,90],
-        vmin=cbarlims[0],
-        vmax=cbarlims[1],
-        interpolation="bicubic",
-        interpolation_stage="rgba",
-        **kwargs)
- 
+    data = ax.imshow(data_arr.T, cmap, zorder=10, alpha=0.8,
+                     extent=[-180, 180, -90, 90], vmin=cbarlims[0],
+                     vmax=cbarlims[1], interpolation="bicubic",
+                     interpolation_stage="rgba", **kwargs)
 
     if ylims is not None:
         plt.ylim(ylims)
@@ -255,10 +260,9 @@ def draw_map(
 
     else:
         if save_or_show != "return":
-            raise ValueError(
-                'save_or_show input is invalid. Accepted inputs are "save",',
-                '"show" or "return", you gave ',
-                save_or_show,)
+            raise ValueError('save_or_show input is invalid. '
+                             'Accepted inputs are "save", "show"'
+                             'or "return", you gave ', save_or_show)
 
 
 def draw_field_line_plot(x, y, z, title=None, interpolate=False,
@@ -268,48 +272,57 @@ def draw_field_line_plot(x, y, z, title=None, interpolate=False,
                          ax=None, cmap='viridis',
                          fname=None, save_or_show='save',
                          fpeak_col=None):
-    """Draw a plot of data along a single field line (longitude).
+    """
+    Draw a plot of data along a single field line (longitude).
 
-    :param x: X-axis data, or latitude
-    :type x: numpy array
-    :param y: Y-axis data, or altitude
-    :type y: numpy array
-    :param z: Z-axis (color) data, or data to be plotted
-    :type z: numpy array
-    :param title: Tiitle of generated plot, defaults to None
-    :type title: str, optional
-    :param interpolate: Interpolate the data (to the x-y grid),
-        defaults to False
-    :type interpolate: bool, optional
-    :param x_label: Label of x-axis, defaults to 'Mlat (Deg)'
-    :type x_label: str, optional
-    :param y_label: Label of y-axis, defaults to 'Altitude (km)'
-    :type y_label: str, optional
-    :param x_lims: Limits of x-axis, defaults to [-65, 65]
-    :type x_lims: list, optional
-    :param y_lims: Limits of y-axis, defaults to [0, 1200]
-    :type y_lims: list, optional
-    :param cbar_label: Label of colorbar, defaults to None
-    :type cbar_label: str, optional
-    :param cbar_lims: Limits of colorbar, defaults to None
-    :type cbar_lims: list, optional
-    :param ax: If plotting on an existing axis, specify it here,
-        defaults to None
-    :type ax: Matplotlib axes, optional
-    :param cmap: Which matplotlib colormap to use, defaults to 'viridis'
-    :type cmap: str, optional
-    :param fname: Filename when saving, defaults to None
-    :type fname: str, optional
-    :param save_or_show: Save or show plots? Defaults to "save"
-    :type save_or_show: str, optional
-    :param fpeak_col: To plot the F-peak location, give the latitude-altitude
-        coordinates here, defaults to None
-    :type fpeak_col: numpy array, optional
-    :raises ValueError: If fname exists and OVERWRITE is False
-    :raises ValueError: If save_or_show is not "save", "show", or "return"
-    :raises ValueError: If fname is not given when save_or_show is "save"
-    :return: Data from imshow
-    :rtype: Matplotlib imshow object
+    Parameters
+    ----------
+    x : numpy array
+        X-axis data, or latitude
+    y : numpy array
+        Y-axis data, or altitude
+    z : numpy array
+        Z-axis (color) data, or data to be plotted
+    title : str, optional
+        Tiitle of generated plot, by default None
+    interpolate : bool, optional
+        Interpolate the data (to the x-y grid), by default False
+    x_label : str, optional
+        Label of x-axis, by default 'Mlat (Deg)'
+    y_label : str, optional
+        Label of y-axis, by default 'Altitude (km)'
+    x_lims : list, optional
+        Limits of x-axis, by default [-65, 65]
+    y_lims : list, optional
+        Limits of y-axis, by default [0, 1200]
+    cbar_label : str, optional
+        Label of colorbar, by default None
+    cbar_lims : list, optional
+        Limits of colorbar, by default None
+    ax : Matplotlib axes, optional
+        If plotting on an existing axis, specify it here, by default None
+    cmap : str, optional
+        Which matplotlib colormap to use, by default 'viridis'
+    fname : str, optional
+        Filename when saving, by default None
+    save_or_show : str, optional
+        Save or show plots? Defaults to "save", by default 'save'
+    fpeak_col : numpy array, optional
+        To plot the F-peak location, give the latitude-altitude coordinates here, by default None
+
+    Raises
+    ------
+    ValueError
+        If fname exists and OVERWRITE is False
+    ValueError
+        If save_or_show is not "save", "show", or "return"
+    ValueError
+        If fname is not given when save_or_show is "save"
+
+    Returns
+    -------
+    Matplotlib imshow object
+        Data from imshow
     """
 
     if cbar_lims is None:
@@ -431,38 +444,45 @@ def panel_plot(da,
                tight_layout=False,
                cbar_label=None
                ):
-    """Plot a panel plot of a data array.
+    """
+    Plot a panel plot of a data array.
 
-    :param da: Data array to be plotted
-    :type da: xarray DataArray
-    :param x: X-axis data, defaults to 'time'
-    :type x: str, optional
-    :param y: Y-axis data, defaults to 'lat'
-    :type y: str, optional
-    :param wrap_col: Column to wrap around, defaults to 'lon'
-    :type wrap_col: str, optional
-    :param plot_vals: Values (of wrap_col) to plot, defaults to
+    Parameters
+    ----------
+    da : xr.DataArray
+        Data array to be plotted
+    x : str, optional
+        X-axis data, by default 'time'
+    y : str, optional
+        Y-axis data, by default 'lat'
+    wrap_col : str, optional
+        Column to wrap around, by default 'lon'
+    plot_vals : list, optional
+        Values (of wrap_col) to plot, by default
         [0, 45, 90, 135, 180, 225, 270, 315]
-    :type plot_vals: list, optional
-    :param do_map: Plot on a map? Defaults to False
-    :type do_map: bool, optional
-    :param col_wrap: How many columns to make, defaults to 4
-    :type col_wrap: int, optional
-    :param suptitle: Title of plot, defaults to None
-    :type suptitle: str, optional
-    :param vlims: Absolute value of colorbar limits, defaults to None (auto).
-    :type vlims: int, optional
-    :param cmap: Which matplotlib colormap to use, defaults to 'bwr'
-    :type cmap: str, optional
-    :param out_fname: Filename when saving, defaults to None
-    :type out_fname: str, optional
-    :param isel_plotvals: Set to true if the plot_vals are indices
-        rather than values, defaults to False
-    :type isel_plotvals: bool, optional
-    :param tight_layout: Use tight layout? Defaults to False
-    :type tight_layout: bool, optional
-    :param cbar_label: Label of colorbar, defaults to None
-    :type cbar_label: str, optional
+    do_map : bool, optional
+        Plot on a map?, by default False
+    col_wrap : int, optional
+        How many columns to make, by default 4
+    suptitle : str, optional
+        Title of plot, by default None
+    vlims : int, optional
+        Absolute value of colorbar limits, by default None (auto).
+    cmap : str, optional
+        Which matplotlib colormap to use, by default 'bwr'
+    out_fname : str, optional
+        Filename when saving, by default None
+    isel_plotvals : bool, optional
+        Set to true if the plot_vals are indices
+        rather than values, by default False
+    tight_layout : bool, optional
+        Use tight layout?, by default False
+    cbar_label : str, optional
+        Label of colorbar, by default None
+
+    Returns
+    -------
+    None
     """
 
     if suptitle is None:
@@ -471,7 +491,7 @@ def panel_plot(da,
         add_cbar = False
     else:
         add_cbar = True
-    
+
     if do_map:
         if isel_plotvals:
             p = da.isel({wrap_col: plot_vals}).plot(
@@ -549,48 +569,43 @@ def panel_with_lt(da,
                   y='lat',
                   wrap_col='lon',
                   lons=[0, 45, 90, 135, 180, 225, 270, 315],
-                  do_map=False,
                   col_wrap=4,
                   suptitle=None,
                   figsize=None,
                   vlims=None,
                   cmap='bwr',
                   out_fname=None,
-                  isel_plotvals=False,
                   tight_layout=False,):
-    """Plot a panel plot of a data array, with local time on the x-axis.
+    """
+    Plot a panel plot of a data array, with local time on the x-axis.
 
-    :param da: Data array to be plotted
-    :type da: xarray DataArray
-    :param x: X-axis data, defaults to 'time'
-    :type x: str, optional
-    :param y: Y-axis data, defaults to 'lat'
-    :type y: str, optional
-    :param wrap_col: Column to wrap around, defaults to 'lon'
-    :type wrap_col: str, optional
-    :param lons: Values (of wrap_col) to plot, defaults to
+    Parameters
+    ----------
+    da : DataArray
+        Data array to be plotted
+    x : str, optional
+        X-axis data, defaults to 'time'
+    y : str, optional
+        Y-axis data, defaults to 'lat'
+    wrap_col : str, optional
+        Column to wrap around, defaults to 'lon'
+    lons : list, optional
+        Values (of wrap_col) to plot, defaults to
         [0, 45, 90, 135, 180, 225, 270, 315]
-    :type lons: list, optional
-    :param do_map: Plot on a map? Defaults to False
-    :type do_map: bool, optional
-    :param col_wrap: How many columns to make, defaults to 4
-    :type col_wrap: int, optional
-    :param suptitle: Title of plot, defaults to None
-    :type suptitle: str, optional
-    :param figsize: Size of figure, defaults to None (automatic)
-    :type figsize: list, optional
-    :param vlims: Absolute value of colorbar limits, defaults to None
-        (automatic)
-    :type vlims: int, optional
-    :param cmap: Which matplotlib colormap to use, defaults to 'bwr'
-    :type cmap: str, optional
-    :param out_fname: Filename when saving, defaults to None
-    :type out_fname: str, optional
-    :param isel_plotvals: Set to true if the plot_vals are indices
-        rather than values, defaults to False
-    :type isel_plotvals: bool, optional
-    :param tight_layout: Use tight layout? Defaults to False
-    :type tight_layout: bool, optional
+    col_wrap : int, optional
+        How many columns to make, defaults to 4
+    suptitle : str, optional
+        Title of plot, defaults to None
+    figsize : list, optional
+        Size of figure, defaults to None (automatic)
+    vlims : int, optional
+        Absolute value of colorbar limits, defaults to None (automatic)
+    cmap : str, optional
+        Which matplotlib colormap to use, defaults to 'bwr'
+    out_fname : str, optional
+        Filename when saving, defaults to None
+    tight_layout : bool, optional
+        Use tight layout? Defaults to False
     """
 
     lons = np.array(lons).reshape(int(len(lons) / col_wrap), col_wrap)
@@ -645,31 +660,37 @@ def panel_with_lt(da,
         plt.close('all')
 
 
-def panel_of_dials(da, hemi_titles, times,
-                   time_titles=None,
-                   title=None,
-                   mask_dials=False,
-                   lon_labels=False,
-                   **plotargs):
-    """Plot a panel of polar dials.
+def panel_of_dials(da, hemi_titles, times, time_titles=None, title=None,
+                   mask_dials=False, lon_labels=False, **plotargs):
+    """
+    Plot a panel of polar dials.
 
-    :param da: Data array to be plotted
-    :type da: xarray DataArray
-    :param hemi_titles: Titles of each hemisphere
-    :type hemi_titles: list, optional
-    :param times: Times to plot
-    :type times: list, optional
-    :param time_titles: Titles of each time, defaults to None
-    :type time_titles: list, optional
-    :param title: Title of plot, defaults to None
-    :type title: str, optional
-    :param mask_dials: Mask values below this value, defaults to False
-    :type mask_dials: int, optional
-    :param lon_labels: Show longitude labels, defaults to False
-    :type lon_labels: bool, optional
-    :raises ValueError: If hemi_titles and times do not match in shape
-    :return: Data from imshow (a figure)
-    :rtype: Matplotlib imshow object
+    Parameters
+    ----------
+    da : xarray DataArray
+        Data array to be plotted.
+    hemi_titles : list, optional
+        Titles of each hemisphere.
+    times : list, optional
+        Times to plot.
+    time_titles : list, optional
+        Titles of each time, defaults to None.
+    title : str, optional
+        Title of plot, defaults to None.
+    mask_dials : int, optional
+        Mask values below this value, defaults to False.
+    lon_labels : bool, optional
+        Show longitude labels, defaults to False.
+
+    Returns
+    -------
+    Matplotlib imshow object
+        Data from imshow (a figure).
+
+    Raises
+    ------
+    ValueError
+        If hemi_titles and times do not match in shape.
     """
 
     if time_titles is not None:
@@ -769,35 +790,38 @@ def loop_panels(da,
                 lon_labels=False,
                 mask_dials=False,
                 **plotargs):
-    """When making panel plots, this script is easier to interface with.
+    """
+    When making panel plots, this script is easier to interface with.
 
-    :param da: Data array to be plotted
-    :type da: xarray DataArray
-    :param ncols: Number of columns to plot
-    :type ncols: int
-    :param start_time: Start time of plot to be converted to pd.Timestamp...
-        Format as 'YYYY-MM-DD HH:MM:SS'; '2011-05-20' is acceptable (00:00 UT)
-    :type start_time: str
-    :param time_delta: Time between each plot, defaults to '1 hour'
-    :type time_delta: str, optional
-    :param sel_criteria: Criteria to select data (i.e. plotting multiple
-        altitudes), defaults to None
-    :type sel_criteria: dict, optional
-    :param suptitle: Title of plot, defaults to None
-    :type suptitle: str, optional
-    :param title: Title of each subplot, defaults to None
-    :type title: str, optional
-    :param col_names: Name(s) of column(s) to plot, defaults to None
-        (use this when plotting a DataSet instead of a DataArray)
-    :type col_names: list of str, optional
-    :param save: Filename to save plot to, defaults to None
-    :type save: str, optional
-    :param lon_labels: Show longitude labels, defaults to False
-    :type lon_labels: bool, optional
-    :param mask_dials: Mask values below this value, defaults to False
-    :type mask_dials: int, optional
-    :return: Data from imshow (a figure)
-    :rtype: Matplotlib imshow object
+    Parameters
+    ----------
+    da : xarray DataArray
+        Data array to be plotted.
+    ncols : int
+        Number of columns to plot.
+    start_time : str
+        Start time of plot to be converted to pd.Timestamp. Format as 'YYYY-MM-DD HH:MM:SS'; '2011-05-20' is acceptable (00:00 UT).
+    time_delta : str, optional
+        Time between each plot, defaults to '1 hour'.
+    sel_criteria : dict, optional
+        Criteria to select data (i.e. plotting multiple altitudes), defaults to None.
+    suptitle : str, optional
+        Title of plot, defaults to None.
+    title : str, optional
+        Title of each subplot, defaults to None.
+    col_names : list of str, optional
+        Name(s) of column(s) to plot, defaults to None (use this when plotting a DataSet instead of a DataArray).
+    save : str, optional
+        Filename to save plot to, defaults to None.
+    lon_labels : bool, optional
+        Show longitude labels, defaults to False.
+    mask_dials : int, optional
+        Mask values below this value, defaults to False.
+
+    Returns
+    -------
+    Matplotlib imshow object
+        Data from imshow (a figure).
     """
 
     hemititles = [['North', 'South'] for i in range(ncols)]
@@ -876,56 +900,50 @@ def loop_panels(da,
                     return fig
 
 
-def custom_panels_keos(da,
-                       numplots=8,
-                       sel_col='localtime',
-                       max_per_row=4,
-                       suptitle=None,
-                       vmin=None,
-                       vmax=None,
-                       sharex=True,
-                       sharey=True,
-                       x='time',
-                       cmap='rainbow',
-                       one_colorbars=True,
-                       colorbar_label=''):
-    """A acript to make a panel of keogram-like plots.
+def custom_panels_keos(da, numplots=8, sel_col='localtime', max_per_row=4,
+                       suptitle=None, vmin=None, vmax=None, sharex=True,
+                       sharey=True, x='time', cmap='rainbow',
+                       one_colorbars=True, colorbar_label=''):
+    """
+    A script to make a panel of keogram-like plots.
 
-    :param da: Data array to be plotted
-    :type da: xarray DataArray
-    :param numplots: Number of plots to make, defaults to 8
-    :type numplots: int, optional
-    :param sel_col: Column to select data from, defaults to 'localtime'
-    :type sel_col: str, optional
-    :param max_per_row: Maximum number of plots per row, defaults to 4
-    :type max_per_row: int, optional
-    :param suptitle: Title of plot, defaults to None
-    :type suptitle: str, optional
-    :param vmin: Minimum value of colorbar, defaults to None
-    :type vmin: int, optional
-    :param vmax: Maximum value of colorbar, defaults to None
-    :type vmax: int, optional
-    :param sharex: Share x-axis? Defaults to True
-    :type sharex: bool, optional
-    :param sharey: Share y-axis? Defaults to True
-    :type sharey: bool, optional
-    :param x: X-axis data, defaults to 'time'
-    :type x: str, optional
-    :param cmap: Which matplotlib colormap to use, defaults to 'rainbow'
-    :type cmap: str, optional
-    :param one_colorbars: Use one colorbar for all plots? Defaults to True
-    :type one_colorbars: bool, optional
-    :param colorbar_label: Label of colorbar, defaults to ''
-    :type colorbar_label: str, optional
-    :return: Data from imshow (a figure)
-    :rtype: Matplotlib imshow object
+    Parameters
+    ----------
+    da : xarray DataArray
+        Data array to be plotted.
+    numplots : int, optional
+        Number of plots to make, by default 8.
+    sel_col : str, optional
+        Column to select data from, by default 'localtime'.
+    max_per_row : int, optional
+        Maximum number of plots per row, by default 4.
+    suptitle : str, optional
+        Title of plot, by default None.
+    vmin : int, optional
+        Minimum value of colorbar, by default None.
+    vmax : int, optional
+        Maximum value of colorbar, by default None.
+    sharex : bool, optional
+        Share x-axis?, by default True.
+    sharey : bool, optional
+        Share y-axis?, by default True.
+    x : str, optional
+        X-axis data, by default 'time'.
+    cmap : str, optional
+        Which matplotlib colormap to use, by default 'rainbow'.
+    one_colorbars : bool, optional
+        Use one colorbar for all plots?, by default True.
+    colorbar_label : str, optional
+        Label of colorbar, by default ''.
+
+    Returns
+    -------
+    Matplotlib imshow object
+        Data from imshow (a figure).
     """
 
     if sel_col == 'localtime' and sel_col not in da.coords:
-        # print('adding')
         da = add_lt_to_dataset(da, localtimes=90)
-    # print(da.coords)
-    # return da
 
     nrows = int(np.ceil(numplots / max_per_row))
     ncols = max_per_row
@@ -994,70 +1012,70 @@ def map_and_dials(dial_da,
                   several_datasets=False,
                   times_datasets=None,
                   latlon_labeled=False):
-    """This script will make a plot of a map and polar dials for
-    several timesteps.
+    """
+    This script will make a plot of a map and polar dials for several timesteps.
 
-    :param dial_da: Data array to be plotted on dials
-    :type dial_da: xarray DataArray
-    :param total: Number of plots to make
-    :type total: int
-    :param map_da: Data array to be plotted on map, defaults to None
-    :type map_da: xarray DataArray, optional
-    :param max_per_row: Maximum number of plots per row, defaults to 3
-    :type max_per_row: int, optional
-    :param isel_dials: Indices to select dial data from, defaults to None
-    :type isel_dials: dict, optional
-    :param sel_dials: Criteria to select dial data from, defaults to None
-    :type sel_dials: dict, optional
-    :param isel_map: Indices to select map data from, defaults to None
-    :type isel_map: dict, optional
-    :param sel_map: Criteria to select map data from, defaults to None
-    :type sel_map: dict, optional
-    :param quiver_map_cols: Columns to plot on map as quiver,
-        defaults to None (no quivers)
-    :type quiver_map_cols: str, optional
-    :param suptitle: Title of plot, defaults to None
-    :type suptitle: str, optional
-    :param suptitlesize: Size of suptitle, defaults to 'large'
-    :type suptitlesize: str, optional
-    :param time_start: Start time of plot, defaults to None
-    :type time_start: str, optional
-    :param time_delta: Time between each plot, defaults to '1 hour'
-    :type time_delta: str, optional
-    :param save: Filename to save plot to, defaults to None (don't save)
-    :type save: str, optional
-    :param mask_dials: Mask values below this value, defaults to 0.001
-    :type mask_dials: float, optional
-    :param mask_maps: Mask values below this value, defaults to False
-    :type mask_maps: bool, optional
-    :param dial_cmap: Which matplotlib colormap to use for dials,
-        defaults to 'rainbow'
-    :type dial_cmap: str, optional
-    :param map_cmap: Which matplotlib colormap to use for maps,
-        defaults to 'rainbow'
-    :type map_cmap: str, optional
-    :param vmin_dial: Minimum value of dial colorbar, defaults to None
-    :type vmin_dial: int, optional
-    :param vmax_dial: Maximum value of dial colorbar, defaults to None
-    :type vmax_dial: int, optional
-    :param dial_kwargs: Keyword arguments for dial plot, defaults to {}
-    :type dial_kwargs: dict, optional
-    :param map_kwargs: Keyword arguments for map plot, defaults to {}
-    :type map_kwargs: dict, optional
-    :param vmin_map: Minimum value of map colorbar, defaults to None
-    :type vmin_map: int, optional
-    :param vmax_map: Maximum value of map colorbar, defaults to None
-    :type vmax_map: int, optional
-    :param several_datasets: Plot several datasets on the same plot,
-        defaults to False
-    :type several_datasets: bool, optional
-    :param times_datasets: Times to plot for each dataset, defaults to None
-    :type times_datasets: list of str, optional
-    :param latlon_labeled: Show latitude and longitude labels,
-        defaults to False
-    :type latlon_labeled: bool, optional
-    :return: Data from imshow (a figure)
-    :rtype: Matplotlib imshow object
+    Parameters
+    ----------
+    dial_da : xarray DataArray
+        Data array to be plotted on dials
+    total : int
+        Number of plots to make
+    map_da : xarray DataArray, optional
+        Data array to be plotted on map, defaults to None
+    max_per_row : int, optional
+        Maximum number of plots per row, defaults to 3
+    isel_dials : dict, optional
+        Indices to select dial data from, defaults to None
+    sel_dials : dict, optional
+        Criteria to select dial data from, defaults to None
+    isel_map : dict, optional
+        Indices to select map data from, defaults to None
+    sel_map : dict, optional
+        Criteria to select map data from, defaults to None
+    quiver_map_cols : str, optional
+        Columns to plot on map as quiver, defaults to None (no quivers)
+    suptitle : str, optional
+        Title of plot, defaults to None
+    suptitlesize : str, optional
+        Size of suptitle, defaults to 'large'
+    time_start : str, optional
+        Start time of plot, defaults to None
+    time_delta : str, optional
+        Time between each plot, defaults to '1 hour'
+    save : str, optional
+        Filename to save plot to, defaults to None (don't save)
+    mask_dials : float, optional
+        Mask values below this value, defaults to 0.001
+    mask_maps : bool, optional
+        Mask values below this value, defaults to False
+    dial_cmap : str, optional
+        Which matplotlib colormap to use for dials, defaults to 'rainbow'
+    map_cmap : str, optional
+        Which matplotlib colormap to use for maps, defaults to 'rainbow'
+    vmin_dial : int, optional
+        Minimum value of dial colorbar, defaults to None
+    vmax_dial : int, optional
+        Maximum value of dial colorbar, defaults to None
+    dial_kwargs : dict, optional
+        Keyword arguments for dial plot, defaults to {}
+    map_kwargs : dict, optional
+        Keyword arguments for map plot, defaults to {}
+    vmin_map : int, optional
+        Minimum value of map colorbar, defaults to None
+    vmax_map : int, optional
+        Maximum value of map colorbar, defaults to None
+    several_datasets : bool, optional
+        Plot several datasets on the same plot, defaults to False
+    times_datasets : list of str, optional
+        Times to plot for each dataset, defaults to None
+    latlon_labeled : bool, optional
+        Show latitude and longitude labels, defaults to False
+
+    Returns
+    -------
+    Matplotlib imshow object
+        Data from imshow (a figure)
     """
 
     # setup data:

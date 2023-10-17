@@ -12,12 +12,18 @@ import pandas as pd
 
 
 def epoch_to_datetime(epoch_time):
-    """Convert from epoch seconds to datetime.
+    """
+    Convert from epoch seconds to datetime.
 
-    :param epoch_time: Seconds since 1 Jan 1965
-    :type epoch_time: float
-    :return: Datetime object corresponding to `epoch_time`
-    :rtype: datetime
+    Parameters
+    ----------
+    epoch_time : float
+        Seconds since 1 Jan 1965
+
+    Returns
+    -------
+    datetime
+        Datetime object corresponding to `epoch_time`
     """
 
     dtime = dt.datetime(1965, 1, 1) + dt.timedelta(seconds=epoch_time)
@@ -26,12 +32,18 @@ def epoch_to_datetime(epoch_time):
 
 
 def datetime_to_epoch(dtime):
-    """Convert datetime to epoch seconds.
+    """
+    Convert datetime to epoch seconds.
 
-    :param dtime: Datetime object
-    :type dtime: datetime
-    :return: Seconds since 1 Jan 1965
-    :rtype: float
+    Parameters
+    ----------
+    dtime : datetime
+        Datetime object
+
+    Returns
+    -------
+    float
+        Seconds since 1 Jan 1965
     """
 
     epoch_time = (dtime - dt.datetime(1965, 1, 1)).total_seconds()
@@ -40,17 +52,23 @@ def datetime_to_epoch(dtime):
 
 
 def ut_to_lt(time_array, glon):
-    """Compute local time from date and longitude.
+    """
+    Compute local time from date and longitude.
 
-    :param time_array: Array-like of datetime objects in universal time
-    :type time_array: array-like
-    :param glon: Float or array-like of floats containing geographic longitude
+    Parameters
+    ----------
+    time_array : array-like
+        Array-like of datetime objects in universal time
+    glon : array-like or float
+        Float or array-like of floats containing geographic longitude
         in degrees. If single value or array of a different shape, all
         longitudes are applied to all times. If the shape is the same as
         `time_array`, the values are paired in the SLT calculation.
-    :type glon: array-like or float
-    :return: List of local times in hours
-    :rtype: array of floats
+
+    Returns
+    -------
+    array of floats
+        List of local times in hours
     """
 
     time_array = np.asarray(time_array)
@@ -84,14 +102,20 @@ def ut_to_lt(time_array, glon):
 
 
 def lt_to_ut(lt, glon):
-    """Compute universal time in hours from local time and longitude.
+    """
+    Compute universal time in hours from local time and longitude.
 
-    :param lt: Local time(s) in hours
-    :type lt: float or array-like
-    :param glon: Geographic longitude(s) in degrees.
-    :type glon: float or array-like
-    :return: Universal time in hours
-    :rtype: float
+    Parameters
+    ----------
+    lt : float or array-like
+        Local time(s) in hours
+    glon : float or array-like
+        Geographic longitude(s) in degrees.
+
+    Returns
+    -------
+    float
+        Universal time in hours
     """
     uth = np.asarray(lt) - np.asarray(glon) / 15.0
 
@@ -103,12 +127,18 @@ def lt_to_ut(lt, glon):
 
 
 def calc_time_shift(utime):
-    """Calculate the time shift needed to orient a polar dial.
+    """
+    Calculate the time shift needed to orient a polar dial.
 
-    :param utime: Datetime object of the time we're plotting
-    :type utime: datetime
-    :return: Time shift in degrees
-    :rtype: float
+    Parameters
+    ----------
+    utime : datetime
+        Datetime object of the time we're plotting
+
+    Returns
+    -------
+    float
+        Time shift in degrees
     """
 
     uth = utime.hour + (utime.minute + (

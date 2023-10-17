@@ -37,10 +37,9 @@ def main(
         skip_time_check=False,
         progress_bar=True,
         num_workers=16):
-    
     """
     Interpolate SAMI3 outputs to a new grid.
-    
+
     Parameters
     ----------
     sami_data_path : str or os.pathLike
@@ -72,7 +71,7 @@ def main(
     sami_mintime : int, optional
         Minimum time to read in SAMI data. Defaults to 0. Use this to skip the
         first few hours of SAMI data and save time & memory.
-    run_name : Optional[str], optional
+    run_name : str optional
         Name of the run, used to name the output file.
         run_name='test' will generate a file called 'test_SAMI_REGRID.nc'.
         Defaults to None.
@@ -87,16 +86,17 @@ def main(
         Number of workers to use when interpolating. Defaults to 16.
         (16 workers => 1.3 GB of RAM/10 time-steps of SAMI at 80/72/256
         resolution)
+
     Raises
     ------
     ValueError
         If out_coord_file does not have the required variables.
+
     Returns
     -------
     None
-    
+
     """
-   
 
     if out_path is None:
         out_path = sami_data_path
@@ -130,7 +130,7 @@ def main(
                           show_progress=progress_bar,
                           num_workers=num_workers,
                           )
-        
+
     else:
         # read in the file
         # try:
@@ -185,13 +185,13 @@ if __name__ == '__main__':
                         help='Skip verifying accuracy of times. Useful when'
                         ' SAMI has been configured to skip some outputs '
                         '(hrpr != 0)')
-    
+
     parser.add_argument('--sami_mintime', type=int, default=0,
-                       help='Set this to help with memory management (especially '
-                       'when using aarons_mod). Setting this to 5, for example, '
-                       'will skip the first 5 output times of the SAMI run. '
-                       'This is relevant even without aarons_mod as the first 12-24 '
-                       'hours of SAMI outputs are not to be trusted.')
+                        help='Set this to help with memory management (especially '
+                        'when using aarons_mod). Setting this to 5, for example, '
+                        'will skip the first 5 output times of the SAMI run. '
+                        'This is relevant even without aarons_mod as the first 12-24 '
+                        'hours of SAMI outputs are not to be trusted.')
 
     parser.add_argument('--custom_grid', action='store_true', default=False,
                         help='Launches interactive script to set custom grid.'
@@ -214,14 +214,14 @@ if __name__ == '__main__':
                         # 'at 80/72/256 resolution)'
                         )
 
-    # parser.add_argument('--aarons_mod', action='store_true',
-    #                     help='Interpolating SAMI data is hard. Through a lot of '
-    #                     'testing, I found that you can interpolate to 2x '
-    #                     'resolution and then coarsen the results and things look '
-    #                     'normal. If you notice bad stuff in the regridded files, '
-    #                     'use this option. \n'
-    #                     'This will take a lot memory and time than default runs, '
-    #                     'so be careful!')
+# parser.add_argument('--aarons_mod', action='store_true',
+#                     help='Interpolating SAMI data is hard. Through a lot of '
+#                     'testing, I found that you can interpolate to 2x '
+#                     'resolution and then coarsen the results and things look '
+#                     'normal. If you notice bad stuff in the regridded files, '
+#                     'use this option. \n'
+#                     'This will take a lot memory and time than default runs, '
+#                     'so be careful!')
 
     args = parser.parse_args()
 

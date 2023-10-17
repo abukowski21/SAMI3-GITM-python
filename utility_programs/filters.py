@@ -8,22 +8,41 @@ def make_fits(da,
               lims=[40, 85],
               order=1,
               percent=True):
-    """Calculate bandpass filter for all data previously read in.
+    """Calculate bandpass filter for all data previously read in,
     this is a wrapper for the scipy bandpass filter.
+    
+    Parameters
+    ----------
+    da : xarray DataArray
+        DataArray to be filtered
+    freq : int, optional
+        Output frequency, units must be same as lims, by default 5
+    lims : list, optional
+        Limits of bandpass filter, by default [40, 85]
+    order : int, optional
+        Order of the filter, by default 1
+    percent : bool, optional
+        Return DataArray as percent over background?
+        Set to False to return the absolute perturbation over background.
+        Defaults to True.
+        
+    Returns
+    -------
+    xarray DataArray
+        DataArray with filtered data.
+        
+    Notes
+    -----
+    The bandpass filter is applied to the data using the scipy.signal.filtfilt
+    function. This function is a forward-backward filter, meaning that the
+    data is filtered in both the forward and reverse directions. This results
+    in zero phase shift in the filtered data.
 
-    :param da: DataArray to be filtered
-    :type da: xarray DataArray
-    :param freq: Output frequency, units must be same as lims, defaults to 5
-    :type freq: int, optional
-    :param lims: Limits of bandpass filter, defaults to [40, 85]
-    :type lims: list, optional
-    :param order: Order of the filter, defaults to 1
-    :type order: int, optional
-    :param percent: Return DataArray as percent over background?
-        Set to False to return the fit. Defaults to True
-    :type percent: bool, optional
-    :return: Filtered data
-    :rtype: _xarray.DataArray
+    The bandpass filter is designed using the scipy.signal.butter function.
+    This function designs a Butterworth filter, which is a type of infinite
+    impulse response filter. The filter is designed using the specified
+    order, and the cutoff frequencies are calculated from the specified
+    limits and the sampling frequency.
     """
 
     # Define sampling frequency and limits in minutes
@@ -54,12 +73,18 @@ def make_fits(da,
 
 
 def remove_outliers(array):
-    """Remove outliers from an array by replacing them with the median value.
-
-    :param array: Data to be filtered
-    :type array: numpy array or xarray DataArray
-    :return: Filtered data
-    :rtype: numpy array or xarray DataArray
+    """ Remove outliers from an array by replacing them with the median value.
+    
+    Parameters
+    ----------
+    array : numpy array or xarray DataArray
+        Data to be filtered
+        
+    Returns
+    -------
+    numpy array or xarray DataArray
+        Filtered data
+        
     """
 
     arr2 = array.copy()
@@ -76,22 +101,28 @@ def remove_outliers(array):
 
 def filter_xarray_DA_diff(da, dim='time', order=2, percent=False,
                           label='lower'):
-    """Calculate the difference of a DataArray along a given dimension.
-
-    :param da: DataArray to be filtered
-    :type da: xarray DataArray
-    :param dim: Dimension over which to calculate the diff, defaults to 'time'
-    :type dim: str, optional
-    :param order: Order of the diff, defaults to 2
-    :type order: int, optional
-    :param percent: Return the percent over diff (False),
-        or just return the fit (True), defaults to False
-    :type percent: bool, optional
-    :param label: Label values to the 'lower' or 'upper' bound,
-        defaults to 'lower'
-    :type label: str, optional
-    :return: Filtered data
-    :rtype: _xarray.DataArray
+    
+    """ Calculate the difference of a DataArray along a given dimension.
+    
+    Parameters
+    ----------
+    da : xarray DataArray
+        DataArray to be filtered
+    dim : str, optional
+        Dimension over which to calculate the diff, by default 'time'
+    order : int, optional
+        Order of the diff, by default 2
+    percent : bool, optional
+        Return the percent over diff (False), or just return the fit (True),
+        by default False
+    label : str, optional
+        Label values to the 'lower' or 'upper' bound, by default 'lower'
+        
+    Returns
+    -------
+    xarray DataArray
+        Filtered data
+        
     """
 
     if percent:
