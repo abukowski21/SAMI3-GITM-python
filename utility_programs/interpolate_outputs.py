@@ -34,7 +34,7 @@ def interpolate_var(tri1, tri2, outpts1, outpts2,
     This is a refactor of the SAMI interps so that we can thread it.
 
     """
-    np.seterr(all="ignore")
+    
 
     interp1=LinearNDInterpolator(
                         tri1,
@@ -42,8 +42,9 @@ def interpolate_var(tri1, tri2, outpts1, outpts2,
                         .flatten())
     tmp1=interp1(outpts1).reshape(out_shape)
     interp2=LinearNDInterpolator(tri2, indata.T[mask].flatten())
-    return np.nanmean([tmp1, interp2(outpts2).reshape(out_shape)],
-                    axis=0)
+    with np.seterr(all="ignore"):
+        return np.nanmean([tmp1, interp2(outpts2).reshape(out_shape)],
+                        axis=0)
 
 
 def do_interpolations(
