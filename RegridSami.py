@@ -37,57 +37,66 @@ def main(
         skip_time_check=False,
         progress_bar=True,
         num_workers=16):
+    
     """
     Interpolate SAMI3 outputs to a new grid.
-
-    :param sami_data_path: Path to SAMI3 output files.
-    :type sami_data_path: str or os.pathLike
-    :param out_path: Location to save output files. Defaults to
-        sami_data_path.
-    :type out_path: str or os.pathLike, optional
-    :param save_weights: Whether or not to save Delauney Triangulation.
-        Defaults to True.
-    :type save_weights: bool, optional
-    :param cols: Columns to read data from. Can be string or list-like.
+    
+    Parameters
+    ----------
+    sami_data_path : str or os.pathLike
+        Path to SAMI3 output files.
+    out_path : str or os.pathLike, optional 
+        Location to save output files. Defaults to sami_data_path.
+    save_weights : bool, optional
+        Whether or not to save Delauney Triangulation. Defaults to True.
+    cols : str or list-like, optional
+        Columns to read data from. Can be string or list-like. 
         Defaults to 'all'.
-    :type cols: str or list-like, optional
-    :param dtime_sim_start: Datetime of simulation start. Required to read raw
-        SAMI outputs. Defaults to None.
-    :type dtime_sim_start: datetime
-    :param lat_step: Integer step to use in output grid (deg). Defaults to 2.
-    :type lat_step: int, optional
-    :param lon_step: Integer step to use in output grid (deg). Defaults to 4.
-    :type lon_step: int, optional
-    :param alt_step: Integer step to use in output grid (in km).
-        Defaults to 50.
-    :type alt_step: int, optional
-    :param minmax_alt: Min & Max altitude to output in km. Defaults to
-        [100, 2200].
-    :type minmax_alt: list, optional
-    :param out_coord_file: Output coordinates from a file instead of using the
-        default grid. Cannot be used with finerinterps. Defaults to None (no
-        coordinate file). ** MUST HAVE "time, lat, lon, alt" COLUMNS **
+    dtime_sim_start : datetime, optional
+        Datetime of simulation start. Required to read raw SAMI outputs.
+        Defaults to None.
+    lat_step : int, optional
+        Integer step to use in output grid (deg). Defaults to 2.
+    lon_step : int, optional
+        Integer step to use in output grid (deg). Defaults to 4.
+    alt_step : int, optional
+        Integer step to use in output grid (in km). Defaults to 50.
+    minmax_alt : list, optional
+        Min & Max altitude to output in km. Defaults to [100, 2200].
+    out_coord_file : str or os.pathLike, optional
+        Output coordinates from a file instead of using the default grid.
+        Defaults to None (no coordinate file).
+        ** MUST HAVE "time, lat, lon, alt" COLUMNS **
         Use this to specify a user-defined grid or to interpolate to a set of
         satellite coordinates.
-    :type out_coord_file: str or os.pathLike, optional
-    :param sami_mintime: Minimum time to read in SAMI data. Defaults to 0. Use
-        this to skip the first few hours of SAMI data and save time & memory.
-    :type sami_mintime: int, optional
-    :param run_name: Name of the run, used to name the output file.
+    sami_mintime : int, optional
+        Minimum time to read in SAMI data. Defaults to 0. Use this to skip the
+        first few hours of SAMI data and save time & memory.
+    run_name : Optional[str], optional
+        Name of the run, used to name the output file.
         run_name='test' will generate a file called 'test_SAMI_REGRID.nc'.
         Defaults to None.
-    :type run_name: Optional[str]
-    :param skip_time_check: Skip checking if the time range is valid. SAMI can
-        sometimes output fake timesteps, or be configured to start outputting
-        data after several hours. This will skip checking that the times are
-        valid. Defaults to False.
-    :type skip_time_check: bool, optional
-    :param progress_bar: Show progress bar? Defaults to True.
-    :type progress_bar: bool, optional
-    :raises ValueError: If out_coord_file does not have the required variables.
-    :return: None
-    :rtype: None
+    skip_time_check : bool, optional
+        Skip checking if the time range is valid. SAMI can sometimes output
+        fake timesteps, or be configured to start outputting data after
+        several hours. This will skip checking that the times are valid.
+        Defaults to False.
+    progress_bar : bool, optional
+        Show progress bar? Defaults to True.
+    num_workers : int, optional
+        Number of workers to use when interpolating. Defaults to 16.
+        (16 workers => 1.3 GB of RAM/10 time-steps of SAMI at 80/72/256
+        resolution)
+    Raises
+    ------
+    ValueError
+        If out_coord_file does not have the required variables.
+    Returns
+    -------
+    None
+    
     """
+   
 
     if out_path is None:
         out_path = sami_data_path
