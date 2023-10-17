@@ -239,7 +239,7 @@ def add_lt_to_dataset(ds,
 
     for itime in range(ds.time.size):
         timeds = ds.isel(time=itime).swap_dims(lon='localtime')
-        ltdss.append(timeds.interp(localtime=localtimes, method='cubic'))
+        ltdss.append(timeds.interp(localtime=localtimes))
         if pbar:
             pbar.update()
 
