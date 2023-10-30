@@ -16,7 +16,7 @@ def make_fits(da,
     da : xarray DataArray
         DataArray to be filtered
     freq : int, optional
-        Output frequency, units must be same as lims, by default 5
+        Time between outputs, units must be same as lims, by default 5
     lims : list, optional
         Limits of bandpass filter, by default [40, 85]
     order : int, optional
@@ -54,7 +54,7 @@ def make_fits(da,
     upper_index = int(upper_limit / freq)
 
     # Design the bandpass filter
-    nyquist_freq = 0.5 * freq
+    nyquist_freq = 0.5 * 1/freq
     lower_cutoff = lower_index / nyquist_freq
     upper_cutoff = upper_index / nyquist_freq
     b, a = signal.butter(order, [1 / upper_cutoff, 1 / lower_cutoff],
