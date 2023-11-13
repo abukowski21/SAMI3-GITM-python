@@ -541,7 +541,6 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
                        start_dtime=None, end_dtime=None,
                        start_idx=None, end_idx=None,
                        progress_bar=False, skip_time_check=False):
-    print('TODO: THE TIME BAR IS WRONG')
 
     """
     Read in (raw) SAMI data and return an xarray dataset.
@@ -634,7 +633,7 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
     dimnames = ('time', 'nlt', 'nf', 'nz')
 
     if progress_bar:
-        pbar1 = tqdm(total=len(sami_og_vars), desc='Reading SAMI binaries')
+        pbar1 = tqdm(total=len(cols), desc='Reading SAMI binaries')
 
     if cols != 'all':
         if isinstance(cols, str):
