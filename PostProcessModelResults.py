@@ -20,7 +20,7 @@ import subprocess
 
 from utility_programs.read_routines import GITM, SAMI
 from utility_programs.utils import str_to_ut
-import RegridSami
+import SAMI3_ESMF_Regrid
 import argparse
 
 
@@ -179,47 +179,24 @@ def main(args):
                 run_name=args.single_file if args.single_file else None)
 
         if do_write_regrid:
-            print('Attempting to regrid SAMI outputs!\n'
+            print('Attempting to regrid SAMI outputs with ESMF!\n'
                   'This may take a while...\n'
-                  'There may be memory issues if you have a long SAMI run.\n'
-                  'Try running with --sami_mintime'
-                  ' to limit the number of files processed.'
+                  'Please ensure you have the ESMF library installed.\n'
                   '\n   ====== \n')
 
             if not args.single_file:
                 print('---> No output run_name is set (single_file=False).\n'
                       '  Setting this will change the output file names.'
-                      '  Currently there will only be one output file named: '
+                      '  Currently files will be named [varname]_ '
                       'SAMI_REGRID.nc')
 
-            if args.set_custom_grid:
-                RegridSami.main(sami_data_path=args.sami_dir,
-                                out_path=output_dir,
-                                save_weights=args.save_weights,
-                                dtime_sim_start=args.dtime_sim_start,
-                                sami_mintime=args.sami_mintime,
-                                lat_step=latstep,
-                                lon_step=lonstep,
-                                alt_step=altstep,
-                                minmax_alt=[minalt, maxalt],
-                                skip_time_check=args.skip_time_check,
-                                run_name=args.single_file if args.single_file
-                                else '',
-                                progress_bar=args.progress,
-                                num_workers=args.num_workers)
-
-            else:
-                RegridSami.main(
-                    sami_data_path=args.sami_dir,
-                    out_path=output_dir,
-                    save_weights=args.save_weights,
-                    dtime_sim_start=args.dtime_sim_start,
-                    sami_mintime=args.sami_mintime,
-                    skip_time_check=args.skip_time_check,
-                    run_name=args.single_file if args.single_file
-                    else '',
-                    progress_bar=args.progress,
-                    num_workers=args.num_workers)
+            SAMI3_ESMF_Regrid.main(
+                sami_data_path=args.sami_dir,
+                dtime_sim_start=args.dtime_sim_start,
+                progress=args.progress,
+                remake_files=True,
+                out_dir=args.output_dir,
+                output_filename=args.single_file if args.single_file else None)
 
     return
 
@@ -237,7 +214,10 @@ if __name__ == '__main__':
                         ' folder at "./OUTPUTS/".')
     parser.add_argument('--sami_type', type=str, default='all',
                         help='Which SAMI data to process? (Default: all)'
-                        '(Options: "all", "raw", "regrid")')
+                        '(Options: "all", "raw", "regrid")'
+                        ' "regrid" will use ESMF to regrid the SAMI data.'
+                        ' Additional functionality is available with the'
+                        ' SAMI3_ESMF_Regrid module.')
     parser.add_argument('--gitm_types', type=str, default='all',
                         nargs='*', help='Which GITM data to process?'
                         ' (EX: 3DALL, 3DNEU, etc.) (Default: all)')
@@ -245,34 +225,12 @@ if __name__ == '__main__':
                         help='Set this to the run name to output the entire'
                         ' model run data to a single netCDF file.'
                         ' Note: model name will be added automatically')
-    parser.add_argument('--set_custom_grid', action='store_true',
-                        help='Set a custom grid for SAMI regridding?'
-                        ' Default: False')
-    parser.add_argument('--low_mem', type=bool, default=True,
-                        help='Process SAMI files in low memory mode?'
-                        ' (NOTE: Memory usage is still 30GB+, without lowmem'
-                        ' the entire run is read in at once.) Default: True'
-                        ' (Type: bool)')
-    parser.add_argument('--sami_mintime', type=int, default=0,
-                        help='Minimum timestep to start SAMI regridding at.'
-                        ' Default: 0 (all files)'
-                        ' Use this to help with memory management.')
-    parser.add_argument('-c', '--ccmc', action='store', type=bool,
-                        default=True,
-                        help='Use CCMC naming conventions? (Default: True)'
-                        ' (Type: bool)')
     parser.add_argument('-r', '--replace', action='store_true',
                         help='Replace existing netCDF files? (Default: False)'
                         ' (not implemented yet)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Print out more information? (Default: False)')
-    parser.add_argument('--save_weights', action='store_true',
-                        default=False,
-                        help='Reuse Delauney Triangulation? (default False \n'
-                        ' If True, triangulation file will be re-used if it'
-                        ' exists in the SAMI input directory.'
-                        ' If the file is not found, a new one will be written'
-                        ' to the --sami_dir.')
+
     parser.add_argument('-d', '--delete_bins', action='store_true',
                         help='Delete binary files after processing? '
                         'Caution: This is irreversible! (Default: False)')
@@ -289,7 +247,7 @@ if __name__ == '__main__':
                         ' Requires tqdm')
     parser.add_argument('--dtime_sim_start', type=str, default=None,
                         help='Start time of the simulation, in the format: '
-                        'YYYYMMDDHHmmSS Required to process SAMI from *.dat')
+                        'YYYYMMDDHHmmSS. Required to process SAMI from *.dat')
     parser.add_argument('--dtime_event_start', type=str, default=None,
                         help='Event (storm) start time, in the format: '
                         'YYYYMMDDHHmmSS (Optional. added as attr to netCDFs)')
@@ -300,13 +258,6 @@ if __name__ == '__main__':
                         'This exists because some systems have faster'
                         ' local storage than mass storage.\n'
                         'NOTE: This is not used for SAMI processing,')
-    parser.add_argument('--num_workers', type=int, default=16,
-                        help='When doing a regrid of the SAMI data, we need '
-                        'to do a lot of calculations. By default this will '
-                        'use 16 workers, but you can change it if you want. '
-                        '(higher workers = faster & more memory!) '
-                        'NOTE: This is only used for SAMI regridding '
-                        '(not raw or GITM.')
     parser.add_argument('--skip_existing', action='store_true',
                         help='Skip existing temp files when doing single_file?'
                         'Useful if processing was interrupted.')
@@ -317,20 +268,5 @@ if __name__ == '__main__':
     # make sure args.sami_type is one of opts
     if args.sami_type not in opts:
         raise ValueError('sami_type must be one of {}'.format(opts))\
-
-    if args.set_custom_grid and (args.sami_type == 'regrid'
-                                 or args.sami_type == 'all'):
-
-        global latstep, lonstep, altstep, minalt, maxalt
-        print('We are going to set a custom grid for your sami regridding. ')
-        latstep = int(input('latitude step size in degrees (1):') or 1)
-        lonstep = int(input('longitude step size in degrees: (4):') or 4)
-        altstep = int(input('altitude step size in km (50):') or 50)
-        minalt = int(input('minimum altitude in km (150):') or 150)
-        maxalt = int(input('maximum altitude in km (2200):') or 2200)
-
-    elif args.set_custom_grid and args.sami_type == 'raw':
-        raise ValueError('You cannot set a custom grid for raw SAMI files,'
-                         ' since nothing is being regridded.')
 
     main(args)
