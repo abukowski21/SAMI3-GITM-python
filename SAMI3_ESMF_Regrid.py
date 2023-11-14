@@ -7,7 +7,8 @@ import xarray as xr
 import numpy as np
 from scipy.io import netcdf_file
 from utility_programs.read_routines import SAMI
-
+from multiprocessing import Pool
+from itertools import repeat
 
 def generate_interior_points_sami_raw(in_cart, old_shape, progress=False):
     """Generates mesh points from SAMI raw data for use in ESMF.
@@ -271,7 +272,7 @@ def apply_weight_file(sami_data_path,
                                                                     len(outalt)]))
 
         # loop thru time, esmf does not hold any of our time info:
-        srcData_T=sds.edens.values
+        srcData_T=sds[datavar].values
 
         for t in range(len(sds.time.values)):
             # array for out data:
@@ -288,11 +289,12 @@ def apply_weight_file(sami_data_path,
 
 
         if output_filename:
-            out_ds.to_netcdf(os.path.join(sami_data_path, output_filename),
-                            mode='w' if first else 'a',
+            out_ds.to_netcdf(os.path.join(sami_data_path, output_filename+'_SAMI_REGRID.nc'),
+                            mode='a' if os.path.exists(os.path.join(sami_data_path, 
+                                                                    qoutput_filename+'_SAMI_REGRID.nc')) else 'w',
                             engine='h5netcdf')
         else:
-            out_ds.to_netcdf(os.path.join(sami_data_path, datavar),
+            out_ds.to_netcdf(os.path.join(sami_data_path, datavar+'_SAMI_REGRID.nc'),
                             engine='h5netcdf')
 
         first=False
@@ -316,7 +318,8 @@ def main(sami_data_path,
          progress=False,
          remake_files=False,
          out_dir=None,
-         output_filename=None):  # if outname is none, output new files for each var.
+         output_filename=None, # if outname is none, output new files for each var.
+         num_procs=48):  
 
     if type(dtime_sim_start) == str:
         dtime_sim_start=datetime.datetime.strptime(dtime_sim_start,
@@ -338,8 +341,8 @@ def main(sami_data_path,
         if remake_files:
             make_esmf_inputs=True
         else:
-            print('ESMF inputs already found. Will recalculate ',
-                  'weights using the same input/output files.\n',
+            print('ESMF inputs already found. Will interpolate ',
+                  'using the same input/output files.\n',
                   'Run with remake_files=True to make the input/output files again.')
     else:
         make_esmf_inputs=True
@@ -412,19 +415,35 @@ def main(sami_data_path,
             print('ESMF_RegridWeightGen successful. Applying weights...')
 
     # Now we can apply weights!
-
-    apply_weight_file(sami_data_path,
+    if num_procs ==1 or num_procs ==1:
+        apply_weight_file(sami_data_path,
                       dtime_sim_start,
                       out_dir,
                       cols=cols,
                       progress=progress,
                       output_filename=output_filename)
+    
+    else:
+        if num_procs == -1:
+            num_procs = os.cpu_count()
+        
+        with Pool(num_procs) as pool:
+            pool.starmap(apply_weight_file,
+                         zip(repeat(sami_data_path),
+                             repeat(dtime_sim_start),
+                            repeat(out_dir),
+                             cols,
+                            repeat(False),
+                            repeat(output_filename)))
 
     return
 
 
-main("/glade/derecho/scratch/abukowski/paper2/real-sols_eqx/december/sami-gitm-coupled",
+main("/glade/derecho/scratch/abukowski/paper1/disturbed/sami-gitm-coupled",
      '20110520',
-     progress=True,
-     cols='edens',
-     remake_files=False)
+     progress=False,
+     cols=['edens', 'mer_exb', 'zon_exb', 'etemp'],
+     remake_files=False,
+     output_filename='testing_esmf_disturbed_t1',
+     out_dir = '/glade/derecho/scratch/abukowski/paper1/postproc/',
+    num_procs=2)
