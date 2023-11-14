@@ -1,4 +1,3 @@
-import sys
 import os
 import subprocess
 import datetime
@@ -7,10 +6,9 @@ import xarray as xr
 import numpy as np
 from scipy.io import netcdf_file
 from utility_programs.read_routines import SAMI
-from multiprocessing import Pool
-from itertools import repeat
 
-def generate_interior_points_sami_raw(in_cart, old_shape, progress=False):
+
+def generate_interior_points_sami_raw(old_shape, progress=False):
     """Generates mesh points from SAMI raw data for use in ESMF.
 
     Args:
@@ -106,7 +104,9 @@ def generate_interior_points_output_grid(longitudes, latitudes, altitudes,
     out_shape = [lon_dim, lat_dim, alt_dim]
 
     if progress:
-        pbar = tqdm(total=np.prod([len(longitudes), len(latitudes), len(altitudes)]),
+        pbar = tqdm(total=np.prod([len(longitudes),
+                                   len(latitudes),
+                                   len(altitudes)]),
                     desc='Generating interior points for output grid')
 
     for a, lon in enumerate(longitudes):
@@ -129,7 +129,6 @@ def generate_interior_points_output_grid(longitudes, latitudes, altitudes,
                       [a1, b, c1],
                       [a1, b1, c1],
                       [a, b1, c1]]
-                closest = []
 
                 id_pt = []
                 yes = True
@@ -160,9 +159,9 @@ def write_UGRID_mesh(lon, lat, alt, indices, fname):
     num_cells = np.sum([len(i) == 8 for i in indices])
 
     # add dimensions
-    eight = f.createDimension("eight", 8)
-    nnodes = f.createDimension("nnodes", len(lon))
-    ncells = f.createDimension("ncells", num_cells)
+    f.createDimension("eight", 8)
+    f.createDimension("nnodes", len(lon))
+    f.createDimension("ncells", num_cells)
 
     # add variables
     # mesh, empty variable to describe topology:
@@ -226,14 +225,14 @@ def apply_weight_file(sami_data_path,
         sami_data_path, 'esmf_weightfile.nc'))
     dst_ds = xr.open_dataset(os.path.join(sami_data_path, 'dst_ugrid.nc'))
 
-    # Get the output dimensions now so we don't have to do it a lot during the loop:
+    # Get the output dimensions outside the loop the loop:
     outlon = np.unique(dst_ds.nodelon.values)
     outlat = np.unique(dst_ds.nodelat.values)
     outalt = np.unique(dst_ds.height.values)
-    newshape = [len(outlon), len(outlat), len(outalt)]
+    # newshape = [len(outlon), len(outlat), len(outalt)]
 
     if cols != 'all':
-        if type(cols) == str:
+        if type(cols) is str:
             cols = [cols]
     else:
         cols = SAMI.sami_og_vars.values()
@@ -247,71 +246,70 @@ def apply_weight_file(sami_data_path,
     for nvar, datavar in enumerate(cols):
 
         sds = SAMI.read_raw_to_xarray(sami_data_path,
-                                     dtime_sim_start,
-                                     cols=datavar,
-                                     progress_bar=False)
+                                      dtime_sim_start,
+                                      cols=datavar,
+                                      progress_bar=False)
         # Progress bar:
         if progress:
             if first:
                 pbar = tqdm(total=len(sds.time) * len(cols))
 
             pbar.set_description('interpolating %s \t vars:(%i/%i)'
-                                 %(datavar, nvar, len(cols)))
+                                 % (datavar, nvar, len(cols)))
 
         # Xarray dataset for output data:
-        out_ds=xr.Dataset()
-        out_ds['lon']=outlon
-        out_ds['lat']=outlat
-        out_ds['alt']=outalt
-        out_ds['time']=sds.time
-
-        
+        out_ds = xr.Dataset()
+        out_ds['lon'] = outlon
+        out_ds['lat'] = outlat
+        out_ds['alt'] = outalt
+        out_ds['time'] = sds.time
 
         # loop thru time, esmf does not hold any of our time info:
         dstpts = np.zeros((sds.time.size, weights.n_b.size))
-        unique_rows, row_indices, row_counts = np.unique(new_row[weights.n_s.values], 
-                                                        return_inverse=True, 
-                                                        return_counts=True)
-        
+        unique_rows, row_indices, row_counts = np.unique(
+            new_row[weights.n_s.values],
+            return_inverse=True,
+            return_counts=True)
+
         for t in range(sds.time.size):
             srcData = sds[datavar].isel(time=t).values.flatten()
             # Accumulate values for each unique row index using np.add.at
-            np.add.at(dstpts[t], unique_rows, 
-                      np.bincount(row_indices, weights=new_s[weights.n_s.values] * srcData[new_col[weights.n_s.values]], 
-                          minlength=len(unique_rows)))
+            np.add.at(dstpts[t],
+                      unique_rows,
+                      np.bincount(row_indices,
+                                  weights=new_s[weights.n_s.values]
+                                  * srcData[new_col[weights.n_s.values]],
+                                  minlength=len(unique_rows)))
 
             if progress:
                 pbar.update()
 
         if progress:
             pbar.set_description('Writing %s \t vars:(%i/%i)'
-                                 %(datavar, nvar, len(cols)))
+                                 % (datavar, nvar, len(cols)))
 
         datavar = datavar.replace('+', '_plus_').replace('-', '_')
-        out_ds[datavar]=(('time', 'lon', 'lat', 'alt'), 
-            dstpts.reshape([sds.time.size,
-                            len(outlon),
-                            len(outlat),
-                            len(outalt)]))
-
+        out_ds[datavar] = (('time', 'lon', 'lat', 'alt'),
+                           dstpts.reshape([sds.time.size,
+                                           len(outlon),
+                                          len(outlat),
+                                           len(outalt)]))
 
         if output_filename:
-            out_ds.to_netcdf(os.path.join(out_dir, output_filename+'_SAMI_REGRID.nc'),
-                            mode='a' if os.path.exists(os.path.join(sami_data_path, 
-                                                                    output_filename+'_SAMI_REGRID.nc')) else 'w',
-                            engine='h5netcdf')
+            out_ds.to_netcdf(os.path.join(out_dir,
+                                          output_filename+'_SAMI_REGRID.nc'),
+                             mode='a' if os.path.exists(
+                                 os.path.join(sami_data_path,
+                                              output_filename
+                                              + '_SAMI_REGRID.nc')) else 'w',
+                             engine='h5netcdf')
         else:
             out_ds.to_netcdf(os.path.join(out_dir, datavar+'_SAMI_REGRID.nc'),
-                            engine='h5netcdf')
+                             engine='h5netcdf')
 
         del out_ds
 
-        first=False
-
-
-
-
-    regrid_ds=xr.Dataset()
+        first = False
 
 
 def main(sami_data_path,
@@ -326,39 +324,40 @@ def main(sami_data_path,
          progress=False,
          remake_files=False,
          out_dir=None,
-         output_filename=None, # if outname is none, output new files for each var.
-         num_procs=48):  
+         # if outname is none, output new files for each var.
+         output_filename=None):
 
-    if type(dtime_sim_start) == str:
-        dtime_sim_start=datetime.datetime.strptime(dtime_sim_start,
+    if type(dtime_sim_start) is str:
+        dtime_sim_start = datetime.datetime.strptime(dtime_sim_start,
                                                      '%Y%m%d')
     # read in the SAMI grid:
-    nz, nf, nlt, nt=SAMI.get_grid_elems_from_parammod(sami_data_path)
-    sami_grid=SAMI.get_sami_grid(sami_data_path, nlt, nf, nz)
+    nz, nf, nlt, nt = SAMI.get_grid_elems_from_parammod(sami_data_path)
+    sami_grid = SAMI.get_sami_grid(sami_data_path, nlt, nf, nz)
 
     # Make the SAMI interior points...
 
     # Will need these later:
-    raw_glon=sami_grid['glon'].flatten()
-    raw_glat=sami_grid['glat'].flatten()
-    raw_alt=sami_grid['alt'].flatten()
+    raw_glon = sami_grid['glon'].flatten()
+    raw_glat = sami_grid['glat'].flatten()
+    raw_alt = sami_grid['alt'].flatten()
 
-    make_esmf_inputs=False
+    make_esmf_inputs = False
     if os.path.exists(os.path.join(sami_data_path, 'src_ugrid.nc')) and\
             os.path.exists(os.path.join(sami_data_path, 'dst_ugrid.nc')):
         if remake_files:
-            make_esmf_inputs=True
+            make_esmf_inputs = True
         else:
             print('ESMF inputs already found. Will interpolate',
                   'using the same input/output files.\n',
-                  'Run with remake_files=True to make the input/output files again.')
+                  'Run with remake_files=True to make the input/output files',
+                  'again.')
     else:
-        make_esmf_inputs=True
+        make_esmf_inputs = True
 
     # only redo if files don't exist (and user doesn't want them remade...)
     if make_esmf_inputs:
         # Make connection indices:
-        sami_idxs=generate_interior_points_sami_raw(
+        sami_idxs = generate_interior_points_sami_raw(
             np.array([raw_glat, raw_glon, raw_alt]),
             sami_grid['mlat'].shape,  # Shape of the SAMI grid (nlt, nf, nz)
             progress=progress)
@@ -369,44 +368,45 @@ def main(sami_data_path,
 
     if make_esmf_inputs:
         # Now make the outputs:
-        out_lat=np.linspace(-90, 90, num_lats)
-        out_lon=np.linspace(0, 360, num_lons, endpoint=False)
+        out_lat = np.linspace(-90, 90, num_lats)
+        out_lon = np.linspace(0, 360, num_lons, endpoint=False)
+
         if alt_step:
-            out_alt=np.arange(min_alt, max_alt+1, alt_step)
+            out_alt = np.arange(min_alt, max_alt+1, alt_step)
         else:
-            out_alt=np.linspace(min_alt, max_alt, num_alts)
+            out_alt = np.linspace(min_alt, max_alt, num_alts)
 
         # And generate interior points
-        flat_lon, flat_lat, flat_alt, output_idxs=generate_interior_points_output_grid(
-            out_lon, out_lat, out_alt, progress=progress)
+        flat_lon, flat_lat, flat_alt, output_idxs = \
+            generate_interior_points_output_grid(out_lon, out_lat, out_alt,
+                                                 progress=progress)
 
         # write this to a NetCDF file, just like before:
         write_UGRID_mesh(flat_lon, flat_lat, flat_alt, output_idxs,
                          os.path.join(sami_data_path, 'dst_ugrid.nc'))
 
-    make_esmf_weights=False
+    make_esmf_weights = False
     if os.path.exists(os.path.join(sami_data_path, 'esmf_weightfile.nc')):
         if remake_files:
             print('Found ESMF weight file, making it again...')
-            make_esmf_weights=True
+            make_esmf_weights = True
         else:
             print('Reusing existing ESMF weight file.')
     else:
-        make_esmf_weights=True
+        make_esmf_weights = True
 
     if make_esmf_weights:
         # And now we can call ESMF!
         print('calling ESMF...')
-        esmf_command=['ESMF_RegridWeightGen -s',
+        esmf_command = ['ESMF_RegridWeightGen -s',
                         os.path.join(sami_data_path, 'src_ugrid.nc'),
                         '-d', os.path.join(sami_data_path, 'dst_ugrid.nc'),
                         '--src_loc corner --dst_loc corner -w',
                         os.path.join(sami_data_path, 'esmf_weightfile.nc'),
                         '-l greatcircle -i']
 
-        esmf_errored=False
-        esmf_result=subprocess.run(' '.join(esmf_command), shell=True, check=True)
-        
+        esmf_result = subprocess.run(
+            ' '.join(esmf_command), shell=True, check=True)
 
         # Check the result
         if esmf_result.returncode == 0:
@@ -414,11 +414,11 @@ def main(sami_data_path,
         else:
             print(f"Command failed with return code {esmf_result.returncode}")
             print('\n\n\nError in using ESMF. Make sure it is loaded!\n',
-                  'If you do have ESMF loaded, this is the command you need to run:\n\n\t',
+                  'If you do have ESMF loaded, try to run:\n\n\t',
                   ' '.join(esmf_command),
                   '\n\nCheck output logs in PET*.Log for more info ',
-                  '(if the file does not exist, ESMF was unable to run at all).\n',
-                  'After ESMF is run, come back and you can apply the weights.\n')
+                  '(if the file does not exist, ESMF was unable to run).\n',
+                  'After ESMF is finished, come back and apply the weights.\n')
             print("Error output:", esmf_result.stderr)
             raise ValueError('ESMF did not work!')
 
@@ -429,8 +429,6 @@ def main(sami_data_path,
                       cols=cols,
                       progress=progress,
                       output_filename=output_filename)
-    
-    
 
     return
 
@@ -441,4 +439,4 @@ main("/glade/derecho/scratch/abukowski/paper1/quiet/sami-gitm-coupled",
      cols='all',
      remake_files=False,
      output_filename='testing_esmf_quiet_t1',
-     out_dir = '/glade/derecho/scratch/abukowski/paper1/postproc/',)
+     out_dir='/glade/derecho/scratch/abukowski/paper1/postproc/',)
