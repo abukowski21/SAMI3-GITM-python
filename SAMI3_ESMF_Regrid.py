@@ -445,14 +445,14 @@ def apply_weight_file(sami_data_path,
 
         if output_filename:
             out_ds.to_netcdf(os.path.join(out_dir,
-                                          output_filename+'_SAMI_REGRID.nc'),
+                                          output_filename+'_SAMI-REGRID.nc'),
                              mode='a' if os.path.exists(
                                  os.path.join(sami_data_path,
                                               output_filename
-                                              + '_SAMI_REGRID.nc')) else 'w',
+                                              + '_SAMI-REGRID.nc')) else 'w',
                              engine='h5netcdf')
         else:
-            out_ds.to_netcdf(os.path.join(out_dir, datavar+'_SAMI_REGRID.nc'),
+            out_ds.to_netcdf(os.path.join(out_dir, datavar+'_SAMI-REGRID.nc'),
                              engine='h5netcdf')
 
         del out_ds
