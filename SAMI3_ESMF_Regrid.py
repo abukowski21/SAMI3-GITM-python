@@ -1,3 +1,9 @@
+"""
+This module contains functions for processing SAMI raw data for use in ESMF.
+Input and output grids are calculated and written to file as a 3D UGRID mesh
+and the ESMF weight file is computed and then applied.
+"""
+
 import os
 import subprocess
 import datetime
