@@ -2,6 +2,10 @@
 This module contains functions for processing SAMI raw data for use in ESMF.
 Input and output grids are calculated and written to file as a 3D UGRID mesh
 and the ESMF weight file is computed and then applied.
+
+All functions use spherical coordinates with `lon` & `lat` in degrees (with
+`lon` from 0-360), and `alt` in km from Earth's surface.
+
 """
 
 import os
@@ -94,7 +98,24 @@ def generate_interior_points_sami_raw(old_shape, progress=False):
 
 def generate_interior_points_output_grid(longitudes, latitudes, altitudes,
                                          progress=False):
-    """
+    """ Generate a 3D mesh from arrays of desired output coordinate values.
+    The input points are 1D arrays of various lengths, denoting the
+    desired output grid (in deg and km above Earth's surface).
+    The output is a 1D array of the corner points of the cuboids to be
+    used as the grid corners in ESMF. These are used for
+    the "vertids" variable in the UGRID mesh ESMF input.
+
+    Args:
+        longitudes (numpy.ndarray or list): 1D array of longitudes
+        latitudes (numpy.ndarray or list): 1D array of latitudes
+        altitudes (numpy.ndarray or list): 1D array of altitudes
+        progress (bool): Whether or not to show `tqdm` progress bar
+
+    Returns:
+        tuple: tuple of 1D arrays of the corner points of the cuboids
+            to be used as the grid corners in ESMF. These are used for
+            the "vertids" variable in the UGRID mesh ESMF input.
+            [lons, lats, alts, connections]
 
     """
     lons = []
@@ -163,7 +184,10 @@ def generate_interior_points_output_grid(longitudes, latitudes, altitudes,
 def generate_interior_points_custom_grid(lats, lons, alts,
                                          cell_radius=0.5,
                                          progress=False):
-    """Generate a 3D mesh and write it to a UGRID file.
+    """Generate a 3D mesh from given 3D coordinates and write it to a UGRID
+    file for use in ESMF. The mesh has overlap (degeneracy) which *should*
+    be fine. The lats, lons, and alts arrays should contain the same number of
+    points.
 
     Args:
         lats (numpy.ndarray): 1D array of latitudes
@@ -230,6 +254,31 @@ def generate_interior_points_custom_grid(lats, lons, alts,
 
 
 def write_UGRID_mesh(lon, lat, alt, indices, fname):
+    """ Write a UGRID mesh file for given coordinates and
+    indices (interconnects between nodes). See the ESMF documentation
+    (UGRID section) for more info.
+
+    Args:
+        lon (numpy.ndarray): 1D array of longitudes
+        lat (numpy.ndarray): 1D array of latitudes
+        alt (numpy.ndarray): 1D array of altitudes
+        indices (numpy.ndarray): 2D array of indices, shape (N, 8)
+        fname (str): Output filename
+
+    Returns:
+        None
+
+    Notes:
+        - The mesh must be created elsewhere, this just writes the file.
+        - This function resides in a file with other functions to help
+            generate the mesh interconnects.
+        - The provided indices must be in the correct order, see the
+            ESMF documentation for more info.
+        - This function is used for both the input and output meshes,
+            and can be used for anyything else, provided the arguments are
+            correct.
+
+    """
 
     f = netcdf_file(fname, "w")  # make file
     num_cells = np.sum([len(i) == 8 for i in indices])
@@ -295,6 +344,29 @@ def apply_weight_file(sami_data_path,
                       progress=True,
                       output_filename=None
                       ):
+    """Apply the ESMF weight file to the SAMI raw data.
+
+    Args:
+        sami_data_path (str): Path to SAMI3 raw data
+        dtime_sim_start (str): Simulation start date (YYYYMMDD)
+        out_dir (str): Output directory, Default is same as sami_data_path
+        cols (str or list): Columns to interpolate. Default is 'all'
+        progress (bool): Whether or not to show `tqdm` progress bar
+        output_filename (str): Output filename, Default is to make a new file
+            for each variable.
+
+    Returns:
+        None
+
+    Notes:
+        - This has been sped up and takes ~1 hour for a full SAMI run
+        - Multithreading this should be straighforward, but it is not a
+            priority since the speed is good enough (and Xarray can lock
+            files which will cause issues).
+        - Memory usage is ~10GB, so it is likely too heavy to run on a
+            login node.
+
+    """
 
     #  Start with loading weight file and the output grid file...
     weights = xr.open_dataset(os.path.join(
@@ -399,13 +471,49 @@ def main(sami_data_path,
          custom_input_file=None,
          # User-defined input file (.csv with comma sep and a header)
          # (i.e. sat track w/ `glon, glat, alt` columns.)
-         custom_grid_size=1,
+         custom_grid_size=0.5,
          cols='all',
          progress=False,
          remake_files=False,
          out_dir=None,
          # if outname is none, output new files for each var.
          output_filename=None):
+    """ Main function for processing SAMI raw data for use in ESMF.
+
+    Args:
+        sami_data_path (str): Path to SAMI3 raw data
+        dtime_sim_start (str): Simulation start date (YYYYMMDD)
+        num_lons (int): Number of longitudes in output grid
+        num_lats (int): Number of latitudes in output grid
+        num_alts (int): Number of altitudes in output grid
+        alt_step (int): Altitude step size in output grid. Use this or num_alts
+            (Default is None)
+        min_alt (int): Minimum altitude in output grid
+        max_alt (int): Maximum altitude in output grid
+        custom_input_file (str): User-defined input file (.csv with comma sep
+            and a header) (i.e. sat track w/ `glon, glat, alt` columns.)
+        custom_grid_size (float): Size of grid cells to use when regridding to
+            a satellite file. Measured in degrees from center (so it is a
+            radius), and altitude is 10*custom_grid_size. Default is 0.5.
+        cols (str or list): Columns to interpolate (comma sep)
+        progress (bool): Whether or not to show `tqdm` progress bar
+        remake_files (bool): Remake ESMF input files? Default is False
+            (reuse existing files)
+        out_dir (str): Output directory, Default is same as sami_data_path
+        output_filename (str): Output filename, Default is to make a new file
+            for each variable.
+
+    Returns:
+        None
+
+    Notes:
+        - This is not *super* well documented. Contact me with questions
+        - It should "just work", but may not...
+        - The mesh generated does follow ESMF conventions, however
+            more points are thrown out than is probably necessary.
+            With the size of the SAMI grid this is probably not an issue.
+
+    """
 
     if type(dtime_sim_start) is str:
         dtime_sim_start = datetime.datetime.strptime(dtime_sim_start,
@@ -535,10 +643,72 @@ def main(sami_data_path,
     return
 
 
-main("/glade/derecho/scratch/abukowski/paper1/quiet/sami-gitm-coupled",
-     '20110520',
-     progress=True,
-     cols='all',
-     remake_files=False,
-     output_filename='testing_esmf_quiet_t1',
-     out_dir='/glade/derecho/scratch/abukowski/paper1/postproc/',)
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description='Process SAMI3 raw data for use in ESMF.'
+        ' The output grid can be user specified.')
+
+    parser.add_argument('sami_data_path', type=str,
+                        help='Path to SAMI3 raw data')
+    parser.add_argument('dtime_sim_start', type=str,
+                        help='Simulation start date (YYYYMMDD)')
+    parser.add_argument('--no_pbar', action='store_true',
+                        help='Disable progress bar')
+    parser.add_argument('--cols', type=str, default='all',
+                        help='Columns to interpolate (comma sep)')
+    parser.add_argument('--out_dir', type=str, default=None,
+                        help='Output directory, '
+                        'Default is same as sami_data_path')
+    parser.add_argument('--output_filename', type=str, default=None,
+                        help='Output filename, '
+                        'Default is to make a new file for each variable.')
+    parser.add_argument('--remake_files', action='store_true',
+                        help='Remake ESMF input files? '
+                        'Default is False (reuse existing files)',
+                        default=False)
+    parser.add_argument('--num_lons', type=int, default=90,
+                        help='Number of longitudes in output grid')
+    parser.add_argument('--num_lats', type=int, default=180,
+                        help='Number of latitudes in output grid')
+    parser.add_argument('--num_alts', type=int, default=100,
+                        help='Number of altitudes in output grid')
+    parser.add_argument('--alt_step', type=int, default=None,
+                        help='Altitude step size in output grid. '
+                        'Use this or num_alts! (Default is None)')
+    parser.add_argument('--min_alt', type=int, default=100,
+                        help='Minimum altitude in output grid')
+    parser.add_argument('--max_alt', type=int, default=2400,
+                        help='Maximum altitude in output grid')
+    parser.add_argument('--custom_input_file', type=str, default=None,
+                        help='User-defined input file (.csv with comma sep '
+                        'and a header) (i.e. sat ephemeris file w/ '
+                        '`glon, glat, alt` columns.)')
+    parser.add_argument('--custom_grid_size', type=float, default=1,
+                        help='Size of grid cells to use when regridding to a '
+                        'satellite file. Measured in degrees from center (so '
+                        'it is a radius), and altitude is '
+                        '10*custom_grid_size. Default is 0.5.')
+
+    args = parser.parse_args()
+
+    if args.out_dir is None:
+        args.out_dir = args.sami_data_path
+
+    main(args.sami_data_path,
+         args.dtime_sim_start,
+         args.num_lons,
+         args.num_lats,
+         args.num_alts,
+         args.alt_step,
+         args.min_alt,
+         args.max_alt,
+         args.custom_input_file,
+         args.custom_grid_size,
+         args.cols,
+         not args.no_pbar,
+         args.remake_files,
+         args.out_dir,
+         args.output_filename
+         )
