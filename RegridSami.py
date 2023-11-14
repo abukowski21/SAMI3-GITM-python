@@ -44,12 +44,12 @@ def main(
     ----------
     sami_data_path : str or os.pathLike
         Path to SAMI3 output files.
-    out_path : str or os.pathLike, optional 
+    out_path : str or os.pathLike, optional
         Location to save output files. Defaults to sami_data_path.
     save_weights : bool, optional
         Whether or not to save Delauney Triangulation. Defaults to True.
     cols : str or list-like, optional
-        Columns to read data from. Can be string or list-like. 
+        Columns to read data from. Can be string or list-like.
         Defaults to 'all'.
     dtime_sim_start : datetime, optional
         Datetime of simulation start. Required to read raw SAMI outputs.
@@ -187,11 +187,12 @@ if __name__ == '__main__':
                         '(hrpr != 0)')
 
     parser.add_argument('--sami_mintime', type=int, default=0,
-                        help='Set this to help with memory management (especially '
-                        'when using aarons_mod). Setting this to 5, for example, '
-                        'will skip the first 5 output times of the SAMI run. '
-                        'This is relevant even without aarons_mod as the first 12-24 '
-                        'hours of SAMI outputs are not to be trusted.')
+                        help='Set this to help with memory management '
+                        '(especially when using aarons_mod). Setting this to '
+                        '5, for example, will skip the first 5 output times '
+                        'of the SAMI run. This is relevant even without '
+                        'aarons_mod as the first 12-24 hours of SAMI outputs '
+                        'are not to be trusted.')
 
     parser.add_argument('--custom_grid', action='store_true', default=False,
                         help='Launches interactive script to set custom grid.'
@@ -205,23 +206,14 @@ if __name__ == '__main__':
 
     parser.add_argument('--num_workers', type=int, default=16,
                         help='When doing a regrid of the SAMI data, we need '
-                        'to do a lot of calculations. By default this will use '
-                        '16 workers, but you can change it if you want. '
+                        'to do a lot of calculations. By default this will '
+                        'use 16 workers, but you can change it if you want. '
                         "(higher workers = faster, to a point... "
                         "The number concurrent procs can be limited for "
                         "*reasons*. Email me if this is an issue & we'll chat"
                         # '16 workers => 1.3 GB of RAM/10 time-steps of SAMI '
                         # 'at 80/72/256 resolution)'
                         )
-
-# parser.add_argument('--aarons_mod', action='store_true',
-#                     help='Interpolating SAMI data is hard. Through a lot of '
-#                     'testing, I found that you can interpolate to 2x '
-#                     'resolution and then coarsen the results and things look '
-#                     'normal. If you notice bad stuff in the regridded files, '
-#                     'use this option. \n'
-#                     'This will take a lot memory and time than default runs, '
-#                     'so be careful!')
 
     args = parser.parse_args()
 

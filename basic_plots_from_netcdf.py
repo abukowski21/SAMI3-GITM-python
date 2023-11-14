@@ -27,7 +27,7 @@ def run_processing_options(ds, process_options):
         **'alt_int'**: integrate over altitude
         **'bandpass'**: apply bandpass filter
         **'transpose'**: transpose the dataset
-    
+
     Returns
     -------
     xarray.Dataset
@@ -60,7 +60,7 @@ def autoplot(
         concat_dim='time'):
     """
     Plot data from netCDF files.
-    
+
     Parameters
     ----------
     file_list : list of str or str
@@ -96,13 +96,13 @@ def autoplot(
         Name of the dimension to concatenate the data along
         when reading netCDF files with Dask. Optional. Only change this if you
         are having trouble reading in files. Default is 'time'.
-    
+
     Raises
     -------
     ValueError
         If altitude is selected when using alt_int, or if
         lon/lat cuts are used when making maps.
-        
+
     Returns
     -------
     None
