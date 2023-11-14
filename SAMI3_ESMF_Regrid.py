@@ -3,6 +3,7 @@ import subprocess
 import datetime
 from tqdm import tqdm
 import xarray as xr
+import pandas as pd
 import numpy as np
 from scipy.io import netcdf_file
 from utility_programs.read_routines import SAMI
@@ -151,6 +152,75 @@ def generate_interior_points_output_grid(longitudes, latitudes, altitudes,
         pbar.close()
 
     return lons, lats, alts, node_conns
+
+
+def generate_interior_points_custom_grid(lats, lons, alts,
+                                         cell_radius=0.5,
+                                         progress=False):
+    """Generate a 3D mesh and write it to a UGRID file.
+
+    Args:
+        lats (numpy.ndarray): 1D array of latitudes
+        lons (numpy.ndarray): 1D array of longitudes
+        alts (numpy.ndarray): 1D array of altitudes
+        cell_radius (float): Distance from point to corner of cell,
+            in degrees, (altitude is 10* cell_radius). Default is 1 degree.
+        progress (bool): Whether or not to show `tqdm` progress bar
+
+    Returns:
+        tuple: tuple of 1D arrays of the corner points of the cuboids
+            to be used as the grid corners in ESMF. These are used for
+            the "vertids" variable in the UGRID mesh ESMF input.
+            [lons, lats, alts, connections]
+    """
+
+    assert len(lats) == len(lons) == len(alts), \
+        'lats, lons, and alts must be the same length!'
+
+    lat_corners = []
+    lon_corners = []
+    alt_corners = []
+
+    node_conns = []
+
+    for centerpt in range(len(lats)):
+        lon_below = lons[centerpt] - cell_radius
+        lon_above = lons[centerpt] + cell_radius
+
+        lat_below = lats[centerpt] - cell_radius
+        lat_above = lats[centerpt] + cell_radius
+
+        alt_below = alts[centerpt] - 10*cell_radius
+        alt_above = alts[centerpt] + 10*cell_radius
+
+        # Make sure we don't go over the poles:
+        if lat_below < -90:
+            lat_below = -90
+        if lat_above > 90:
+            lat_above = 90
+
+        lat_corners.append([lat_below, lat_above,
+                            lat_above, lat_below,
+                            lat_below, lat_above,
+                            lat_above, lat_below])
+        lon_corners.append([lon_below, lon_below,
+                            lon_above, lon_above,
+                            lon_below, lon_below,
+                            lon_above, lon_above])
+        alt_corners.append([alt_below, alt_below,
+                            alt_below, alt_below,
+                            alt_above, alt_above,
+                            alt_above, alt_above])
+
+        node_conns.append([8*centerpt, 8*centerpt+1,
+                           8*centerpt+2, 8*centerpt+3,
+                           8*centerpt+4, 8*centerpt+5,
+                           8*centerpt+6, 8*centerpt+7])
+
+    return np.array(lon_corners).flatten(), \
+        np.array(lat_corners).flatten(), \
+        np.array(alt_corners).flatten(), \
+        np.array(node_conns)
 
 
 def write_UGRID_mesh(lon, lat, alt, indices, fname):
@@ -320,6 +390,10 @@ def main(sami_data_path,
          alt_step=None,  # use either this or num_alts!
          min_alt=100,
          max_alt=2400,
+         custom_input_file=None,
+         # User-defined input file (.csv with comma sep and a header)
+         # (i.e. sat track w/ `glon, glat, alt` columns.)
+         custom_grid_size=1,
          cols='all',
          progress=False,
          remake_files=False,
@@ -367,23 +441,43 @@ def main(sami_data_path,
                          os.path.join(sami_data_path, 'src_ugrid.nc'))
 
     if make_esmf_inputs:
-        # Now make the outputs:
-        out_lat = np.linspace(-90, 90, num_lats)
-        out_lon = np.linspace(0, 360, num_lons, endpoint=False)
+        if custom_input_file:
 
-        if alt_step:
-            out_alt = np.arange(min_alt, max_alt+1, alt_step)
+            custom_grid_df = pd.read_csv(custom_input_file)
+
+            # Now make the outputs:
+            out_lat = custom_grid_df['glat'].values
+            out_lon = custom_grid_df['glon'].values
+            out_alt = custom_grid_df['alt'].values
+
+            # And generate interior points
+            flat_lon, flat_lat, flat_alt, output_idxs = \
+                generate_interior_points_custom_grid(
+                    out_lon, out_lat, out_alt,
+                    cell_radius=custom_grid_size,
+                    progress=progress)
+
+            write_UGRID_mesh(flat_lon, flat_lat, flat_alt, output_idxs,
+                             os.path.join(sami_data_path, 'dst_ugrid.nc'))
+
         else:
-            out_alt = np.linspace(min_alt, max_alt, num_alts)
+            # Now make the outputs:
+            out_lat = np.linspace(-90, 90, num_lats)
+            out_lon = np.linspace(0, 360, num_lons, endpoint=False)
 
-        # And generate interior points
-        flat_lon, flat_lat, flat_alt, output_idxs = \
-            generate_interior_points_output_grid(out_lon, out_lat, out_alt,
-                                                 progress=progress)
+            if alt_step:
+                out_alt = np.arange(min_alt, max_alt+1, alt_step)
+            else:
+                out_alt = np.linspace(min_alt, max_alt, num_alts)
 
-        # write this to a NetCDF file, just like before:
-        write_UGRID_mesh(flat_lon, flat_lat, flat_alt, output_idxs,
-                         os.path.join(sami_data_path, 'dst_ugrid.nc'))
+            # And generate interior points
+            flat_lon, flat_lat, flat_alt, output_idxs = \
+                generate_interior_points_output_grid(out_lon, out_lat, out_alt,
+                                                     progress=progress)
+
+            # write this to a NetCDF file, just like before:
+            write_UGRID_mesh(flat_lon, flat_lat, flat_alt, output_idxs,
+                             os.path.join(sami_data_path, 'dst_ugrid.nc'))
 
     make_esmf_weights = False
     if os.path.exists(os.path.join(sami_data_path, 'esmf_weightfile.nc')):
@@ -401,9 +495,11 @@ def main(sami_data_path,
         esmf_command = ['ESMF_RegridWeightGen -s',
                         os.path.join(sami_data_path, 'src_ugrid.nc'),
                         '-d', os.path.join(sami_data_path, 'dst_ugrid.nc'),
-                        '--src_loc corner --dst_loc corner -w',
+                        '--src_loc corner --dst_loc',
+                        'center' if custom_input_file else 'corner',
+                        '-l greatcircle -i -w',
                         os.path.join(sami_data_path, 'esmf_weightfile.nc'),
-                        '-l greatcircle -i']
+                        ]
 
         esmf_result = subprocess.run(
             ' '.join(esmf_command), shell=True, check=True)
