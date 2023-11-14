@@ -10,13 +10,13 @@ All functions use spherical coordinates with `lon` & `lat` in degrees (with
 
 import os
 import subprocess
-import datetime
 from tqdm import tqdm
 import xarray as xr
 import pandas as pd
 import numpy as np
 from scipy.io import netcdf_file
 from utility_programs.read_routines import SAMI
+from utility_programs.utils import str_to_ut
 
 
 def generate_interior_points_sami_raw(old_shape, progress=False):
@@ -516,8 +516,8 @@ def main(sami_data_path,
     """
 
     if type(dtime_sim_start) is str:
-        dtime_sim_start = datetime.datetime.strptime(dtime_sim_start,
-                                                     '%Y%m%d')
+        dtime_sim_start = str_to_ut(dtime_sim_start)
+
     # read in the SAMI grid:
     nz, nf, nlt, nt = SAMI.get_grid_elems_from_parammod(sami_data_path)
     sami_grid = SAMI.get_sami_grid(sami_data_path, nlt, nf, nz)
