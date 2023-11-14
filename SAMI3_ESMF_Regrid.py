@@ -107,7 +107,7 @@ def generate_interior_points_output_grid(longitudes, latitudes, altitudes,
 
     if progress:
         pbar = tqdm(total=np.prod([len(longitudes), len(latitudes), len(altitudes)]),
-                    desc='Generating interior points for output grid.')
+                    desc='Generating interior points for output grid')
 
     for a, lon in enumerate(longitudes):
         for b, lat in enumerate(latitudes):
@@ -255,9 +255,8 @@ def apply_weight_file(sami_data_path,
             if first:
                 pbar = tqdm(total=len(sds.time) * len(cols))
 
-            pbar.set_description('interpolating %s \t vars:(%i/%i), \t time:(%i/%i):'
-                                 %(datavar, nvar, len(cols), 0, len(sds.time)))
-
+            pbar.set_description('interpolating %s \t vars:(%i/%i)'
+                                 %(datavar, nvar, len(cols)))
 
         # Xarray dataset for output data:
         out_ds=xr.Dataset()
@@ -266,40 +265,49 @@ def apply_weight_file(sami_data_path,
         out_ds['alt']=outalt
         out_ds['time']=sds.time
 
-        out_ds[datavar]=(('time', 'lon', 'lat', 'alt'), np.empty([sds.time.size,
-                                                                    len(outlon),
-                                                                    len(outlat),
-                                                                    len(outalt)]))
+        
 
         # loop thru time, esmf does not hold any of our time info:
-        srcData_T=sds[datavar].values
-
-        for t in range(len(sds.time.values)):
-            # array for out data:
-            dstpts=np.empty(weights.n_b.size)
-
-            srcData = srcData_T[t].flatten()
-            for i in weights.n_s.values: #TODO: Vectorize or speedup somehow...
-                dstpts[new_row[i]] += new_s[i] * srcData[new_col[i]] 
-
-            out_ds[datavar][t]=dstpts.reshape([len(outlon), len(outlat),len(outalt)])
+        dstpts = np.zeros((sds.time.size, weights.n_b.size))
+        unique_rows, row_indices, row_counts = np.unique(new_row[weights.n_s.values], 
+                                                        return_inverse=True, 
+                                                        return_counts=True)
+        
+        for t in range(sds.time.size):
+            srcData = sds[datavar].isel(time=t).values.flatten()
+            # Accumulate values for each unique row index using np.add.at
+            np.add.at(dstpts[t], unique_rows, 
+                      np.bincount(row_indices, weights=new_s[weights.n_s.values] * srcData[new_col[weights.n_s.values]], 
+                          minlength=len(unique_rows)))
 
             if progress:
                 pbar.update()
 
+        if progress:
+            pbar.set_description('Writing %s \t vars:(%i/%i)'
+                                 %(datavar, nvar, len(cols)))
+
+        datavar = datavar.replace('+', '_plus_').replace('-', '_')
+        out_ds[datavar]=(('time', 'lon', 'lat', 'alt'), 
+            dstpts.reshape([sds.time.size,
+                            len(outlon),
+                            len(outlat),
+                            len(outalt)]))
+
 
         if output_filename:
-            out_ds.to_netcdf(os.path.join(sami_data_path, output_filename+'_SAMI_REGRID.nc'),
+            out_ds.to_netcdf(os.path.join(out_dir, output_filename+'_SAMI_REGRID.nc'),
                             mode='a' if os.path.exists(os.path.join(sami_data_path, 
-                                                                    qoutput_filename+'_SAMI_REGRID.nc')) else 'w',
+                                                                    output_filename+'_SAMI_REGRID.nc')) else 'w',
                             engine='h5netcdf')
         else:
-            out_ds.to_netcdf(os.path.join(sami_data_path, datavar+'_SAMI_REGRID.nc'),
+            out_ds.to_netcdf(os.path.join(out_dir, datavar+'_SAMI_REGRID.nc'),
                             engine='h5netcdf')
 
+        del out_ds
+
         first=False
-        if progress:
-            pbar.update()
+
 
 
 
@@ -341,7 +349,7 @@ def main(sami_data_path,
         if remake_files:
             make_esmf_inputs=True
         else:
-            print('ESMF inputs already found. Will interpolate ',
+            print('ESMF inputs already found. Will interpolate',
                   'using the same input/output files.\n',
                   'Run with remake_files=True to make the input/output files again.')
     else:
@@ -379,71 +387,58 @@ def main(sami_data_path,
     make_esmf_weights=False
     if os.path.exists(os.path.join(sami_data_path, 'esmf_weightfile.nc')):
         if remake_files:
+            print('Found ESMF weight file, making it again...')
             make_esmf_weights=True
+        else:
+            print('Reusing existing ESMF weight file.')
     else:
         make_esmf_weights=True
 
     if make_esmf_weights:
         # And now we can call ESMF!
-        esmf_command=['ESMF_RegridWeightGen -s ',
+        print('calling ESMF...')
+        esmf_command=['ESMF_RegridWeightGen -s',
                         os.path.join(sami_data_path, 'src_ugrid.nc'),
-                        '-d ', os.path.join(sami_data_path, 'dst_ugrid.nc'),
-                        '--src_loc corner --dst_loc corner -w ',
+                        '-d', os.path.join(sami_data_path, 'dst_ugrid.nc'),
+                        '--src_loc corner --dst_loc corner -w',
                         os.path.join(sami_data_path, 'esmf_weightfile.nc'),
                         '-l greatcircle -i']
 
         esmf_errored=False
-        try:
-            pr=subprocess.Popen(
-                esmf_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            # blocks until process finishes
-            out, err=pr.communicate()
+        esmf_result=subprocess.run(' '.join(esmf_command), shell=True, check=True)
+        
 
-        except FileNotFoundError:
-            esmf_errored=True
-
-        # check the return code
-        if esmf_errored:
+        # Check the result
+        if esmf_result.returncode == 0:
+            print("Command was successful")
+        else:
+            print(f"Command failed with return code {esmf_result.returncode}")
             print('\n\n\nError in using ESMF. Make sure it is loaded!\n',
                   'If you do have ESMF loaded, this is the command you need to run:\n\n\t',
                   ' '.join(esmf_command),
                   '\n\nCheck output logs in PET*.Log for more info ',
                   '(if the file does not exist, ESMF was unable to run at all).\n',
                   'After ESMF is run, come back and you can apply the weights.\n')
+            print("Error output:", esmf_result.stderr)
             raise ValueError('ESMF did not work!')
-        else:
-            print('ESMF_RegridWeightGen successful. Applying weights...')
 
     # Now we can apply weights!
-    if num_procs ==1 or num_procs ==1:
-        apply_weight_file(sami_data_path,
+    apply_weight_file(sami_data_path,
                       dtime_sim_start,
                       out_dir,
                       cols=cols,
                       progress=progress,
                       output_filename=output_filename)
     
-    else:
-        if num_procs == -1:
-            num_procs = os.cpu_count()
-        
-        with Pool(num_procs) as pool:
-            pool.starmap(apply_weight_file,
-                         zip(repeat(sami_data_path),
-                             repeat(dtime_sim_start),
-                            repeat(out_dir),
-                             cols,
-                            repeat(False),
-                            repeat(output_filename)))
+    
 
     return
 
 
-main("/glade/derecho/scratch/abukowski/paper1/disturbed/sami-gitm-coupled",
+main("/glade/derecho/scratch/abukowski/paper1/quiet/sami-gitm-coupled",
      '20110520',
-     progress=False,
-     cols=['edens', 'mer_exb', 'zon_exb', 'etemp'],
+     progress=True,
+     cols='all',
      remake_files=False,
-     output_filename='testing_esmf_disturbed_t1',
-     out_dir = '/glade/derecho/scratch/abukowski/paper1/postproc/',
-    num_procs=2)
+     output_filename='testing_esmf_quiet_t1',
+     out_dir = '/glade/derecho/scratch/abukowski/paper1/postproc/',)
