@@ -302,10 +302,11 @@ if __name__ == '__main__':
                         'NOTE: This is not used for SAMI processing,')
     parser.add_argument('--num_workers', type=int, default=16,
                         help='When doing a regrid of the SAMI data, we need '
-                        'to do a lot of calculations. By default this will use '
-                        '16 workers, but you can change it if you want. '
+                        'to do a lot of calculations. By default this will '
+                        'use 16 workers, but you can change it if you want. '
                         '(higher workers = faster & more memory!) '
-                        'NOTE: This is only used for SAMI regridding (not raw or GITM.')
+                        'NOTE: This is only used for SAMI regridding '
+                        '(not raw or GITM.')
     parser.add_argument('--skip_existing', action='store_true',
                         help='Skip existing temp files when doing single_file?'
                         'Useful if processing was interrupted.')
