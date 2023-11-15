@@ -60,9 +60,9 @@ def main(args):
         header_files = glob.glob(os.path.join(args.gitm_dir, '*.header'))
         if len(header_files) > 0:
             print('GITM headers found in {}'.format(args.gitm_dir),
-                'Attempting to postprocess...\n',
-                '(This is not very robust. You probably have to do '
-                'this yourself)')
+                  'Attempting to postprocess...\n',
+                  '(This is not very robust. You probably have to do '
+                  'this yourself)')
             gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/data')]
 
             cmd = os.path.join('.', gitm_parent_dir, 'pGITM')
@@ -80,27 +80,30 @@ def main(args):
                 raise ValueError(
                     'No GITM files found in {}'.format(args.gitm_dir),
                     'Double check the directory or go run pGITM.')
-        
-        #Check if output files exist and if they do, if user wants to remake
-        actually_do_gitm = False
-        files_exist=False
 
-        if args.single_file and len(glob.glob(os.path.join(output_dir,
-                                       args.single_file + '*GITM.nc'))) > 0:
-            files_exist=True
-            
+        # Check if output files exist and if they do, if user wants to remake
+        actually_do_gitm = False
+        files_exist = False
+
+        if args.single_file and len(glob.glob(
+            os.path.join(output_dir,
+                         args.single_file + '*GITM.nc'))) > 0:
+            files_exist = True
+
         elif len(glob.glob(os.path.join(output_dir, '*GITM.nc'))) > 0:
-            files_exist=True
+            files_exist = True
 
         if files_exist:
             if args.replace:
                 print('Replacing existing post-processed GITM files according '
-                    'to supplied arguments. The file(s) that will be overwritten'
-                    ' is: \n \t {}'.format(os.path.join(args.output_dir,
-                      (args.single_file + '_GITM.nc' if single_file
-                      else '*_GITM.nc'))))
+                      'to supplied arguments. The file(s) that will be'
+                      ' overwritten is/are: \n \t {}'.format(
+                          os.path.join(args.output_dir,
+                                       (args.single_file + '_GITM.nc'
+                                           if args.single_file else
+                                        '*_GITM.nc'))))
 
-                actually_do_gitm=True
+                actually_do_gitm = True
 
             else:
                 print(
@@ -110,11 +113,10 @@ def main(args):
                     "   Contents: \n    {}\n".format(
                         output_dir, os.listdir(output_dir)),
                     "And the output file(s) named: {} already exists".format(
-                        (args.single_file + '_GITM.nc' if single_file
-                      else '*_GITM.nc')))
+                        (args.single_file + '_GITM.nc' if args.single_file
+                         else '*_GITM.nc')))
 
-
-        else:
+        if actually_do_gitm:
             GITM.process_all_to_cdf(
                 gitm_dir=args.gitm_dir,
                 out_dir=output_dir,
@@ -153,7 +155,7 @@ def main(args):
                 existing_sami_files.extend(glob.glob(
                     os.path.join(
                         output_dir,
-                        (args.single_file +'_SAMI-RAW.nc' if args.single_file
+                        (args.single_file + '_SAMI-RAW.nc' if args.single_file
                             else '*SAMI-RAW.nc'))))
             if do_write_regrid:
                 existing_sami_files.extend(glob.glob(
@@ -173,17 +175,15 @@ def main(args):
 
             else:
                 print('Postprocessed SAMI files already exist in: '
-                                 '{}\nRun with --replace to overwrite.\n'
-                                 '   Contents: \n    {}\n'.format(
-                                     output_dir, existing_sami_files),
-                                 'Cowardly refusing to overwrite listed files.')
+                      '{}\nRun with --replace to overwrite.\n'
+                      '   Contents: \n    {}\n'.format(
+                          output_dir, existing_sami_files),
+                      'Cowardly refusing to overwrite listed files.')
 
                 if 'RAW' in '-'.join(existing_sami_files):
                     do_write_raw = False
                 if 'REGRID' in '-'.join(existing_sami_files):
                     do_write_regrid = False
-
-        
 
         if args.ccmc and not args.single_file:
             use_ccmc = True
@@ -230,6 +230,7 @@ def main(args):
 
             SAMI3_ESMF_Regrid.main(
                 sami_data_path=args.sami_dir,
+                ESMF_DIR=args.ESMF_DIR,
                 dtime_sim_start=args.dtime_sim_start,
                 progress=not args.progress,
                 remake_files=True,
@@ -256,6 +257,11 @@ if __name__ == '__main__':
                         ' "regrid" will use ESMF to regrid the SAMI data.'
                         ' Additional functionality is available with the'
                         ' SAMI3_ESMF_Regrid module.')
+    parser.add_argument('--ESMF_DIR', type=str, default='',
+                        help='Path to ESMF executables (specifically the'
+                        ' ESMF_RegridWeightGen executable). Required for SAMI'
+                        ' regridding. (Default is to use system $PATH)'
+                        '\nThis does not need to be set in most cases.')
     parser.add_argument('--gitm_types', type=str, default='all',
                         nargs='*', help='Which GITM data to process?'
                         ' (EX: 3DALL, 3DNEU, etc.) (Default: all)')
