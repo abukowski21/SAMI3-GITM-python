@@ -620,12 +620,17 @@ def main(sami_data_path,
             print("Command was successful")
         else:
             print(f"Command failed with return code {esmf_result.returncode}")
-            print('\n\n\nError in using ESMF. Make sure it is loaded!\n',
-                  'If you do have ESMF loaded, try to run:\n\n\t',
+            print('\n\n\nError with ESMF. Make sure it is installed correctly!\n',
+                  'If you do have ESMF installled, try to run:\n\n\t',
                   ' '.join(esmf_command),
                   '\n\nCheck output logs in PET*.Log for more info ',
                   '(if the file does not exist, ESMF was unable to run).\n',
-                  'After ESMF is finished, come back and apply the weights.\n')
+                  'After ESMF is finished, come back and apply the weights.\n'
+                  'Some tips: \n - If you are using modules, make sure ESMF '
+                  'is loaded LAST (so it is listed first in $PATH)\n'
+                  ' - The version of ESMF that comes bundled with `esmpy`'
+                  ' will not work since we need PIO support (and must be '
+                  'built with MPI)')
             print("Error output:", esmf_result.stderr)
             raise ValueError('ESMF did not work!')
 
