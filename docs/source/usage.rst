@@ -104,10 +104,20 @@ Before running any regridding operations, ensure you have ESMF installed correct
       ESMF_IO_PNETCDF_PRESENT     T
 
 .. note::
-    If you do not see this, you need to install ESMF. See `this section of the ESMF documentation <http://earthsystemmodeling.org/docs/release/ESMF_8_6_0/ESMF_usrdoc/node6.html#SECTION00063000000000000000>`_ for more information.
+    If you do not see this, you need to install ESMF. `Link to download ESMF <https://earthsystemmodeling.org/download/>`_.
 
     ``ESMF_IO_PIO_PRESENT`` must be ``T`` as well. This is necessary to regrid with ESMF from mesh files (which is done automatically).
 
+    If you are installing ESMF for the first time, these options may save you time:
+
+    1. Ensure the required Intel/C compilers, NetCDF & PnetCDF libraries, and MPI libraries are installed and/or loaded. `See this link <https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/node10.html#SECTION000103100000000000000>`_ for more details.
+    2. Download & un-compress the ESMF software, ``cd`` into the new directory.
+    1. Enable PIO ``export ESMF_PIO="internal"``
+    2. Enable NetCDF ``export ESMF_NETCDF="nc-config"``
+    3. Tell ESMF which compiler, install directory, and MPI protocols you want to use. You can `follow the instructions here <https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/node6.html#SECTION00063000000000000000>`_ for the rest of the installation.
+    4. Do the install, ``make libs`` since we do not need everything.
+    5. It will take a while. 
+    6. If successful, there should be a folder called ``apps`` which contains the ESMF scripts!
 
 
 
