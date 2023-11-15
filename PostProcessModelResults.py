@@ -100,7 +100,7 @@ def main(args):
             delete_bins=args.delete_bins,
             replace_cdfs=args.replace,
             drop_ghost_cells=args.ghost_cells,
-            progress_bar=args.progress,
+            progress_bar=not args.progress,
             use_ccmc=args.ccmc,
             file_types=args.gitm_types,
             single_file=True if args.single_file else False,
@@ -169,9 +169,8 @@ def main(args):
                 split_by_time=split_by_time,
                 split_by_var=split_by_var,
                 dtime_sim_start=args.dtime_sim_start,
-                progress_bar=args.progress,
+                progress_bar=not args.progress,
                 OVERWRITE=args.replace,
-                low_mem=args.low_mem,
                 delete_raw=args.delete_bins,
                 dtime_storm_start=args.dtime_event_start,
                 skip_time_check=args.skip_time_check,
@@ -193,7 +192,7 @@ def main(args):
             SAMI3_ESMF_Regrid.main(
                 sami_data_path=args.sami_dir,
                 dtime_sim_start=args.dtime_sim_start,
-                progress=args.progress,
+                progress=not args.progress,
                 remake_files=True,
                 out_dir=args.output_dir,
                 output_filename=args.single_file if args.single_file else None)
@@ -230,7 +229,8 @@ if __name__ == '__main__':
                         ' (not implemented yet)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Print out more information? (Default: False)')
-
+    parser.add_argument('--ccmc', action='store_true',
+                        help='Use CCMC naming convention?')
     parser.add_argument('-d', '--delete_bins', action='store_true',
                         help='Delete binary files after processing? '
                         'Caution: This is irreversible! (Default: False)')
@@ -241,8 +241,8 @@ if __name__ == '__main__':
                         help='Skip verifying accuracy of times. Useful when'
                         ' SAMI has been configured to skip some outputs '
                         '(hrpr != 0)')
-    parser.add_argument('--no_progress', action='store_false', dest='progress',
-                        help='Show progress bar? (Default: True)'
+    parser.add_argument('--no_progress', action='store_true', dest='progress',
+                        help='Hide progress bar? (Default: False)'
                         ' - recommended since things can take a LONG time.'
                         ' Requires tqdm')
     parser.add_argument('--dtime_sim_start', type=str, default=None,
