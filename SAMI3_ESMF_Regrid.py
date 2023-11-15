@@ -559,13 +559,17 @@ def main(sami_data_path,
 
     if make_esmf_inputs:
         if custom_input_file:
-            print(custom_input_file)
             custom_grid_df = pd.read_csv(custom_input_file)
 
             # Now make the outputs:
-            out_lat = custom_grid_df['glat'].values
-            out_lon = custom_grid_df['glon'].values
-            out_alt = custom_grid_df['alt'].values
+            try:
+                out_lat = custom_grid_df['glat'].values
+                out_lon = custom_grid_df['glon'].values
+                out_alt = custom_grid_df['alt'].values
+            except KeyError:
+                out_lat = custom_grid_df['lat'].values
+                out_lon = custom_grid_df['lon'].values
+                out_alt = custom_grid_df['alt'].values
 
             # And generate interior points
             flat_lon, flat_lat, flat_alt, output_idxs = \
