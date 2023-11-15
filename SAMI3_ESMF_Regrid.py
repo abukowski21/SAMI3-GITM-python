@@ -462,6 +462,7 @@ def apply_weight_file(sami_data_path,
 
 def main(sami_data_path,
          dtime_sim_start,
+         ESMF_DIR='',
          num_lons=90,
          num_lats=180,
          num_alts=100,
@@ -481,6 +482,11 @@ def main(sami_data_path,
     Args:
         sami_data_path (str): Path to SAMI3 raw data
         dtime_sim_start (str): Simulation start date (YYYYMMDD)
+        ESMF_DIR (str): Path to ESMF installation. Default is ''.
+            This only needs to be set in you are using a user-install
+            of ESMF. In most cases, this will not need to be changed.
+            See ESMF install instrunctios for more information:
+            https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/
         num_lons (int): Number of longitudes in output grid
         num_lats (int): Number of latitudes in output grid
         num_alts (int): Number of altitudes in output grid
@@ -603,7 +609,7 @@ def main(sami_data_path,
     if make_esmf_weights:
         # And now we can call ESMF!
         print('calling ESMF...')
-        esmf_command = ['ESMF_RegridWeightGen -s',
+        esmf_command = [ESMF_DIR + 'ESMF_RegridWeightGen -s',
                         os.path.join(sami_data_path, 'src_ugrid.nc'),
                         '-d', os.path.join(sami_data_path, 'dst_ugrid.nc'),
                         '--src_loc corner --dst_loc',
@@ -611,16 +617,22 @@ def main(sami_data_path,
                         '-l greatcircle -i -w',
                         os.path.join(sami_data_path, 'esmf_weightfile.nc'),
                         ]
+        if ESMF_DIR != '' and esmf_command[0][0] != '.':
+            esmf_command = '.' + esmf_command
+        try:
+            esmf_result = subprocess.run(
+                ' '.join(esmf_command), shell=True, check=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("Output:", esmf_result.stdout.decode())
 
-        esmf_result = subprocess.run(
-            ' '.join(esmf_command), shell=True, check=True)
-
-        # Check the result
-        if esmf_result.returncode == 0:
-            print("Command was successful")
-        else:
-            print(f"Command failed with return code {esmf_result.returncode}")
-            print('\n\n\nError with ESMF. Make sure it is installed correctly!\n',
+        except FileNotFoundError:
+            print('Could not find ESMF executable. Make sure it is installed '
+                  'and the path is correctly passed to this script.')
+            raise FileNotFoundError('Could not find ESMF executable.')
+        except subprocess.CalledProcessError:
+            print('ESMF failed to run. Check the output above for more info. '
+                  'If you are using a user-install of ESMF, make sure the '
+                  'installation is correct.'
                   'If you do have ESMF installled, try to run:\n\n\t',
                   ' '.join(esmf_command),
                   '\n\nCheck output logs in PET*.Log for more info ',
@@ -631,8 +643,9 @@ def main(sami_data_path,
                   ' - The version of ESMF that comes bundled with `esmpy`'
                   ' will not work since we need PIO support (and must be '
                   'built with MPI)')
-            print("Error output:", esmf_result.stderr)
-            raise ValueError('ESMF did not work!')
+            print("\n\nError output:", esmf_result.stderr.decode())
+
+            raise subprocess.CalledProcessError('ESMF failed to run.')
 
     # Now we can apply weights!
     apply_weight_file(sami_data_path,
@@ -656,6 +669,12 @@ if __name__ == '__main__':
                         help='Path to SAMI3 raw data')
     parser.add_argument('dtime_sim_start', type=str,
                         help='Simulation start date (YYYYMMDD)')
+    parser.add_argument('--ESMF_DIR', type=str, default='',
+                        help='Path to the ESMF_RegridWeightGen executable. '
+                        'Default is to use the system path.\n'
+                        'This only needs to be set in you are using a '
+                        'single-user-install of ESMF. In most cases, this '
+                        'will not need to be changed.')
     parser.add_argument('--no_pbar', action='store_true',
                         help='Disable progress bar')
     parser.add_argument('--cols', type=str, default='all',
@@ -664,7 +683,8 @@ if __name__ == '__main__':
                         help='Output directory, '
                         'Default is same as sami_data_path')
     parser.add_argument('--output_filename', type=str, default=None,
-                        help='Output filename, '
+                        help="Output each model's produced files to a file "
+                        "with this filename, "
                         'Default is to make a new file for each variable.')
     parser.add_argument('--remake_files', action='store_true',
                         help='Remake ESMF input files? '
