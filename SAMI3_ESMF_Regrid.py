@@ -469,14 +469,12 @@ def main(sami_data_path,
          min_alt=100,
          max_alt=2400,
          custom_input_file=None,
-         # User-defined input file (.csv with comma sep and a header)
-         # (i.e. sat track w/ `glon, glat, alt` columns.)
          custom_grid_size=0.5,
          cols='all',
          progress=False,
          remake_files=False,
          out_dir=None,
-         # if outname is none, output new files for each var.
+         # if outname is None, output new files for each var.
          output_filename=None):
     """ Main function for processing SAMI raw data for use in ESMF.
 
@@ -546,7 +544,6 @@ def main(sami_data_path,
     if make_esmf_inputs:
         # Make connection indices:
         sami_idxs = generate_interior_points_sami_raw(
-            np.array([raw_glat, raw_glon, raw_alt]),
             sami_grid['mlat'].shape,  # Shape of the SAMI grid (nlt, nf, nz)
             progress=progress)
 
