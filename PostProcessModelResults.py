@@ -36,15 +36,41 @@ def main(args):
         if len(glob.glob(os.path.join(args.gitm_dir, '*.bin'))) != 0:
             pgitm = True
 
+        # Attempt to post-process (with pGITM) the GITM outputs for the user
+        # This is not very great though and will likely fail.
+        header_files = glob.glob(os.path.join(args.gitm_dir, '*.header'))
+        if len(header_files) > 0:
+            print('GITM headers found in {}'.format(args.gitm_dir),
+                'Attempting to postprocess...\n',
+                '(This is not very robust. You probably have to go run '
+                './pGITM yourself)')
+            gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/data')]
+
+            cmd = os.path.join('.', gitm_parent_dir, 'pGITM')
+            print('Running: {}'.format(cmd))
+            if args.verbose:
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+                for line in p.stdout:
+                    print(line)
+                p.wait()
+                print(p.returncode)
+            else:
+                subprocess.Popen(cmd, shell=True).wait()
+
+        else:
+            raise ValueError('No GITM files found in {}'.format(args.gitm_dir),
+                             'Double check the directory or run pGITM.')
+
     if args.dtime_sim_start is not None:
         args.dtime_sim_start = str_to_ut(args.dtime_sim_start)
 
     if args.dtime_event_start is not None:
         args.dtime_event_start = str_to_ut(args.dtime_event_start)
 
-    if pgitm is None and psami is None:
+    if (not pgitm) and (not psami):
         raise ValueError(
-            'You must specify at least one model output directory.')
+            'Not processing anything! Either no files were found or you did '
+            'not pass a valid directory.\nExiting...')
 
     if args.output_dir is None:
         output_dir = os.path.join(os.getcwd(), 'OUTPUTS')
@@ -56,30 +82,6 @@ def main(args):
         os.makedirs(output_dir)
 
     if pgitm:
-
-        header_files = glob.glob(os.path.join(args.gitm_dir, '*.header'))
-        if len(header_files) > 0:
-            print('GITM headers found in {}'.format(args.gitm_dir),
-                'Attempting to postprocess...\n',
-                '(This is not very robust. You probably have to do '
-                'this yourself)')
-            gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/data')]
-
-            cmd = os.path.join('.', gitm_parent_dir, 'pGITM')
-            print('Running: {}'.format(cmd))
-            if args.verbose:
-                p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-                for line in p.stdout:
-                    print(line)
-                p.wait()
-                print(p.returncode)
-            else:
-                subprocess.Popen(cmd, shell=True).wait()
-
-            if len(glob.glob(os.path.join(args.gitm_dir, '*.bin'))) == 0:
-                raise ValueError(
-                    'No GITM files found in {}'.format(args.gitm_dir),
-                    'Double check the directory or go run pGITM.')
         
         #Check if output files exist and if they do, if user wants to remake
         actually_do_gitm = False
