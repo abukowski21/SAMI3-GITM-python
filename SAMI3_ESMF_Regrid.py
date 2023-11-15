@@ -559,7 +559,7 @@ def main(sami_data_path,
 
     if make_esmf_inputs:
         if custom_input_file:
-
+            print(custom_input_file)
             custom_grid_df = pd.read_csv(custom_input_file)
 
             # Now make the outputs:
@@ -675,7 +675,7 @@ if __name__ == '__main__':
                         'This only needs to be set in you are using a '
                         'single-user-install of ESMF. In most cases, this '
                         'will not need to be changed.')
-    parser.add_argument('--no_pbar', action='store_true',
+    parser.add_argument('--no_pbar', action='store_true', default=False,
                         help='Disable progress bar')
     parser.add_argument('--cols', type=str, default='all',
                         help='Columns to interpolate (comma sep)')
