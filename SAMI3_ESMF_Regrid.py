@@ -613,7 +613,7 @@ def main(sami_data_path,
     if make_esmf_weights:
         # And now we can call ESMF!
         print('calling ESMF...')
-        esmf_command = [('.' + ESMF_DIR if ESMF_DIR != '' else ''),
+        esmf_command = [('.' + ESMF_DIR if ESMF_DIR != '' else '') +
                         'ESMF_RegridWeightGen -s',
                         os.path.join(sami_data_path, 'src_ugrid.nc'),
                         '-d', os.path.join(sami_data_path, 'dst_ugrid.nc'),
