@@ -680,7 +680,7 @@ def process_all_to_cdf(sami_data_path,
                        OVERWRITE=False,
                        delete_raw=False,
                        append_files=False,
-                       low_mem=False,
+                       low_mem=True,
                        cols='all',
                        skip_time_check=False
                        ):
