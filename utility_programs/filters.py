@@ -13,16 +13,18 @@ def make_fits(da,
     
     Parameters
     ----------
-    da : xarray DataArray
+    da : xarray DataArray or numpy array
         DataArray to be filtered
     freq : int, optional
-        Time between outputs, units must be same as lims, by default 5
+        Time between outputs, units must be same as lims, by default 5; for 
+        data every 5 minutes. 
     lims : list, optional
-        Limits of bandpass filter, by default [40, 85]
+        Period limits of bandpass filter, by default [40, 85]. Units must be 
+        same as `freq`.
     order : int, optional
         Order of the filter, by default 1
     percent : bool, optional
-        Return DataArray as percent over background?
+        Return Array as percent over background?
         Set to False to return the absolute perturbation over background.
         Defaults to True.
         
@@ -50,14 +52,14 @@ def make_fits(da,
     upper_limit = max(lims)
 
     # Convert limits to corresponding indices
-    lower_index = int(lower_limit / freq)
-    upper_index = int(upper_limit / freq)
+    # lower_index = int(lower_limit / freq)
+    # upper_index = int(upper_limit / freq)
 
     # Design the bandpass filter
-    nyquist_freq = 0.5 * 1/freq
-    lower_cutoff = lower_index / nyquist_freq
-    upper_cutoff = upper_index / nyquist_freq
-    b, a = signal.butter(order, [1 / upper_cutoff, 1 / lower_cutoff],
+    nyquist_freq = 0.5 / freq
+    lower_cutoff = (1/lower_limit) / nyquist_freq
+    upper_cutoff = (1/upper_limit) / nyquist_freq
+    b, a = signal.butter(order, [upper_cutoff, lower_cutoff],
                          btype='band', analog=False)
 
     # Apply the filter to the data
@@ -68,9 +70,11 @@ def make_fits(da,
         return (100 * (filtd) / da)
 
     else:
-        da.values = filtd
-        return da
-
+        if isinstance(da, np.ndarray):
+            return filtd
+        else:
+            da.values = filtd
+            return da
 
 def remove_outliers(array):
     """ Remove outliers from an array by replacing them with the median value.
