@@ -618,7 +618,7 @@ def main(sami_data_path,
                         os.path.join(sami_data_path, 'src_ugrid.nc'),
                         '-d', os.path.join(sami_data_path, 'dst_ugrid.nc'),
                         '--src_loc corner --dst_loc',
-                        'center' if custom_input_file else 'corner',
+                        'corner',
                         '-l greatcircle -i -w',
                         os.path.join(sami_data_path, 'esmf_weightfile.nc'),
                         ]
