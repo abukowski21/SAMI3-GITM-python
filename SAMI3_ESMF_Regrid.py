@@ -342,7 +342,8 @@ def apply_weight_file(sami_data_path,
                       out_dir,
                       cols='all',
                       progress=True,
-                      output_filename=None
+                      output_filename=None,
+                      custom_input_file=None
                       ):
     """Apply the ESMF weight file to the SAMI raw data.
 
@@ -373,11 +374,21 @@ def apply_weight_file(sami_data_path,
         sami_data_path, 'esmf_weightfile.nc'))
     dst_ds = xr.open_dataset(os.path.join(sami_data_path, 'dst_ugrid.nc'))
 
-    # Get the output dimensions outside the loop the loop:
-    outlon = np.unique(dst_ds.nodelon.values)
-    outlat = np.unique(dst_ds.nodelat.values)
-    outalt = np.unique(dst_ds.height.values)
-    # newshape = [len(outlon), len(outlat), len(outalt)]
+    # Get the output dimensions outside the loop the loop, only for grid though
+    if not custom_input_file:
+        outlon = np.unique(dst_ds.nodelon.values)
+        outlat = np.unique(dst_ds.nodelat.values)
+        outalt = np.unique(dst_ds.height.values)
+
+    else: # Custom input files (sat tracks) need to be handled differently.
+        # read dataset now and see if time info is present.
+        sat_df = pd.read_csv(custom_input_file)
+        if 'time' in sat_df.columns:
+            add_time_custom_file = True
+        else:
+            print('\n\nVariable "time" not present in input file.'
+                  '\nOutput file will not contain satellite time.\n')
+            add_time_custom_file = False
 
     if cols != 'all':
         if type(cols) is str:
@@ -405,26 +416,41 @@ def apply_weight_file(sami_data_path,
             pbar.set_description('interpolating %s \t vars:(%i/%i)'
                                  % (datavar, nvar, len(cols)))
 
-        # Xarray dataset for output data:
+        # Xarray dataset for output data...
         out_ds = xr.Dataset()
-        out_ds['lon'] = outlon
-        out_ds['lat'] = outlat
-        out_ds['alt'] = outalt
-        out_ds['time'] = sds.time
+        if custom_input_file:
+            
+            out_ds['sami_time'] = sds.time.values
+            if add_time_custom_file:
+                out_ds['sat_time'] = (('sat_step'), sat_df['time'])
+            
+            try:
+                out_ds['lat'] = (('sat_step'), sat_df.lat)
+                out_ds['lon'] = (('sat_step'), sat_df.lon)
+                out_ds['alt'] = (('sat_step'), sat_df.alt)
+            except KeyError:
+                out_ds['lat'] = (('sat_step'), sat_df.glat)
+                out_ds['lon'] = (('sat_step'), sat_df.glon)
+                out_ds['alt'] = (('sat_step'), sat_df.alt)
+        else:
+            out_ds['lon'] = outlon
+            out_ds['lat'] = outlat
+            out_ds['alt'] = outalt
+            out_ds['time'] = sds.time
 
         # loop thru time, esmf does not hold any of our time info:
         dstpts = np.zeros((sds.time.size, weights.n_b.size))
-        unique_rows, row_indices, row_counts = np.unique(
-            new_row[weights.n_s.values],
-            return_inverse=True,
-            return_counts=True)
+        unique_rows, row_inds, row_counts = np.unique(
+                                                new_row[weights.n_s.values],
+                                                return_inverse=True,
+                                                return_counts=True)
 
         for t in range(sds.time.size):
             srcData = sds[datavar].isel(time=t).values.flatten()
             # Accumulate values for each unique row index using np.add.at
             np.add.at(dstpts[t],
                       unique_rows,
-                      np.bincount(row_indices,
+                      np.bincount(row_inds,
                                   weights=new_s[weights.n_s.values]
                                   * srcData[new_col[weights.n_s.values]],
                                   minlength=len(unique_rows)))
@@ -437,11 +463,18 @@ def apply_weight_file(sami_data_path,
                                  % (datavar, nvar, len(cols)))
 
         datavar = datavar.replace('+', '_plus_').replace('-', '_')
-        out_ds[datavar] = (('time', 'lon', 'lat', 'alt'),
-                           dstpts.reshape([sds.time.size,
-                                           len(outlon),
-                                          len(outlat),
-                                           len(outalt)]))
+
+        if custom_input_file: # Write in vars with dims sami_time, sat_step
+            out_ds[datavar] = (('sami_time', 'sat_step'),
+                                dstpts.reshape([sds.time.size,
+                                                out_ds['lat'].size,
+                                                8]).mean(axis=-1))
+        else: # normal grid dimensions:
+            out_ds[datavar] = (('time', 'lon', 'lat', 'alt'),
+                                dstpts.reshape([sds.time.size,
+                                                len(outlon),
+                                                len(outlat),
+                                                len(outalt)]))
 
         if output_filename:
             out_ds.to_netcdf(os.path.join(out_dir,
@@ -658,7 +691,8 @@ def main(sami_data_path,
                       out_dir,
                       cols=cols,
                       progress=progress,
-                      output_filename=output_filename)
+                      output_filename=output_filename,
+                      custom_input_file=custom_input_file)
 
     return
 
