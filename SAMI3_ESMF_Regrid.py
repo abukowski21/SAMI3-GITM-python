@@ -248,9 +248,9 @@ def generate_interior_points_custom_grid(lats, lons, alts,
                            8*centerpt+6, 8*centerpt+7])
 
     return np.array(lon_corners).flatten(), \
-        np.array(lat_corners).flatten(), \
-        np.array(alt_corners).flatten(), \
-        np.array(node_conns)
+           np.array(lat_corners).flatten(), \
+           np.array(alt_corners).flatten(), \
+           np.array(node_conns)
 
 
 def write_UGRID_mesh(lon, lat, alt, indices, fname):
@@ -343,7 +343,8 @@ def apply_weight_file(sami_data_path,
                       cols='all',
                       progress=True,
                       output_filename=None,
-                      custom_input_file=None
+                      custom_input_file=None,
+                      temp_dir=None,
                       ):
     """Apply the ESMF weight file to the SAMI raw data.
 
@@ -368,11 +369,14 @@ def apply_weight_file(sami_data_path,
             login node.
 
     """
+    
+    if not temp_dir:
+        temp_dir = sami_data_path
 
     #  Start with loading weight file and the output grid file...
     weights = xr.open_dataset(os.path.join(
-        sami_data_path, 'esmf_weightfile.nc'))
-    dst_ds = xr.open_dataset(os.path.join(sami_data_path, 'dst_ugrid.nc'))
+        temp_dir, 'esmf_weightfile.nc'))
+    dst_ds = xr.open_dataset(os.path.join(temp_dir, 'dst_ugrid.nc'))
 
     # Get the output dimensions outside the loop the loop, only for grid though
     if not custom_input_file:
@@ -413,7 +417,7 @@ def apply_weight_file(sami_data_path,
             if first:
                 pbar = tqdm(total=len(sds.time) * len(cols))
 
-            pbar.set_description('interpolating %s \t vars:(%i/%i)'
+            pbar.set_description('interpolating %s vars:(%i/%i)'.ljust(40,' ')
                                  % (datavar, nvar, len(cols)))
 
         # Xarray dataset for output data...
@@ -422,13 +426,13 @@ def apply_weight_file(sami_data_path,
             
             out_ds['sami_time'] = sds.time.values
             if add_time_custom_file:
-                out_ds['sat_time'] = (('sat_step'), sat_df['time'])
+                out_ds['sat_time'] = (('sat_step'), pd.to_datetime(sat_df['time']))
             
             try:
                 out_ds['lat'] = (('sat_step'), sat_df.lat)
                 out_ds['lon'] = (('sat_step'), sat_df.lon)
                 out_ds['alt'] = (('sat_step'), sat_df.alt)
-            except KeyError:
+            except AttributeError:
                 out_ds['lat'] = (('sat_step'), sat_df.glat)
                 out_ds['lon'] = (('sat_step'), sat_df.glon)
                 out_ds['alt'] = (('sat_step'), sat_df.alt)
@@ -459,7 +463,7 @@ def apply_weight_file(sami_data_path,
                 pbar.update()
 
         if progress:
-            pbar.set_description('Writing %s \t vars:(%i/%i)'
+            pbar.set_description('Writing %s \t vars:(%i/%i)'.ljust(40,' ')
                                  % (datavar, nvar, len(cols)))
 
         datavar = datavar.replace('+', '_plus_').replace('-', '_')
@@ -469,17 +473,18 @@ def apply_weight_file(sami_data_path,
                                 dstpts.reshape([sds.time.size,
                                                 out_ds['lat'].size,
                                                 8]).mean(axis=-1))
+
         else: # normal grid dimensions:
             out_ds[datavar] = (('time', 'lon', 'lat', 'alt'),
                                 dstpts.reshape([sds.time.size,
                                                 len(outlon),
                                                 len(outlat),
                                                 len(outalt)]))
-
+        # return dstpts
         if output_filename:
             out_ds.to_netcdf(os.path.join(out_dir,
                                           output_filename+'_SAMI-REGRID.nc'),
-                             mode='a' if os.path.exists(
+                             mode='a' if not first and os.path.exists(
                                  os.path.join(out_dir,
                                               output_filename
                                               + '_SAMI-REGRID.nc')) else 'w',
@@ -508,6 +513,7 @@ def main(sami_data_path,
          progress=False,
          remake_files=False,
          out_dir=None,
+         temp_dir=None,
          # if outname is None, output new files for each var.
          output_filename=None):
     """ Main function for processing SAMI raw data for use in ESMF.
@@ -515,7 +521,7 @@ def main(sami_data_path,
     Args:
         sami_data_path (str): Path to SAMI3 raw data
         dtime_sim_start (str): Simulation start date (YYYYMMDD)
-        ESMF_DIR (str): Path to ESMF installation. Default is ''.
+        ESMF_DIR (str): ABSOLUTE path to ESMF installation. Default is ''.
             This only needs to be set in you are using a user-install
             of ESMF. In most cases, this will not need to be changed.
             See ESMF install instrunctios for more information:
@@ -554,6 +560,13 @@ def main(sami_data_path,
 
     if type(dtime_sim_start) is str:
         dtime_sim_start = str_to_ut(dtime_sim_start)
+        
+    if not temp_dir:
+        temp_dir = sami_data_path
+        
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
+        print('Created Directory: ', temp_dir)
 
     # read in the SAMI grid:
     nz, nf, nlt, nt = SAMI.get_grid_elems_from_parammod(sami_data_path)
@@ -567,8 +580,8 @@ def main(sami_data_path,
     raw_alt = sami_grid['alt'].flatten()
 
     make_esmf_inputs = False
-    if os.path.exists(os.path.join(sami_data_path, 'src_ugrid.nc')) and\
-            os.path.exists(os.path.join(sami_data_path, 'dst_ugrid.nc')):
+    if os.path.exists(os.path.join(temp_dir, 'src_ugrid.nc')) and\
+            os.path.exists(os.path.join(temp_dir, 'dst_ugrid.nc')):
         if remake_files:
             make_esmf_inputs = True
         else:
@@ -588,7 +601,7 @@ def main(sami_data_path,
 
         # write this to a NetCDF file:
         write_UGRID_mesh(raw_glon, raw_glat, raw_alt, sami_idxs,
-                         os.path.join(sami_data_path, 'src_ugrid.nc'))
+                         os.path.join(temp_dir, 'src_ugrid.nc'))
 
     if make_esmf_inputs:
         if custom_input_file:
@@ -612,7 +625,9 @@ def main(sami_data_path,
                     progress=progress)
 
             write_UGRID_mesh(flat_lon, flat_lat, flat_alt, output_idxs,
-                             os.path.join(sami_data_path, 'dst_ugrid.nc'))
+                             os.path.join(temp_dir, 'dst_ugrid.nc'))
+
+            print('Made custom mesh file')
 
         else:
             # Now make the outputs:
@@ -631,10 +646,10 @@ def main(sami_data_path,
 
             # write this to a NetCDF file, just like before:
             write_UGRID_mesh(flat_lon, flat_lat, flat_alt, output_idxs,
-                             os.path.join(sami_data_path, 'dst_ugrid.nc'))
+                             os.path.join(temp_dir, 'dst_ugrid.nc'))
 
     make_esmf_weights = False
-    if os.path.exists(os.path.join(sami_data_path, 'esmf_weightfile.nc')):
+    if os.path.exists(os.path.join(temp_dir, 'esmf_weightfile.nc')):
         if remake_files:
             print('Found ESMF weight file, making it again...')
             make_esmf_weights = True
@@ -646,17 +661,17 @@ def main(sami_data_path,
     if make_esmf_weights:
         # And now we can call ESMF!
         print('calling ESMF...')
-        esmf_command = [('.' + ESMF_DIR if ESMF_DIR != '' else '') +
+        esmf_command = [(ESMF_DIR) +
                         'ESMF_RegridWeightGen -s',
-                        os.path.join(sami_data_path, 'src_ugrid.nc'),
-                        '-d', os.path.join(sami_data_path, 'dst_ugrid.nc'),
+                        os.path.join(temp_dir, 'src_ugrid.nc'),
+                        '-d', os.path.join(temp_dir, 'dst_ugrid.nc'),
                         '--src_loc corner --dst_loc',
                         'corner',
                         '-l greatcircle -i -w',
-                        os.path.join(sami_data_path, 'esmf_weightfile.nc'),
+                        os.path.join(temp_dir, 'esmf_weightfile.nc'),
                         ]
-        if ESMF_DIR != '' and esmf_command[0][0] != '.':
-            esmf_command = '.' + esmf_command
+        # if ESMF_DIR != '' and esmf_command[0][0] != '.':
+        #    esmf_command = '.' + esmf_command
         try:
             esmf_result = subprocess.run(
                 ' '.join(esmf_command), shell=True, check=True,
@@ -681,7 +696,7 @@ def main(sami_data_path,
                   ' - The version of ESMF that comes bundled with `esmpy`'
                   ' will not work since we need PIO support (and must be '
                   'built with MPI)')
-            print("\n\nError output:", esmf_result.stderr.decode())
+            # print("\n\nError output:", esmf_result.stderr.decode())
 
             raise subprocess.CalledProcessError('ESMF failed to run.')
 
@@ -692,7 +707,8 @@ def main(sami_data_path,
                       cols=cols,
                       progress=progress,
                       output_filename=output_filename,
-                      custom_input_file=custom_input_file)
+                      custom_input_file=custom_input_file,
+                      temp_dir=temp_dir)
 
     return
 
@@ -751,6 +767,10 @@ if __name__ == '__main__':
                         'satellite file. Measured in degrees from center (so '
                         'it is a radius), and altitude is '
                         '10*custom_grid_size. Default is 0.5.')
+    
+    parser.add_argument('--temp_dir', type=str, 
+                       help='Location where to store temp files. '
+                             'Default is the sami_data_path')
 
     args = parser.parse_args()
 
@@ -772,5 +792,6 @@ if __name__ == '__main__':
          progress=not args.no_pbar,
          remake_files=args.remake_files,
          out_dir=args.out_dir,
-         output_filename=args.output_filename
+         output_filename=args.output_filename,
+         temp_dir=args.temp_dir
          )
