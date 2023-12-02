@@ -29,17 +29,17 @@ def main(args):
     psami = False
     pgitm = False
 
-    if args.sami_dir != './sami_dir':
+    if args.sami_dir:
         if len(glob.glob(os.path.join(args.sami_dir, '*.dat'))) != 0:
             psami = True
-    if args.gitm_dir != './gitm_dir':
+
+    if args.gitm_dir:
         if len(glob.glob(os.path.join(args.gitm_dir, '*.bin'))) != 0:
             pgitm = True
 
-        # Attempt to post-process (with pGITM) the GITM outputs for the user
-        # This is not very great though and will likely fail.
-        header_files = glob.glob(os.path.join(args.gitm_dir, '*.header'))
-        if len(header_files) > 0:
+        elif len(glob.glob(os.path.join(args.gitm_dir, '*.header'))) > 0:
+            # Attempt to post-process (with pGITM) the GITM outputs for the user
+            # This is not very great though and will likely fail.
             print('GITM headers found in {}'.format(args.gitm_dir),
                 'Attempting to postprocess...\n',
                 '(This is not very robust. You probably have to go run '
@@ -56,10 +56,9 @@ def main(args):
                 print(p.returncode)
             else:
                 subprocess.Popen(cmd, shell=True).wait()
-
         else:
             raise ValueError('No GITM files found in {}'.format(args.gitm_dir),
-                             'Double check the directory or run pGITM.')
+                         'Double check the directory or run pGITM.')
 
     if args.dtime_sim_start is not None:
         args.dtime_sim_start = str_to_ut(args.dtime_sim_start)
@@ -121,6 +120,8 @@ def main(args):
                     "And the output file(s) named: {} already exists".format(
                         (args.single_file + '_GITM.nc' if args.single_file
                          else '*_GITM.nc')))
+        else:
+            actually_do_gitm = True
 
         if actually_do_gitm:
             GITM.process_all_to_cdf(
@@ -249,10 +250,10 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-gitm', '--gitm_dir', type=str, default='./gitm_data',
-                        help='GITM Directory. Defaults to ./gitm_data')
-    parser.add_argument('-sami', '--sami_dir', type=str, default='./dami_dir',
-                        help='SAMI directory. Defaults to ./sami_data')
+    parser.add_argument('-gitm', '--gitm_dir', type=str, default=None,
+                        help='GITM Directory. Defaults to None (no GITM processing)')
+    parser.add_argument('-sami', '--sami_dir', type=str, default=None,
+                        help='SAMI directory. Defaults to None (no SAMI processing)')
     parser.add_argument('-out', '--output_dir', type=str, default=None,
                         help='If you want to save the files to another'
                         ' directory, specify it here. Defaults to a new'
