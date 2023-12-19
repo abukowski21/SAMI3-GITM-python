@@ -618,12 +618,12 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
     ds = xr.Dataset(
         coords=dict(
             time=(('time'), times),
-            mlat=(('nlt', 'nf', 'nz'), grid['mlat'].round(2)),
+            mlat=(('nlt', 'nf', 'nz'), grid['mlat'].round(4)),
             mlon=(('nlt', 'nf', 'nz'), grid['mlon'].round(2)),
-            malt=(('nlt', 'nf', 'nz'), grid['malt'].round(2)),
-            glat=(('nlt', 'nf', 'nz'), grid['glat'].round(2)),
-            glon=(('nlt', 'nf', 'nz'), grid['glon'].round(2)),
-            alt=(('nlt', 'nf', 'nz'), grid['alt'].round(2)),),
+            malt=(('nlt', 'nf', 'nz'), grid['malt'].round(4)),
+            glat=(('nlt', 'nf', 'nz'), grid['glat'].round(4)),
+            glon=(('nlt', 'nf', 'nz'), grid['glon'].round(4)),
+            alt=(('nlt', 'nf', 'nz'), grid['alt']),),
     )
 
     if dtime_storm_start is not None:
