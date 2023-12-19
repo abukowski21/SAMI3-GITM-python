@@ -181,7 +181,7 @@ def generate_interior_points_output_grid(longitudes, latitudes, altitudes,
     return lons, lats, alts, node_conns
 
 
-def generate_interior_points_custom_grid(lats, lons, alts,
+def generate_interior_points_custom_grid(lons, lats, alts,
                                          cell_radius=0.5,
                                          progress=False):
     """Generate a 3D mesh from given 3D coordinates and write it to a UGRID
@@ -344,8 +344,7 @@ def apply_weight_file(sami_data_path,
                       progress=True,
                       output_filename=None,
                       custom_input_file=None,
-                      temp_dir=None,
-                      ):
+                      temp_dir=None,):
     """Apply the ESMF weight file to the SAMI raw data.
 
     Args:
@@ -470,16 +469,18 @@ def apply_weight_file(sami_data_path,
 
         if custom_input_file: # Write in vars with dims sami_time, sat_step
             out_ds[datavar] = (('sami_time', 'sat_step'),
-                                dstpts.reshape([sds.time.size,
+                                dstpts.reshape(sds.time.size,
                                                 out_ds['lat'].size,
-                                                8]).mean(axis=-1))
+                                                8, 
+                                                order='C').mean(axis=-1))
 
         else: # normal grid dimensions:
             out_ds[datavar] = (('time', 'lon', 'lat', 'alt'),
-                                dstpts.reshape([sds.time.size,
+                                dstpts.reshape(sds.time.size,
                                                 len(outlon),
                                                 len(outlat),
-                                                len(outalt)]))
+                                                len(outalt),))
+                                                # order='F'))
         # return dstpts
         if output_filename:
             out_ds.to_netcdf(os.path.join(out_dir,
@@ -496,6 +497,7 @@ def apply_weight_file(sami_data_path,
         del out_ds
 
         first = False
+    return
 
 
 def main(sami_data_path,
@@ -507,6 +509,7 @@ def main(sami_data_path,
          alt_step=None,  # use either this or num_alts!
          min_alt=100,
          max_alt=2400,
+         use_log_alt=False,
          custom_input_file=None,
          custom_grid_size=0.5,
          cols='all',
@@ -515,7 +518,8 @@ def main(sami_data_path,
          out_dir=None,
          temp_dir=None,
          # if outname is None, output new files for each var.
-         output_filename=None):
+         output_filename=None,
+         use_mpi=None):
     """ Main function for processing SAMI raw data for use in ESMF.
 
     Args:
@@ -634,11 +638,16 @@ def main(sami_data_path,
             out_lat = np.linspace(-90, 90, num_lats)
             out_lon = np.linspace(0, 360, num_lons, endpoint=False)
 
-            if alt_step:
+            if alt_step and not use_log_alt:
                 out_alt = np.arange(min_alt, max_alt+1, alt_step)
-            else:
+            elif not use_log_alt:
                 out_alt = np.linspace(min_alt, max_alt, num_alts)
-
+            elif use_log_alt and not alt_step:
+                out_alt = np.logspace(np.log10(min_alt), 
+                                      np.log10(max_alt), 
+                                      num_alts)
+            else:
+                raise ValueError('alt_step and use_log_alt are incompatible.')
             # And generate interior points
             flat_lon, flat_lat, flat_alt, output_idxs = \
                 generate_interior_points_output_grid(out_lon, out_lat, out_alt,
@@ -673,10 +682,18 @@ def main(sami_data_path,
         # if ESMF_DIR != '' and esmf_command[0][0] != '.':
         #    esmf_command = '.' + esmf_command
         try:
-            esmf_result = subprocess.run(
-                ' '.join(esmf_command), shell=True, check=True,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print("Output:", esmf_result.stdout.decode())
+            if use_mpi:
+                esmf_result = subprocess.run(
+                    'mpirun -np %i '%use_mpi + ' '.join(esmf_command), 
+                        shell=True, check=True,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                print("Output:", esmf_result.stdout.decode())
+
+            else:
+                esmf_result = subprocess.run(
+                    ' '.join(esmf_command), shell=True, check=True,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                print("Output:", esmf_result.stdout.decode())
 
         except FileNotFoundError:
             print('Could not find ESMF executable. Make sure it is installed '
@@ -758,6 +775,9 @@ if __name__ == '__main__':
                         help='Minimum altitude in output grid')
     parser.add_argument('--max_alt', type=int, default=2400,
                         help='Maximum altitude in output grid')
+    parser.add_argument('--log_alts', action='store_true', default=False,
+                        help='Use log scale for alts? Default is False, '
+                        '(use a linear scale). Not compatible with `alt_step.`')
     parser.add_argument('--custom_input_file', type=str, default=None,
                         help='User-defined input file (.csv with comma sep '
                         'and a header) (i.e. sat ephemeris file w/ '
@@ -771,6 +791,9 @@ if __name__ == '__main__':
     parser.add_argument('--temp_dir', type=str, 
                        help='Location where to store temp files. '
                              'Default is the sami_data_path')
+    parser.add_argument('--use_mpi', type=int, default=None,
+                        help='Use MPI for ESMF weight gen? '
+                        'specify number of procs here.')
 
     args = parser.parse_args()
 
@@ -790,8 +813,10 @@ if __name__ == '__main__':
          custom_grid_size=args.custom_grid_size,
          cols=args.cols,
          progress=not args.no_pbar,
+         use_log_alt=args.log_alts,
          remake_files=args.remake_files,
          out_dir=args.out_dir,
          output_filename=args.output_filename,
-         temp_dir=args.temp_dir
+         temp_dir=args.temp_dir,
+         use_mpi=args.use_mpi,
          )
