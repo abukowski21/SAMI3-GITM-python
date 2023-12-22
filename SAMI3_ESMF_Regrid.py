@@ -519,7 +519,8 @@ def main(sami_data_path,
          temp_dir=None,
          # if outname is None, output new files for each var.
          output_filename=None,
-         use_mpi=None):
+         use_mpi=None,
+         do_apply_weights=True):
     """ Main function for processing SAMI raw data for use in ESMF.
 
     Args:
@@ -549,6 +550,9 @@ def main(sami_data_path,
         out_dir (str): Output directory, Default is same as sami_data_path
         output_filename (str): Output filename, Default is to make a new file
             for each variable.
+        do_apply_weights (bool): Option for just generating the weight file 
+            or also applying it. Default is to apply weights (in addition 
+            to generating). This is mostly just a debug option.
 
     Returns:
         None
@@ -679,8 +683,7 @@ def main(sami_data_path,
                         '-l greatcircle -i -w',
                         os.path.join(temp_dir, 'esmf_weightfile.nc'),
                         ]
-        # if ESMF_DIR != '' and esmf_command[0][0] != '.':
-        #    esmf_command = '.' + esmf_command
+        
         try:
             if use_mpi:
                 esmf_result = subprocess.run(
@@ -716,16 +719,17 @@ def main(sami_data_path,
             # print("\n\nError output:", esmf_result.stderr.decode())
 
             raise subprocess.CalledProcessError('ESMF failed to run.')
-
+    
     # Now we can apply weights!
-    apply_weight_file(sami_data_path,
-                      dtime_sim_start,
-                      out_dir,
-                      cols=cols,
-                      progress=progress,
-                      output_filename=output_filename,
-                      custom_input_file=custom_input_file,
-                      temp_dir=temp_dir)
+    if do_apply_weights:
+        apply_weight_file(sami_data_path,
+                          dtime_sim_start,
+                          out_dir,
+                          cols=cols,
+                          progress=progress,
+                          output_filename=output_filename,
+                          custom_input_file=custom_input_file,
+                          temp_dir=temp_dir)
 
     return
 
