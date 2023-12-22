@@ -480,8 +480,8 @@ def do_interpolations(
                     ds=xr.Dataset(coords={
                         'time': (['time'], times),
                         'alt': (['alt'], altout),
-                        'lon': (['lat'], lonout),
-                        'lat': (['lon'], latout)},)
+                        'lon': (['lon'], lonout),
+                        'lat': (['lat'], latout)},)
                     ds[varname]=(('time', 'lon', 'lat', 'alt'),
                                    np.array(interpd).reshape(len(times),
                                                              len(lonout),
