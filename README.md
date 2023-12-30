@@ -17,7 +17,7 @@ Further documentation is available at https://sami3-gitm-python.readthedocs.io/e
 
 ## Installation
 
-Git clone, cd into repository
+`git` clone, `cd` into repository
 
 ```
 git clone git@github.com:abukowski21/SAMI3-GITM-python.git
@@ -37,6 +37,7 @@ For users that do not have Anaconda, the required dependencies can also be insta
 
 `python -m pip install -r requirements.txt`
 
+ESMF is required to interpolate SAMI3 outputs. More information can be found in the [ESMF documentation](https://earthsystemmodeling.org/doc/) or on [this page](https://sami3-gitm-python.readthedocs.io/en/latest/installation.html).
 
 ## USAGE
 
@@ -48,11 +49,13 @@ To post-process model outputs into NetCDF format: `python PostProcessModelResult
 
 To generate plots with these post-processed outputs: `python basic_plots_from_netcdf.py [args]`
 
-Run any script with the `-h` flag to see the available arguments.
+Run any script with the `[filename] -h` flag to see the available arguments.
 
 ### EXAMPLE:
 
 Here is an example of a workflow to look at SAMI outputs. Here we will just create the regridded data & then plot out the values at all times on a map.
+
+(Note: this is out of date since updating SAMI3 post-processing to ESMF)
 
 ```
 python PostProcessModelResults.py -sami /path/to/sami_data/ -out /path/to/outputs/ --dtime_sim_start 20110521 --sami_type regrid
@@ -63,9 +66,7 @@ python basic_plots_from_netcdf.py /path/to/outputs/ -col edens -out_dir /path/to
 
 A ton of extra functionality is available. Run the scripts with the `-h` or `--help` flags to see available arguments, or check the documentation to read more.
 
-
 Good luck!
-
 
 ## Notes:
 
@@ -79,6 +80,7 @@ Good luck!
 
 Source code for publications can be found in the src_PUBLICATIONS folder. A README in that folder will direct you where to look for the source scripts for each paper which has used this repository.
 
+Additional information on published results (including conference preceedings) should be added eventually, though reach out if you cannot wait.
 
 
 ## Contributing/Licensing
