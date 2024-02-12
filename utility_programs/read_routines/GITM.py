@@ -322,7 +322,13 @@ def read_bin_to_xarray(filename,
             ds = ds.drop_isel(lat=[0, 1, -2, -1],
                               lon=[0, 1, -1, -2], alt=[0, 1, -1, -2])
 
-    if cols != 'all':
+    cols = [cols] if type(cols) is str else cols
+    if cols != 'all' and 'all' not in cols:
+        for c in cols:
+            if c not in ds.data_vars:
+                raise ValueError(
+                    f'Column {c} not found. \n  Available columns: \n',
+                    list(ds.data_vars))
         ds = ds.get(cols)
 
     return ds
