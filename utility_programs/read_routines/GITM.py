@@ -585,6 +585,10 @@ def process_all_to_cdf(gitm_dir,
         raise ValueError('tmp_dir is only used if single_file=True')
 
     if skip_existing:
+
+        if tmp_dir is None:
+            tmp_dir = out_dir
+        
         files_written = glob.glob(os.path.join(tmp_dir, '*.nc'))
         indiv_ends = indiv_ends[len(files_written):]
 
