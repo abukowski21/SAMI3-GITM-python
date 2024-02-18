@@ -48,6 +48,7 @@ ESMF (Earth System Modeling Framework) is a robust software suite designed to fa
 For complete details on how to install ESMF, see their documentation_. I will provide a bit of information on the crucial steps, but this is by no means complete.
 The necessary pages in the documentation are the the quick start page_ and this page on more details on the installation specifics_. 
 
+.. _documentation: https://earthsystemmodeling.org/doc/
 .. _page: https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/node6.html
 
 .. _specifics: https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/node10.html
@@ -56,7 +57,7 @@ We need to install ESMF with just the command line tools, howerver we need suppo
 
 .. _instructions: https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/node6.html#SECTION00063000000000000000
 
-#. Ensure that a suitable version of ESMF is downloaded and uncompressed. Not all versions support 3D spherical interpolations in offline mode. I recommend version 8.4.0, but it is not required.
+#. Ensure that a suitable version of ESMF is downloaded and uncompressed. Not all versions support 3D spherical interpolations in offline mode. I recommend version 8.4.0, but it is not required. Details can be found on the ESMF regridding_ page.
 #. Set the required environmental variables. These are: **ESMF_DIR**, **ESMF_COMM**, **ESMF_COMPILER**, **ESMF_NETCDF**, **ESMF_PNETCDF**, and **ESMF_PIO**. Other variables in the documentation can be set, but my testing has shown that these will work.
 	* **ESMF_DIR** is the path to the installation location
 	* **ESMF_COMM** denotes if ESMF should be installed with support for MPI. Set this to the correct implementation of MPI that your system is using.
@@ -69,6 +70,7 @@ We need to install ESMF with just the command line tools, howerver we need suppo
 
 .. _link: https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/node10.html#sec:netcdf
 
+.. _regridding: https://earthsystemmodeling.org/regrid/
 
 .. _postinstall:
 
