@@ -27,7 +27,8 @@ Interpolating to a Grid
 If you are trying to work with global data, this is the choice for you. You can tell the program your required output grid spacing and the rest will be done for you. Here is an example:
 
 .. code-block:: bash
-	python SAMI3_ESMF_Regrid.py /path/to/sami/outputs [simulation start date as a YYYYMMDD str] --cols edens --out_dir /path/to/output/location --num_lons 90 --num_lats 90 --num_alts 100 --min_alt 100 --max_alt 2500
+	$ python SAMI3_ESMF_Regrid.py /path/to/sami/outputs [simulation start date as a YYYYMMDD str] --cols edens --out_dir /path/to/output/location --num_lons 90 --num_lats 90 --num_alts 100 --min_alt 100 --max_alt 2500
+
 
 Interpolating to User-Specified Points
 ======================================
