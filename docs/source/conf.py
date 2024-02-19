@@ -19,7 +19,7 @@ sys.path.insert(2, os.path.abspath('../../utility_programs/'))
 # -- Project information -----------------------------------------------------
 
 project = 'SAMI3-GITM-Python'
-copyright = '2023, Aaron Bukowski'
+copyright = '2024, Aaron Bukowski'
 author = 'Aaron Bukowski'
 
 
@@ -33,6 +33,8 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'myst_nb']
+
+pygments_style = 'sphinx'
 
 # Don't execute the notebook - just use cached data.
 jupyter_execute_notebooks = "off"
