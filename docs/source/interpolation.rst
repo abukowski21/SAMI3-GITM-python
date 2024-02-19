@@ -1,7 +1,7 @@
 .. _Interpolation:
 
 Interpolation
-============
+#############
 
 After *so* much experimentation, limitations were found with the ``LinearNDInterpolator`` in SciPy. Mainly, it is slow (even when re-using a Delauney Triangulation) and the outputs are heavily influenced by the distance from source to destination points. After trying to write several interpolators, I have decided to implement the Earth System Modeling Framework (ESMF) to interpolate SAMI3 results. Modules to interpolate GITM are currently half-baked but will be finalized soon.
 
