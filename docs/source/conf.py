@@ -37,7 +37,7 @@ extensions = [
 pygments_style = 'sphinx'
 
 # Don't execute the notebook - just use cached data.
-jupyter_execute_notebooks = "off"
+nb_execution_mode = "off"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
