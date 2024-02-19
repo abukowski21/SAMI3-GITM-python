@@ -20,8 +20,9 @@ RegridSami
     :undoc-members:
 
 
-Under the hood, all interpolations are performed with `LinearNDInterpolator <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.LinearNDInterpolator.html>`_. This is a wrapper around `Qhull <http://www.qhull.org/>`_.
+Under the hood, all interpolations (in this program) are performed with `LinearNDInterpolator <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.LinearNDInterpolator.html>`_. This is a wrapper around `Qhull <http://www.qhull.org/>`_.
 
+I need to update this section of the documentation #TODO: (update this).
 
 For more information (and to unlock even more functionality), use the utility_programs.interpolate_outputs module:
 

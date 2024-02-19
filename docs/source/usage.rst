@@ -130,6 +130,9 @@ To keep things approachable and streamlined, PostProcessModelResults.py does not
 There is also the option to "fly a satellite through" the model outputs, interpolating the model outputs to the satellite location. The simulated satellite measurements are calculated at **every** time that we have model data for. Thus, each variable in the output data (in NetCDF format) is indexed with ``(sat_step, sami_time)``. The exception for this is ``(glat, glon, alt, sat_time)``, which are only indexed with ``sat_step``. This is not yet documented or tested, though should be possible by running ``SAMI3_ESMF_Regrid.py`` with the ``--custom_input_file`` flag and specifying the path to a .csv file with [glon, glat, alt] as columns.
 
 
+This information is also included in the :ref:`Interpolation` section.
+
+
 Using in a Python script
 ========================
 

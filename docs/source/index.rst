@@ -18,6 +18,7 @@ This project will not run any models for you, only manipulate the outputs into a
    intro
    installation
    usage
+   interpolation
    dataIO
    plotting
    pubs
