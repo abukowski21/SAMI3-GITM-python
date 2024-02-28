@@ -62,3 +62,30 @@ Interpolation to a custom grid makes a 2D NetCDF file. The dimensions are for th
 
 ESMF is complicated and I've tried to build this out in an approachable way. Please don't hesitate to fill out a GitHub issue or contact me with questions or issues.
 
+
+
+Known errors
+************
+
+This section provides a brief overview of known errors that may occur when running the ESMF interpolation, as well as how to fix them. If you encounter an error that is not listed here, please let me know and I will add it to the list.
+
+A disclaimer first. As best stated `here <https://xesmf.readthedocs.io/en/latest/other_tools.html#other-geospatial-regridding-tools>`_,
+
+    "However, ESMPy is a complicated Python API that controls a huge Fortran beast hidden underneath. It is not as intuitive as native Python packages, and even a simple regridding task requires more than 10 lines of arcane code."
+
+Ideally we would use ESMPy for interpolations since it does not rely on the user installing ESMF, managing the modules with that process, and calling command line functions within Python. But ESMPy is a bit difficult to work with. One day the functionality to use ESMPy will be added and this section can be deleted, but that day will need to wait until my dissertation is done.
+
+The following are known errors that may occur when running the ESMF interpolation, as well as how to fix them.
+
+1. ``Error loading shared library: lib[...].so: cannot open shared object file: No such file or directory``
+	- This error occurs when the compilers used during the ESMF install are not loaded. ESMF is looking to use library files that it cannot find. 
+	- To fix this, you need to load the same modules used during the install before running any ESMF modules. To save time, this module stack can be saved to a collection with ``module save [name]`` and then reloaded with ``module restore [name]``.
+	- On a system without ``modules``, you will need to add the libraries used to install ESMF to your ``LD_LIBRARY_PATH`` or ``$PATH``.
+	- Either can be placed into your startup scripts (.bashrc/.bashprofile/.zshrc/etc.) to be configured automatically when you log iinto the system. Setting default modules is also a good idea, but deprecated so not advised in case you screw things up.
+2. ``Error in system call pthread_mutex_destroy: Device or resource busy
+    src/mpi/init/initthread.c``, ``[system_name:mpi_rank_0]``, or ``application called MPI_Abort(comm=...`` errors.
+	- ESMF cannot set up the MPI interface.
+	- You are likely trying to run MPI programs on a login node. This is bad practice and system administrators have put in place measures to prevent this. You will achieve higher throughput and not take up resources from other users by allocating yourself a compute node (or using a dedicated analysiis node) and running things there.
+3. ``Command [...] not found`` or exit status 127.
+	- The subprocess call could not find the ESMF_RegridWeightGen executable.
+	- To fix this, set the ``ESMF_DIR`` flag (unfortunately named since it's the same name as the variable used during ESMF install) to the path to the ESMF executables. From the $ESMF_DIR used inn the install, go to apps/[...]/ and you will see the executables. Get into the apps directory and hit tab till you find some programs. The directory you found is what ``ESMF_DIR`` should be set to.
