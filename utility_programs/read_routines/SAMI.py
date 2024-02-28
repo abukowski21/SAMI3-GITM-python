@@ -256,7 +256,7 @@ def make_times(nt, sami_data_path, dtime_sim_start,
         times_list.append(dtime_sim_start + datetime.timedelta(hours=hr))
 
     truths = np.array([pd.Timestamp(times_list[t]).round(
-        'T') == times[t] for t in range(len(times))])
+        'min') == times[t] for t in range(len(times))])
     if truths.sum() != len(truths) and not skip_time_check:
         raise ValueError(
             '\nThe times are wrong! Somehow this needs to be fixed.'
