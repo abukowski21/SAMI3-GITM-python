@@ -8,7 +8,7 @@ After *so* much experimentation, limitations were found with the ``LinearNDInter
 Overview
 *********
 
-ESMF is a super powerful framework designed to link various models together. Of the entire functionality, we are only using a tiny bit of it. Of the various interpolation routines I have tried, ESMF has been by far the fastest and most accurate. 
+ESMF is a super powerful framework designed to link various models together. Of the entire functionality, we are only using a tiny bit of it. ESMF has far out-performed the various interpolation routines I have tried, from standard Python routines to exotic machine learning routines. ESMF has been fast, accurate, reliable (when set up right), and reproducible.
 
 ESMPy is extremely hard to debug, at least for me. For this reason, we are calling ESMF from the command line within Python code. Files are autmomatically written with the source and destination "grids", and then the weights are automatically applied. ESMF must be installed with NetCDF support, so the ``conda`` or ``pip`` versions will not work. See the :ref:`Installing ESMF` page for more details.
 
@@ -77,15 +77,20 @@ Ideally we would use ESMPy for interpolations since it does not rely on the user
 
 The following are known errors that may occur when running the ESMF interpolation, as well as how to fix them.
 
-1. ``Error loading shared library: lib[...].so: cannot open shared object file: No such file or directory``
-	- This error occurs when the compilers used during the ESMF install are not loaded. ESMF is looking to use library files that it cannot find. 
-	- To fix this, you need to load the same modules used during the install before running any ESMF modules. To save time, this module stack can be saved to a collection with ``module save [name]`` and then reloaded with ``module restore [name]``.
-	- On a system without ``modules``, you will need to add the libraries used to install ESMF to your ``LD_LIBRARY_PATH`` or ``$PATH``.
-	- Either can be placed into your startup scripts (.bashrc/.bashprofile/.zshrc/etc.) to be configured automatically when you log iinto the system. Setting default modules is also a good idea, but deprecated so not advised in case you screw things up.
-2. ``Error in system call pthread_mutex_destroy: Device or resource busy
+
+1. ``Error in system call pthread_mutex_destroy: Device or resource busy
     src/mpi/init/initthread.c``, ``[system_name:mpi_rank_0]``, or ``application called MPI_Abort(comm=...`` errors.
 	- ESMF cannot set up the MPI interface.
 	- You are likely trying to run MPI programs on a login node. This is bad practice and system administrators have put in place measures to prevent this. You will achieve higher throughput and not take up resources from other users by allocating yourself a compute node (or using a dedicated analysiis node) and running things there.
-3. ``Command [...] not found`` or exit status 127.
+2. Error code 127 can be from several things. First, ``Error loading shared library: lib[...].so: cannot open shared object file: No such file or directory``
+	- This error occurs when the Fortran and C compilers used during the ESMF install are not loaded. ESMF is looking to use library files that it cannot find. 
+	- To fix this, you need to load the same modules used during the install before running any ESMF modules. To save time, this module stack can be saved to a collection with ``module save [name]`` and then reloaded with ``module restore [name]``.
+	- On a system without ``modules``, you will need to add the libraries used to install ESMF to your ``LD_LIBRARY_PATH`` or ``$PATH``.
+	- Either can be placed into your startup scripts (.bashrc/.bashprofile/.zshrc/etc.) to be configured automatically when you log iinto the system. Setting default modules is also a good idea, but deprecated so not advised in case you screw things up.
+3. Second, error 127 and: ``forrtl: severe (174): SIGSEGV, segmentation fault occurred``.
+	- This error occurs when the MPI modules used during the install are not loaded. This one takes a while to show up so oyu might feel like you got lucky and then it will crash.
+	- See previous for how to fix. Just change your MPI modules to the ones used during the install.
+4. Third, error code 127 and ``Command [...] not found``.
 	- The subprocess call could not find the ESMF_RegridWeightGen executable.
 	- To fix this, set the ``ESMF_DIR`` flag (unfortunately named since it's the same name as the variable used during ESMF install) to the path to the ESMF executables. From the $ESMF_DIR used inn the install, go to apps/[...]/ and you will see the executables. Get into the apps directory and hit tab till you find some programs. The directory you found is what ``ESMF_DIR`` should be set to.
+	- This error could also be caused by the ESMF executables not being listed correctly in $PATH. If you *did* add them to $PATH and installed something like ESMPy into your Python environment, they could be in the wrong order. Run ``echo $PATH$`` or ``which ESMF_RegridWeightGen`` to see where the executable is being called from. If it is not the same as the one you installed, you need to fix your $PATH (or use the ``ESMF_DIR`` flag).
