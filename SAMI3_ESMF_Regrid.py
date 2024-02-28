@@ -704,25 +704,27 @@ def main(sami_data_path,
                 print("Output:", esmf_result.stdout.decode())
                 
         except subprocess.CalledProcessError as err_:
-            print('ESMF failed to run. Check the output above for more info. '
-                  'If you are using a user-install of ESMF, make sure the '
-                  'installation is correct with ESMF_PrintInfo.\n'
-                  '  If there are no errors, try to run:\n\n\t',
+            print('\n\nstdout: \n', err_.stdout.decode("utf-8"))
+            print('\nstderr: \n', err_.stderr.decode("utf-8"))
+            print('\nFrom command: ', err_.cmd)
+            print('\nError code: ', err_.returncode)
+
+            print('\n\n ===================== \n\n\n\n'
+                  'ESMF failed to run. \n\n\n ========== \n\n\n'
+                  'See above for debug information\n'
+                  'Attempted to run the following command. After fixing errors, '
+                  'either re-run this python script with --reuse_weights, '
+                  'or run this from the command line:\n\n\t',
                   ' '.join(esmf_command),
                   '\n\nCheck output logs in PET*.Log for more info ',
-                  '(if the file does not exist, ESMF did not run at all).\n',
+                  '(if the log file does not exist, ESMF did not run at all).\n',
                   'After ESMF is finished, come back and apply the weights.\n'
-                  'Some tips: \n - If you are using modules, make sure ESMF '
-                  'is loaded LAST (so it is listed first in $PATH)\n'
-                  '  - The version of ESMF that comes bundled with `esmpy`'
-                  ' will not work since we need PIO support (and must be '
-                  'built with MPI)\n - Check the documentation for this '
+                  'Check the documentation for this '
                   'project for info on known bugs and their fixes.')
-            print("\n\nError output:\n")
 
-            raise subprocess.CalledProcessError(err_.returncode, 
-                                                err_.cmd, 
-                                                output=err_.stdout)
+            return
+
+
     
     # Now we can apply weights!
     if do_apply_weights:
