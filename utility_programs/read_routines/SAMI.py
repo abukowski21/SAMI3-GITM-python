@@ -234,9 +234,11 @@ def make_times(nt, sami_data_path, dtime_sim_start,
     if dtime_storm_start is not None:
         hrs_since_storm_start = []
 
+    if not isinstance(dtime_sim_start, pd.Timestamp):
+        dtime_sim_start = pd.Timestamp(dtime_sim_start)
+
     for t in range(nt):
-        time_here = pd.Timestamp(dtime_sim_start) + \
-            t * pd.Timedelta(5, 'minutes')
+        time_here = dtime_sim_start + t * pd.Timedelta(5, 'minutes')
         times.append(time_here.to_pydatetime())
 
         if dtime_storm_start is not None:
@@ -358,7 +360,7 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
             Path to SAMI data
         dtime_storm_start (datetime.datetime):
             Datetime of the start of the storm
-        dtime_sim_start (datetime.datetime):
+        dtime_sim_start (datetime.datetime-like or str):
             Datetime of the start of the simulation
         t_start_idx (int, optional):
             Time index of the start of the data return. Defaults to None.
