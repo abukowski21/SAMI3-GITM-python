@@ -641,10 +641,13 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
         if isinstance(cols, str):
             cols = [cols]
 
+    none_found = True
     for fname in sami_og_vars:
         if cols != 'all':
             if sami_og_vars[fname] not in cols:
                 continue
+            else:
+                none_found = False
         curr_arr = np.zeros((len(times), nlt, nf, nz))
         try:
             with open(os.path.join(sami_data_path, fname), 'rb') as f:
@@ -663,6 +666,10 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
         except FileNotFoundError:
             print(f'File {fname} not found!\n',
                   'in directory {sami_data_path}')
+    if none_found:
+        raise KeyError('None of the cols you provided were found!',
+                       'You gave: \n', cols, '\nBut the only available',
+                       ' columns are:\n', sami_og_vars.values)
 
     return ds
 
