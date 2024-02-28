@@ -668,11 +668,8 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
                   'in directory {sami_data_path}')
     if none_found:
         raise KeyError('Key not found',
-                       f"""Please double check key names.
-                           You gave: 
-                           {cols} 
-                            But the only available columns are
-                            {sami_og_vars.values}""")
+                       'Please double check key names.',
+                       f'You gave: {cols} But only {sami_og_vars.values} are valid')
 
     return ds
 
