@@ -702,28 +702,27 @@ def main(sami_data_path,
                     ' '.join(esmf_command), shell=True, check=True,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 print("Output:", esmf_result.stdout.decode())
-
-        except FileNotFoundError:
-            print('Could not find ESMF executable. Make sure it is installed '
-                  'and the path is correctly passed to this script.')
-            raise FileNotFoundError('Could not find ESMF executable.')
-        except subprocess.CalledProcessError:
+                
+        except subprocess.CalledProcessError as err_:
             print('ESMF failed to run. Check the output above for more info. '
                   'If you are using a user-install of ESMF, make sure the '
-                  'installation is correct.'
-                  'If you do have ESMF installled, try to run:\n\n\t',
+                  'installation is correct with ESMF_PrintInfo.\n'
+                  '  If there are no errors, try to run:\n\n\t',
                   ' '.join(esmf_command),
                   '\n\nCheck output logs in PET*.Log for more info ',
-                  '(if the file does not exist, ESMF was unable to run).\n',
+                  '(if the file does not exist, ESMF did not run at all).\n',
                   'After ESMF is finished, come back and apply the weights.\n'
                   'Some tips: \n - If you are using modules, make sure ESMF '
                   'is loaded LAST (so it is listed first in $PATH)\n'
-                  ' - The version of ESMF that comes bundled with `esmpy`'
+                  '  - The version of ESMF that comes bundled with `esmpy`'
                   ' will not work since we need PIO support (and must be '
-                  'built with MPI)')
-            # print("\n\nError output:", esmf_result.stderr.decode())
+                  'built with MPI)\n - Check the documentation for this '
+                  'project for info on known bugs and their fixes.')
+            print("\n\nError output:\n")
 
-            raise subprocess.CalledProcessError('ESMF failed to run.')
+            raise subprocess.CalledProcessError(err_.returncode, 
+                                                err_.cmd, 
+                                                output=err_.stdout)
     
     # Now we can apply weights!
     if do_apply_weights:
@@ -815,8 +814,11 @@ if __name__ == '__main__':
 
     parser.add_argument('--use_mpi', type=int, default=None,
                         help='Use MPI for multiprocessing ESMF weight gen? '
-                        'Specify number of procs here.\n\tNote: ESMF will need '
-                        'access to MPI even run single-threaded.')
+                        'Specify number of procs here.\nNot necessary and will '
+                        'not drastically speed anything up, unless your SAMI3 '
+                        'grid is absurdly high resolution.\n\t'
+                        'Note: ESMF will need access to MPI even run'
+                        'single-threaded.')
 
     args = parser.parse_args()
 
