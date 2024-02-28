@@ -34,11 +34,16 @@ def generate_interior_points_sami_raw(old_shape, progress=False):
 
 
     Notes:
-        - This is not well documented. Contact me with questions
-        - It should "just work", but may not...
+        - This is not super well documented. Contact me with questions
+        - The code here could be made more efficient. Rather than saving
+            a few seconds at execution, I opted to make it more readable.
+        - It should "just work".
         - The mesh generated does follow ESMF conventions, however
-            more points are thrown out than is probably necessary.
-            With the size of the SAMI grid this is probably not an issue.
+            more points are thrown out than are probably necessary.
+            With the size of the SAMI grid this is not an issue.
+            The points that *are* thrown out are all at high latitudes
+            or low altitudes, so do not impact the results in any meaningful
+            way.
     """
 
     nlt, nf, nz = old_shape
