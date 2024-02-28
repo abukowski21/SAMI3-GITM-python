@@ -741,10 +741,14 @@ def main(sami_data_path,
 
 if __name__ == '__main__':
     import argparse
+    from argparse import RawTextHelpFormatter
 
     parser = argparse.ArgumentParser(
-        description='Process SAMI3 raw data for use in ESMF.'
-        ' The output grid can be user specified.')
+        description='Perform ESMF regridding and interpolation on SAMI3 model '
+        'outputs. The output grid can be user specified.\n'
+        '  **  NOTE: See the documentation (Interpolation > Common errors) for '
+        'details on known errors and how to fix them. **', 
+        formatter_class=RawTextHelpFormatter)
 
     parser.add_argument('sami_data_path', type=str,
                         help='Path to SAMI3 raw data')
@@ -752,10 +756,15 @@ if __name__ == '__main__':
                         help='Simulation start date (YYYYMMDD)')
     parser.add_argument('--ESMF_DIR', type=str, default='',
                         help='Path to the ESMF_RegridWeightGen executable. '
-                        'Default is to use the system path.\n'
-                        'This only needs to be set in you are using a '
-                        'single-user-install of ESMF. In most cases, this '
-                        'will not need to be changed.')
+                        'Default is to use the system $PATH.\n'
+                        'This needs to be set if ESMF_RegridWeightGen is not '
+                        'in your $PATH.\nTo check if you need to set this, run '
+                        'ESMF_PrintInfo.\nIf the command is not found, either '
+                        'add the path to the executable to your path or '
+                        'specify that path here.\nIf you get this error: \n'
+                        '\terror while loading shared libraries: lib[...].so\n'
+                        'then you need to make sure the modules you have loaded '
+                        'are identical to those used during the install.\n')
     parser.add_argument('--no_pbar', action='store_true', default=False,
                         help='Disable progress bar')
     parser.add_argument('--cols', type=str, default='all',
@@ -793,16 +802,21 @@ if __name__ == '__main__':
                         '`glon, glat, alt` columns.)')
     parser.add_argument('--custom_grid_size', type=float, default=1,
                         help='Size of grid cells to use when regridding to a '
-                        'satellite file. Measured in degrees from center (so '
-                        'it is a radius), and altitude is '
-                        '10*custom_grid_size. Default is 0.5.')
+                        'satellite file. Default is 0.5.\n'
+                        'Measured in degrees from target location (for lat & '
+                        ' lon), and altitude is 10*custom_grid_size (km).\n'
+                        'This most likely will not need to be changed. '
+                        "However, if you are receiving a lot of 0's and NaN's, "
+                        "you can try increasing this value.")
     
     parser.add_argument('--temp_dir', type=str, 
                        help='Location where to store temp files. '
                              'Default is the sami_data_path')
+
     parser.add_argument('--use_mpi', type=int, default=None,
-                        help='Use MPI for ESMF weight gen? '
-                        'specify number of procs here.')
+                        help='Use MPI for multiprocessing ESMF weight gen? '
+                        'Specify number of procs here.\n\tNote: ESMF will need '
+                        'access to MPI even run single-threaded.')
 
     args = parser.parse_args()
 
