@@ -9,30 +9,24 @@ To post-process model results, use PostProcessModelResults.py. The help informat
 
 ``python PostProcessMOdelResults.py --help``
 
-
-More functionality can be unlocked specifically through running RegridSami...
-
-RegridSami
-^^^^^^^^^^
-
-.. automodule:: RegridSami
-    :members:
-    :undoc-members:
-
-
-Under the hood, all interpolations (in this program) are performed with `LinearNDInterpolator <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.LinearNDInterpolator.html>`_. This is a wrapper around `Qhull <http://www.qhull.org/>`_.
-
-I need to update this section of the documentation #TODO: (update this).
-
-For more information (and to unlock even more functionality), use the utility_programs.interpolate_outputs module:
-
-utility_programs.interpolate_outputs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. automodule:: utility_programs.interpolate_outputs
+.. automodule:: PostProcessModelResults
     :members:
     :undoc-members:
     :show-inheritance:
+
+This will rewrite both GITM and SAMI3 output files to NetCDF files. SAMI3 can optionally be interpolated:
+
+Interpolation
+-------------
+
+SAMI3_ESMF_Regrid
+^^^^^^^^^^^^^^^^^
+
+.. automodule:: SAMI3_ESMF_Regrid
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 
 Reading Data
