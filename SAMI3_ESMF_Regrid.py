@@ -149,10 +149,10 @@ def generate_interior_points_output_grid(longitudes, latitudes, altitudes,
                 lats.append(lat)
                 alts.append(alt)
 
-                a1 = a+1 if a < lon_dim else 0
+                a1 = a + 1 if a < lon_dim else 0
                 # if we're near the poles or alt lims, throw points out:
-                b1 = b+1 if b < lat_dim else 'a'
-                c1 = c+1 if c < alt_dim else 'a'
+                b1 = b + 1 if b < lat_dim else 'a'
+                c1 = c + 1 if c < alt_dim else 'a'
 
                 cs = [[a, b, c],
                       [a1, b, c],
@@ -225,8 +225,8 @@ def generate_interior_points_custom_grid(lons, lats, alts,
         lat_below = lats[centerpt] - cell_radius
         lat_above = lats[centerpt] + cell_radius
 
-        alt_below = alts[centerpt] - 10*cell_radius
-        alt_above = alts[centerpt] + 10*cell_radius
+        alt_below = alts[centerpt] - 10 * cell_radius
+        alt_above = alts[centerpt] + 10 * cell_radius
 
         # Make sure we don't go over the poles:
         if lat_below < -90:
@@ -247,15 +247,15 @@ def generate_interior_points_custom_grid(lons, lats, alts,
                             alt_above, alt_above,
                             alt_above, alt_above])
 
-        node_conns.append([8*centerpt, 8*centerpt+1,
-                           8*centerpt+2, 8*centerpt+3,
-                           8*centerpt+4, 8*centerpt+5,
-                           8*centerpt+6, 8*centerpt+7])
+        node_conns.append([8 * centerpt, 8 * centerpt + 1,
+                           8 * centerpt + 2, 8 * centerpt + 3,
+                           8 * centerpt + 4, 8 * centerpt + 5,
+                           8 * centerpt + 6, 8 * centerpt + 7])
 
     return np.array(lon_corners).flatten(), \
-           np.array(lat_corners).flatten(), \
-           np.array(alt_corners).flatten(), \
-           np.array(node_conns)
+        np.array(lat_corners).flatten(), \
+        np.array(alt_corners).flatten(), \
+        np.array(node_conns)
 
 
 def write_UGRID_mesh(lon, lat, alt, indices, fname):
@@ -373,7 +373,7 @@ def apply_weight_file(sami_data_path,
             login node.
 
     """
-    
+
     if not temp_dir:
         temp_dir = sami_data_path
 
@@ -388,7 +388,7 @@ def apply_weight_file(sami_data_path,
         outlat = np.unique(dst_ds.nodelat.values)
         outalt = np.unique(dst_ds.height.values)
 
-    else: # Custom input files (sat tracks) need to be handled differently.
+    else:  # Custom input files (sat tracks) need to be handled differently.
         # read dataset now and see if time info is present.
         sat_df = pd.read_csv(custom_input_file)
         if 'time' in sat_df.columns:
@@ -399,7 +399,7 @@ def apply_weight_file(sami_data_path,
             add_time_custom_file = False
 
     if cols != 'all':
-        if type(cols) is str:
+        if isinstance(cols, str):
             cols = [cols]
     else:
         cols = SAMI.sami_og_vars.values()
@@ -421,17 +421,18 @@ def apply_weight_file(sami_data_path,
             if first:
                 pbar = tqdm(total=len(sds.time) * len(cols))
 
-            pbar.set_description('interpolating %s vars:(%i/%i)'.ljust(40,' ')
+            pbar.set_description('interpolating %s vars:(%i/%i)'.ljust(40, ' ')
                                  % (datavar, nvar, len(cols)))
 
         # Xarray dataset for output data...
         out_ds = xr.Dataset()
         if custom_input_file:
-            
+
             out_ds['sami_time'] = sds.time.values
             if add_time_custom_file:
-                out_ds['sat_time'] = (('sat_step'), pd.to_datetime(sat_df['time']))
-            
+                out_ds['sat_time'] = (('sat_step'),
+                                      pd.to_datetime(sat_df['time']))
+
             try:
                 out_ds['lat'] = (('sat_step'), sat_df.lat)
                 out_ds['lon'] = (('sat_step'), sat_df.lon)
@@ -449,9 +450,9 @@ def apply_weight_file(sami_data_path,
         # loop thru time, esmf does not hold any of our time info:
         dstpts = np.zeros((sds.time.size, weights.n_b.size))
         unique_rows, row_inds, row_counts = np.unique(
-                                                new_row[weights.n_s.values],
-                                                return_inverse=True,
-                                                return_counts=True)
+            new_row[weights.n_s.values],
+            return_inverse=True,
+            return_counts=True)
 
         for t in range(sds.time.size):
             srcData = sds[datavar].isel(time=t).values.flatten()
@@ -467,36 +468,36 @@ def apply_weight_file(sami_data_path,
                 pbar.update()
 
         if progress:
-            pbar.set_description('Writing %s \t vars:(%i/%i)'.ljust(40,' ')
+            pbar.set_description('Writing %s \t vars:(%i/%i)'.ljust(40, ' ')
                                  % (datavar, nvar, len(cols)))
 
         datavar = datavar.replace('+', '_plus_').replace('-', '_')
 
-        if custom_input_file: # Write in vars with dims sami_time, sat_step
+        if custom_input_file:  # Write in vars with dims sami_time, sat_step
             out_ds[datavar] = (('sami_time', 'sat_step'),
-                                dstpts.reshape(sds.time.size,
-                                                out_ds['lat'].size,
-                                                8, 
-                                                order='C').mean(axis=-1))
+                               dstpts.reshape(sds.time.size,
+                                              out_ds['lat'].size,
+                                              8,
+                                              order='C').mean(axis=-1))
 
-        else: # normal grid dimensions:
+        else:  # normal grid dimensions:
             out_ds[datavar] = (('time', 'lon', 'lat', 'alt'),
-                                dstpts.reshape(sds.time.size,
-                                                len(outlon),
-                                                len(outlat),
-                                                len(outalt),))
-                                                # order='F'))
+                               dstpts.reshape(sds.time.size,
+                                              len(outlon),
+                                              len(outlat),
+                                              len(outalt),))
         # return dstpts
         if output_filename:
             out_ds.to_netcdf(os.path.join(out_dir,
-                                          output_filename+'_SAMI-REGRID.nc'),
+                                          output_filename + '_SAMI-REGRID.nc'),
                              mode='a' if not first and os.path.exists(
                                  os.path.join(out_dir,
                                               output_filename
                                               + '_SAMI-REGRID.nc')) else 'w',
                              engine='h5netcdf')
         else:
-            out_ds.to_netcdf(os.path.join(out_dir, datavar+'_SAMI-REGRID.nc'),
+            out_ds.to_netcdf(os.path.join(out_dir,
+                                          datavar + '_SAMI-REGRID.nc'),
                              engine='h5netcdf')
 
         del out_ds
@@ -519,7 +520,7 @@ def main(sami_data_path,
          custom_grid_size=0.5,
          cols='all',
          progress=False,
-         remake_files=False,
+         remake_files=True,
          out_dir=None,
          temp_dir=None,
          # if outname is None, output new files for each var.
@@ -543,20 +544,38 @@ def main(sami_data_path,
             (Default is None)
         min_alt (int): Minimum altitude in output grid
         max_alt (int): Maximum altitude in output grid
+        use_log_alt (bool): Use log scale for alts? Default is False;
+            (use a linear scale). Not compatible with `alt_step.`
+            Only used if the output is a grid.
         custom_input_file (str): User-defined input file (.csv with comma sep
             and a header) (i.e. sat track w/ `glon, glat, alt` columns.)
         custom_grid_size (float): Size of grid cells to use when regridding to
             a satellite file. Measured in degrees from center (so it is a
             radius), and altitude is 10*custom_grid_size. Default is 0.5.
+            If you are receiving a lot of 0's and NaN's, you can try
+            increasing this value.
         cols (str or list): Columns to interpolate (comma sep)
-        progress (bool): Whether or not to show `tqdm` progress bar
-        remake_files (bool): Remake ESMF input files? Default is False
-            (reuse existing files)
-        out_dir (str): Output directory, Default is same as sami_data_path
+        progress (bool): Whether or not to show `tqdm` progress bar when
+            applying weights. Default is False.
+        remake_files (bool): Remake ESMF input files? Default is True
+            (remake ESMF input & weight files). When changing the output
+            coordinates, you must remake the input files.
+        out_dir (str): Output directory, Default is same as sami_data_path.
+        tmp_dir (str): Location where to store temp files. Default is the
+            sami_data_path. The `temp files` are the input and output grid
+            files and the weight ESMF gives back. None are especially large.
         output_filename (str): Output filename, Default is to make a new file
             for each variable.
-        do_apply_weights (bool): Option for just generating the weight file 
-            or also applying it. Default is to apply weights (in addition 
+        use_mpi (int): Use MPI for multiprocessing ESMF weight calculation?
+            Specify the number of processors here. Default is None, which runs
+            ESMF single-threaded. Notes: ESMF will need access to MPI even run
+            single-threaded. This is not necessary and will not drastically
+            speed anything up, unless your SAMI3 grid is absurdly high
+            resolution. Unless you notice the weight generation taking a long
+            time, leave this as the default value. Weight application is single
+            threaded.
+        do_apply_weights (bool): Option for just generating the weight file
+            or also applying it. Default is to apply weights (in addition
             to generating). This is mostly just a debug option.
 
     Returns:
@@ -571,12 +590,12 @@ def main(sami_data_path,
 
     """
 
-    if type(dtime_sim_start) is str:
+    if isinstance(dtime_sim_start, str):
         dtime_sim_start = str_to_ut(dtime_sim_start)
-        
+
     if not temp_dir:
         temp_dir = sami_data_path
-        
+
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
         print('Created Directory: ', temp_dir)
@@ -648,12 +667,12 @@ def main(sami_data_path,
             out_lon = np.linspace(0, 360, num_lons, endpoint=False)
 
             if alt_step and not use_log_alt:
-                out_alt = np.arange(min_alt, max_alt+1, alt_step)
+                out_alt = np.arange(min_alt, max_alt + 1, alt_step)
             elif not use_log_alt:
                 out_alt = np.linspace(min_alt, max_alt, num_alts)
             elif use_log_alt and not alt_step:
-                out_alt = np.logspace(np.log10(min_alt), 
-                                      np.log10(max_alt), 
+                out_alt = np.logspace(np.log10(min_alt),
+                                      np.log10(max_alt),
                                       num_alts)
             else:
                 raise ValueError('alt_step and use_log_alt are incompatible.')
@@ -688,21 +707,21 @@ def main(sami_data_path,
                         '-l greatcircle -i -w',
                         os.path.join(temp_dir, 'esmf_weightfile.nc'),
                         ]
-        
+
         try:
             if use_mpi:
                 esmf_result = subprocess.run(
-                    'mpirun -np %i '%use_mpi + ' '.join(esmf_command), 
-                        shell=True, check=True,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    'mpirun -np %i ' % use_mpi + ' '.join(esmf_command),
+                    shell=True, check=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 print("Output:", esmf_result.stdout.decode())
 
             else:
                 esmf_result = subprocess.run(
                     ' '.join(esmf_command), shell=True, check=True,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 print("Output:", esmf_result.stdout.decode())
-                
+
         except subprocess.CalledProcessError as err_:
             print('\n\nstdout: \n', err_.stdout.decode("utf-8"))
             print('\nstderr: \n', err_.stderr.decode("utf-8"))
@@ -712,20 +731,20 @@ def main(sami_data_path,
             print('\n\n ===================== \n\n\n\n'
                   'ESMF failed to run. \n\n\n ========== \n\n\n'
                   'See above for debug information\n'
-                  'Attempted to run the following command. After fixing errors, '
+                  'Attempted to run the following command. '
+                  'After fixing errors, '
                   'either re-run this python script with --reuse_weights, '
                   'or run this from the command line:\n\n\t',
                   ' '.join(esmf_command),
                   '\n\nCheck output logs in PET*.Log for more info ',
-                  '(if the log file does not exist, ESMF did not run at all).\n',
+                  '(if the log file does not exist, ESMF did not run at all).'
+                  '\n',
                   'After ESMF is finished, come back and apply the weights.\n'
                   'Check the documentation for this '
                   'project for info on known bugs and their fixes.')
 
             return
 
-
-    
     # Now we can apply weights!
     if do_apply_weights:
         apply_weight_file(sami_data_path,
@@ -747,8 +766,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Perform ESMF regridding and interpolation on SAMI3 model '
         'outputs. The output grid can be user specified.\n'
-        '  **  NOTE: See the documentation (Interpolation > Common errors) for '
-        'details on known errors and how to fix them. **', 
+        '  **  NOTE: See the documentation (Interpolation > Common errors) for'
+        ' details on known errors and how to fix them. **',
         formatter_class=RawTextHelpFormatter)
 
     parser.add_argument('sami_data_path', type=str,
@@ -759,12 +778,13 @@ if __name__ == '__main__':
                         help='Path to the ESMF_RegridWeightGen executable. '
                         'Default is to use the system $PATH.\n'
                         'This needs to be set if ESMF_RegridWeightGen is not '
-                        'in your $PATH.\nTo check if you need to set this, run '
-                        'ESMF_PrintInfo.\nIf the command is not found, either '
-                        'add the path to the executable to your path or '
+                        'in your $PATH.\nTo check if you need to set this, run'
+                        ' ESMF_PrintInfo.\nIf the command is not found, either'
+                        ' add the path to the executable to your $PATH or '
                         'specify that path here.\nIf you get this error: \n'
                         '\terror while loading shared libraries: lib[...].so\n'
-                        'then you need to make sure the modules you have loaded '
+                        'then you need to make sure the compilers and MPI '
+                        'modules you have loaded '
                         'are identical to those used during the install.\n')
     parser.add_argument('--no_pbar', action='store_true', default=False,
                         help='Disable progress bar')
@@ -796,7 +816,7 @@ if __name__ == '__main__':
                         help='Maximum altitude in output grid')
     parser.add_argument('--log_alts', action='store_true', default=False,
                         help='Use log scale for alts? Default is False, '
-                        '(use a linear scale). Not compatible with `alt_step.`')
+                        '(use a linear scale). Incompatible with `alt_step.`')
     parser.add_argument('--custom_input_file', type=str, default=None,
                         help='User-defined input file (.csv with comma sep '
                         'and a header) (i.e. sat ephemeris file w/ '
@@ -807,18 +827,18 @@ if __name__ == '__main__':
                         'Measured in degrees from target location (for lat & '
                         ' lon), and altitude is 10*custom_grid_size (km).\n'
                         'This most likely will not need to be changed. '
-                        "However, if you are receiving a lot of 0's and NaN's, "
-                        "you can try increasing this value.")
-    
-    parser.add_argument('--temp_dir', type=str, 
-                       help='Location where to store temp files. '
-                             'Default is the sami_data_path')
+                        "However, if you are receiving a lot of 0's and NaN's,"
+                        " you can try increasing this value.")
+
+    parser.add_argument('--temp_dir', type=str,
+                        help='Location where to store temp files. '
+                        'Default is the sami_data_path')
 
     parser.add_argument('--use_mpi', type=int, default=None,
                         help='Use MPI for multiprocessing ESMF weight gen? '
-                        'Specify number of procs here.\nNot necessary and will '
-                        'not drastically speed anything up, unless your SAMI3 '
-                        'grid is absurdly high resolution.\n\t'
+                        'Specify number of procs here.\nNot necessary and will'
+                        ' not drastically speed anything up, unless your SAMI3'
+                        ' grid is absurdly high resolution.\n\t'
                         'Note: ESMF will need access to MPI even run'
                         'single-threaded.')
 
