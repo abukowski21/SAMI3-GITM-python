@@ -218,6 +218,10 @@ def generate_interior_points_custom_grid(lons, lats, alts,
 
     node_conns = []
 
+    if progress:
+        pbar = tqdm(total=len(lats),
+                    desc='Generating interior points for custom grid')
+
     for centerpt in range(len(lats)):
         lon_below = lons[centerpt] - cell_radius
         lon_above = lons[centerpt] + cell_radius
@@ -251,6 +255,11 @@ def generate_interior_points_custom_grid(lons, lats, alts,
                            8 * centerpt + 2, 8 * centerpt + 3,
                            8 * centerpt + 4, 8 * centerpt + 5,
                            8 * centerpt + 6, 8 * centerpt + 7])
+
+        if progress:
+            pbar.update()
+    if progress:
+        pbar.close()
 
     return np.array(lon_corners).flatten(), \
         np.array(lat_corners).flatten(), \
@@ -797,10 +806,12 @@ if __name__ == '__main__':
                         help="Output each model's produced files to a file "
                         "with this filename, "
                         'Default is to make a new file for each variable.')
-    parser.add_argument('--remake_files', action='store_true',
-                        help='Remake ESMF input files? '
-                        'Default is False (reuse existing files)',
-                        default=False)
+    parser.add_argument('--remake_files', type=bool, default=True,
+                        help='Remake ESMF imput files and re-compute weights?'
+                        ' Default is True (remake ESMF input & weight files). '
+                        '\nWhen changing the output coordinates, you must '
+                        'remake the input files. Best to just leave this on, '
+                        'but there is an option to leave it off for debugging')
     parser.add_argument('--num_lons', type=int, default=90,
                         help='Number of longitudes in output grid')
     parser.add_argument('--num_lats', type=int, default=180,
