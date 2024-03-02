@@ -746,8 +746,7 @@ def main(sami_data_path,
                   'or run this from the command line:\n\n\t',
                   ' '.join(esmf_command),
                   '\n\nCheck output logs in PET*.Log for more info ',
-                  '(if the log file does not exist, ESMF did not run at all).'
-                  '\n',
+                  '(if the log file does not exist, ESMF did open at all).\n'
                   'After ESMF is finished, come back and apply the weights.\n'
                   'Check the documentation for this '
                   'project for info on known bugs and their fixes.')
