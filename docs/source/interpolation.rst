@@ -88,8 +88,9 @@ The following are known errors that may occur when running the ESMF interpolatio
 	- On a system without ``modules``, you will need to add the libraries used to install ESMF to your ``LD_LIBRARY_PATH`` or ``$PATH``.
 	- Either can be placed into your startup scripts (.bashrc/.bashprofile/.zshrc/etc.) to be configured automatically when you log iinto the system. Setting default modules is also a good idea, but deprecated so not advised in case you screw things up.
 3. Second, error 127 and: ``forrtl: severe (174): SIGSEGV, segmentation fault occurred``.
-	- This error occurs when the MPI modules used during the install are not loaded. This one takes a while to show up so oyu might feel like you got lucky and then it will crash.
-	- See previous for how to fix. Just change your MPI modules to the ones used during the install.
+	- This error occurs when the MPI modules used during the install are not loaded. This one takes a while to show up so you might feel like you got lucky and then it will crash.
+	- See previous for how to fix. Just change your MPI modules to the ones used during the install. 
+	- This error sometimes pops up when trying to run MPI on a login node. If the ESMF logs look fine but there was still a segfault, it could be this. See #1 for how to fix it.
 4. Third, error code 127 and ``Command [...] not found``.
 	- The subprocess call could not find the ESMF_RegridWeightGen executable.
 	- To fix this, set the ``ESMF_DIR`` flag (unfortunately named since it's the same name as the variable used during ESMF install) to the path to the ESMF executables. From the $ESMF_DIR used inn the install, go to apps/[...]/ and you will see the executables. Get into the apps directory and hit tab till you find some programs. The directory you found is what ``ESMF_DIR`` should be set to.
