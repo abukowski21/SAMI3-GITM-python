@@ -53,12 +53,15 @@ The necessary pages in the documentation are the the quick start page_ and this 
 
 .. _specifics: https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/node10.html
 
+.. note:: The installation of ESMF is independent of the conda environment above. No need to put them in the same directory or keep the conda environment activated. I recommend installing ESMF without the conda environment active so there's no confusion about which NetCDF and MPI libraries are being used.
+
+
 We need to install ESMF with just the command line tools, howerver we need support for PIO, and NetCDF. Here are general instructions along with some tips. We will be following these instructions_.
 
 .. _instructions: https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/node6.html#SECTION00063000000000000000
 
 #. Ensure that a suitable version of ESMF is downloaded and uncompressed. Not all versions support 3D spherical interpolations in offline mode. I recommend version 8.4.0, but it is not required. Details can be found on the ESMF regridding_ page. You need to install a version that supports offline, 3D (spherical), bilinear interpolation.
-#. Set the required environmental variables. These are: **ESMF_DIR**, **ESMF_COMM**, **ESMF_COMPILER**, **ESMF_NETCDF**, **ESMF_PNETCDF**, and **ESMF_PIO**. Other variables in the documentation can be set, but my testing has shown that these will work.
+#. Set the required environmental variables. These are: **ESMF_DIR**, **ESMF_COMM**, **ESMF_COMPILER**, **ESMF_NETCDF**, **ESMF_PNETCDF**, and **ESMF_PIO**. Other variables in the documentation can be set, but my testing has shown that these will work. These are only necessary during the install, no need to set them when you run the interpolation code.
 	* **ESMF_DIR** is the path to the installation location
 	* **ESMF_COMM** denotes if ESMF should be installed with support for MPI. Set this to the correct implementation of MPI that your system is using.
 	* **ESMF_COMPILER** denotes the Fortran/C++ compiler that ESMF will be built with. typing ``make info`` shows which compiler & MPI impletation are currently planned on being used.

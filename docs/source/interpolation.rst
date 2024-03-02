@@ -94,3 +94,9 @@ The following are known errors that may occur when running the ESMF interpolatio
 	- The subprocess call could not find the ESMF_RegridWeightGen executable.
 	- To fix this, set the ``ESMF_DIR`` flag (unfortunately named since it's the same name as the variable used during ESMF install) to the path to the ESMF executables. From the $ESMF_DIR used inn the install, go to apps/[...]/ and you will see the executables. Get into the apps directory and hit tab till you find some programs. The directory you found is what ``ESMF_DIR`` should be set to.
 	- This error could also be caused by the ESMF executables not being listed correctly in $PATH. If you *did* add them to $PATH and installed something like ESMPy into your Python environment, they could be in the wrong order. Run ``echo $PATH$`` or ``which ESMF_RegridWeightGen`` to see where the executable is being called from. If it is not the same as the one you installed, you need to fix your $PATH (or use the ``ESMF_DIR`` flag).
+4. Error code 1. Take a look in the logs (generated in the folder you ran the code from). If ``ESMF_PIO  : disabled`` and ``ESMF_PNETCDF  : disabled``, it could be two things.
+	- Easy: Check the output of ``which ESMF_PrintInfo``. If it points to a conda environment, ESMF cannot find the executable you installed. You need to fix your $PATH or use the ``ESMF_DIR`` flag when running the Python code (it does not look at your environment variables on its own).
+	- Less easy: If that command is not found, ESMF cannot find the executables. Hopefully you just typed the ESMF_DIR wrong or something. Try running the ``ESMF_PrintInfo`` executable (same directory as the other installed scripts) and see if PIO & pnetcdf are enabled. If not, you need to reinstall ESMF with these enabled. Sorry! 
+
+If these don't work or you find new errors, let me know and I'll update this page. Good luck!
+
