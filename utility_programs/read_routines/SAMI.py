@@ -1,6 +1,9 @@
 
 """read sami data.
 
+Various routines to handle reading raw SAMI3 outputs.
+
+Author: Aaron Bukowski
 
 """
 
@@ -543,7 +546,6 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
                        start_dtime=None, end_dtime=None,
                        start_idx=None, end_idx=None,
                        progress_bar=False, skip_time_check=False):
-
     """
     Read in (raw) SAMI data and return an xarray dataset.
         ! This only works on raw, pre-processed SAMI data !
