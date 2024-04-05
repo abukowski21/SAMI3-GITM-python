@@ -38,12 +38,13 @@ def main(args):
             pgitm = True
 
         elif len(glob.glob(os.path.join(args.gitm_dir, '*.header'))) > 0:
-            # Attempt to post-process (with pGITM) the GITM outputs for the user
-            # This is not very great though and will likely fail.
+            # Attempt to post-process (with pGITM) the GITM outputs
+            # This code is not robust (at all)
+            # Will likely fail.
             print('GITM headers found in {}'.format(args.gitm_dir),
-                'Attempting to postprocess...\n',
-                '(This is not very robust. You probably have to go run '
-                './pGITM yourself)')
+                  'Attempting to postprocess...\n',
+                  '(This is not very robust. You probably have to go run '
+                  './pGITM yourself)')
             gitm_parent_dir = args.gitm_dir[:args.gitm_dir.rfind('/data')]
 
             cmd = os.path.join('.', gitm_parent_dir, 'pGITM')
@@ -58,7 +59,7 @@ def main(args):
                 subprocess.Popen(cmd, shell=True).wait()
         else:
             raise ValueError('No GITM files found in {}'.format(args.gitm_dir),
-                         'Double check the directory or run pGITM.')
+                             'Double check the directory or run pGITM.')
 
     if args.dtime_sim_start is not None:
         args.dtime_sim_start = str_to_ut(args.dtime_sim_start)
@@ -82,9 +83,9 @@ def main(args):
 
     if pgitm:
 
-        #Check if output files exist and if they do, if user wants to remake
+        # Check if output files exist and if they do, if user wants to remake
         actually_do_gitm = False
-        files_exist=False
+        files_exist = False
 
         # Check if output files exist and if they do, if user wants to remake
         actually_do_gitm = False
@@ -251,9 +252,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-gitm', '--gitm_dir', type=str, default=None,
-                        help='GITM Directory. Defaults to None (no GITM processing)')
+                        help='GITM Directory. Defaults to None (no GITM'
+                        ' processing)')
     parser.add_argument('-sami', '--sami_dir', type=str, default=None,
-                        help='SAMI directory. Defaults to None (no SAMI processing)')
+                        help='SAMI directory. Defaults to None (no SAMI '
+                        ' processing)')
     parser.add_argument('-out', '--output_dir', type=str, default=None,
                         help='If you want to save the files to another'
                         ' directory, specify it here. Defaults to a new'
