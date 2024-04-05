@@ -452,7 +452,7 @@ def read_to_nparray(sami_data_path, dtime_sim_start,
         for t in range(nt):
             raw = np.fromfile(file, dtype='float32',
                               count=(nz * nf * nlt) + 2)[1:-1]
-            if t > start_idx and t < end_idx:
+            if t >= start_idx and t <= end_idx:
                 sami_data['data'][data_files[f]][:, :, :, t - start_idx] = \
                     raw.reshape(nlt, nf, nz).copy()
             if pbar:
@@ -657,7 +657,7 @@ def read_raw_to_xarray(sami_data_path, dtime_sim_start, cols='all',
                 for t in range(len(times)):
                     raw = np.fromfile(f, dtype='float32',
                                       count=(nz * nf * nlt) + 2)[1:-1]
-                    if t > start_idx and t <= end_idx:
+                    if t >= start_idx and t <= end_idx:
                         curr_arr[t_ins] = raw.reshape(nlt, nf, nz).copy()
                         t_ins += 1
 
