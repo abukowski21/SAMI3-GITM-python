@@ -91,10 +91,10 @@ def main(args):
         actually_do_gitm = False
         files_exist = False
 
-        if args.single_file and len(glob.glob(
-            os.path.join(output_dir,
-                         args.single_file + '*GITM.nc'))) > 0:
-            files_exist = True
+        if args.single_file:
+            if len(glob.glob(os.path.join(output_dir, 
+                                          args.single_file + '*GITM.nc'))) > 0:
+                files_exist = True
 
         elif len(glob.glob(os.path.join(output_dir, '*GITM.nc'))) > 0:
             files_exist = True
