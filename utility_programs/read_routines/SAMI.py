@@ -754,11 +754,8 @@ def process_all_to_cdf(sami_data_path,
         if progress_bar:
             total = len(cols) * np.sum(
                 [split_by_time, split_by_var, whole_run])
-            print(
-                'Processing in lowmem mode. This will take substantially',
-                'longer than "normal" mode.')
             pbar = tqdm(total=total,
-                        desc='Variable loop')
+                        desc='Rewriting RAW. Variable loop:')
 
         did_one = False
 
