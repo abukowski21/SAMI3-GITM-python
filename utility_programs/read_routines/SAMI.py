@@ -260,7 +260,7 @@ def make_times(nt, sami_data_path, dtime_sim_start,
 
     truths = np.array([pd.Timestamp(times_list[t]).round(
         'min') == times[t] for t in range(len(times))])
-    if truths.sum() != len(truths) and not skip_time_check:
+    if (truths.sum() != len(truths)) and not skip_time_check:
         raise ValueError(
             '\nThe times are wrong! Somehow this needs to be fixed.'
             ' SAMI may be outputting fake files again... \n'
