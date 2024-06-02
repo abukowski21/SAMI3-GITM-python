@@ -506,6 +506,8 @@ def process_all_to_cdf(gitm_dir,
 
     """
 
+    import gc
+
     if not drop_ghost_cells:
         print('Not dropping Ghost cells.',
               'This will cause issues if you are processing both 3D and 2D',
@@ -660,6 +662,8 @@ def process_all_to_cdf(gitm_dir,
 
         if progress_bar:
             pbar.update()
+        gc.collect()
+
     if progress_bar:
         pbar.close()
 
