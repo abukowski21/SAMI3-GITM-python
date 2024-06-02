@@ -243,6 +243,7 @@ def main(args):
                 progress=not args.progress,
                 remake_files=True,
                 out_dir=args.output_dir,
+                skip_time_check=args.skip_time_check,
                 output_filename=args.single_file if args.single_file else None)
 
     return

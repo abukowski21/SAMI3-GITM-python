@@ -357,6 +357,7 @@ def apply_weight_file(sami_data_path,
                       cols='all',
                       progress=True,
                       output_filename=None,
+                      skip_time_check=False,
                       custom_input_file=None,
                       temp_dir=None,):
     """Apply the ESMF weight file to the SAMI raw data.
@@ -424,6 +425,7 @@ def apply_weight_file(sami_data_path,
         sds = SAMI.read_raw_to_xarray(sami_data_path,
                                       dtime_sim_start,
                                       cols=datavar,
+                                      skip_time_check=skip_time_check,
                                       progress_bar=False)
         # Progress bar:
         if progress:
@@ -496,7 +498,7 @@ def apply_weight_file(sami_data_path,
                                               len(outlat),
                                               len(outalt),))
         # return dstpts
-        if output_filename:
+        if output_filename: # user set custom filename
             out_ds.to_netcdf(os.path.join(out_dir,
                                           output_filename + '_SAMI-REGRID.nc'),
                              mode='a' if not first and os.path.exists(
@@ -504,9 +506,13 @@ def apply_weight_file(sami_data_path,
                                               output_filename
                                               + '_SAMI-REGRID.nc')) else 'w',
                              engine='h5netcdf')
-        else:
-            out_ds.to_netcdf(os.path.join(out_dir,
-                                          datavar + '_SAMI-REGRID.nc'),
+            
+        else: # Splitting up by variable
+            if not os.path.exists(out_dir + '_SAMI-REGRID.nc'):
+                os.mkdir(out_dir + '_SAMI-REGRID.nc')
+
+            out_ds.to_netcdf(os.path.join(out_dir + '_SAMI-REGRID.nc',
+                                          datavar),
                              engine='h5netcdf')
 
         del out_ds
@@ -529,6 +535,7 @@ def main(sami_data_path,
          custom_grid_size=0.5,
          cols='all',
          progress=False,
+         skip_time_check=False,
          remake_files=True,
          out_dir=None,
          temp_dir=None,
@@ -707,8 +714,8 @@ def main(sami_data_path,
     if make_esmf_weights:
         # And now we can call ESMF!
         print('calling ESMF...')
-        esmf_command = [(ESMF_DIR) +
-                        'ESMF_RegridWeightGen -s',
+        esmf_command = [os.path.join(ESMF_DIR, 'ESMF_RegridWeightGen'),
+                        '-s',
                         os.path.join(temp_dir, 'src_ugrid.nc'),
                         '-d', os.path.join(temp_dir, 'dst_ugrid.nc'),
                         '--src_loc corner --dst_loc',
@@ -762,6 +769,7 @@ def main(sami_data_path,
                           progress=progress,
                           output_filename=output_filename,
                           custom_input_file=custom_input_file,
+                          skip_time_check=skip_time_check,
                           temp_dir=temp_dir)
 
     return
@@ -805,7 +813,7 @@ if __name__ == '__main__':
                         help="Output each model's produced files to a file "
                         "with this filename, "
                         'Default is to make a new file for each variable.')
-    parser.add_argument('--remake_files', type=bool, default=True,
+    parser.add_argument('--reuse_files', default=False, action='store_true',
                         help='Remake ESMF imput files and re-compute weights?'
                         ' Default is True (remake ESMF input & weight files). '
                         '\nWhen changing the output coordinates, you must '
@@ -839,7 +847,10 @@ if __name__ == '__main__':
                         'This most likely will not need to be changed. '
                         "However, if you are receiving a lot of 0's and NaN's,"
                         " you can try increasing this value.")
-
+    parser.add_argument('--skip_time_check', action='store_true',
+                        help='Skip verifying accuracy of times. Useful when'
+                        ' SAMI has been configured to skip some outputs '
+                        '(hrpr != 0)')
     parser.add_argument('--temp_dir', type=str,
                         help='Location where to store temp files. '
                         'Default is the sami_data_path')
@@ -871,9 +882,10 @@ if __name__ == '__main__':
          cols=args.cols,
          progress=not args.no_pbar,
          use_log_alt=args.log_alts,
-         remake_files=args.remake_files,
+         remake_files=args.reuse_files,
          out_dir=args.out_dir,
          output_filename=args.output_filename,
+         skip_time_check=args.skip_time_check,
          temp_dir=args.temp_dir,
          use_mpi=args.use_mpi,
          )
