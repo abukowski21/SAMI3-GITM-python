@@ -164,6 +164,10 @@ def do_interpolations(
         else:
             out_path = gitm_data_path
 
+    print("don't use this!!")
+    print("The ESMF branch has much better interpolations")
+
+
     # outputs...
     if out_lat_lon_alt is None:
         latout = np.arange(-90, 90, 1)
