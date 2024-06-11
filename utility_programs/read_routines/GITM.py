@@ -658,7 +658,7 @@ def process_all_to_cdf(gitm_dir,
             ds_now.to_netcdf(outfile, engine='h5netcdf')
             files_written.append(outfile)
         else:
-            ds_now.to_netcdf(outfile, mode='w')
+            ds_now.to_netcdf(outfile, engine='h5netcdf', mode='w')
 
         if progress_bar:
             pbar.update()
