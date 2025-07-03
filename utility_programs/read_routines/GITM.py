@@ -678,7 +678,8 @@ def process_all_to_cdf(gitm_dir,
         print('writing... (this takes a while)')
         with ProgressBar():
             ds.to_netcdf(os.path.join(out_dir, run_name + '_GITM.nc'),
-                         encoding={'time': {'dtype': float}})
+                         encoding={'time': {'dtype': float}},
+                         engine='h5netcdf')
         print('cleaning up temp files')
         for f in files_written:
             os.remove(f)
