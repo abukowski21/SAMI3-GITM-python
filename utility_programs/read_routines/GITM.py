@@ -442,7 +442,7 @@ def read_multiple_bins_to_xarray(file_list,
         if pbar:
             progress.update()
 
-    ds = xr.merge(ds)
+    ds = xr.concat(ds, dim='time').sortby('time')
     return ds
 
 
